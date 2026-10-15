@@ -9,8 +9,13 @@ import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import { TBlocklyEvents } from 'Types';
 import LoadModal from '../../components/load-modal';
-import { clearPendingSelection, hasPendingSelection, readSavedSelection } from '../bot/bot-selection-store';
-import { applySelectionToWorkspace, buildWorkspaceXml } from '../bot/bot-workspace';
+import {
+    clearPendingSelection,
+    hasPendingSelection,
+    onSelectionPending,
+    readSavedSelection,
+} from '../bot/bot-selection-store';
+import { applySelectionToWorkspace, buildWorkspaceXml, workspaceHolds } from '../bot/bot-workspace';
 import SaveModal from '../dashboard/bot-list/save-modal';
 import BotBuilderTourHandler from '../tutorials/dbot-tours/bot-builder-tour';
 import QuickStrategy1 from './quick-strategy';
@@ -112,31 +117,56 @@ const BotBuilder = observer(() => {
         });
     };
 
-    // The Bot tab's menus hand their selection over here: as soon as this canvas is ready it loads
-    // those blocks, so the tab opens with the blocks the user selected.
+    // The Bot tab's menus hand their selection over here: this canvas loads those blocks so the tab
+    // opens with the blocks the user selected. This canvas stays mounted for the app's whole life,
+    // so the hand-off is driven by the Bot tab telling us — and runs on mount too, for a selection
+    // left pending by a reload. The canvas and the app's own initial strategy are built
+    // asynchronously, so the hand-off keeps trying and only records itself as done once the blocks
+    // are really on the canvas.
+    const [selection_request, setSelectionRequest] = React.useState(0);
+
+    React.useEffect(() => onSelectionPending(() => setSelectionRequest(request => request + 1)), []);
+
     React.useEffect(() => {
-        if (is_loading || !hasPendingSelection()) return;
+        if (!hasPendingSelection()) return;
 
         let cancelled = false;
         let timer: ReturnType<typeof setTimeout>;
         let attempts = 0;
+        const started_at = Date.now();
 
-        const applySelection = () => {
+        const applySelection = async () => {
             if (cancelled) return;
 
-            const xml = buildWorkspaceXml(readSavedSelection());
-            if (!xml) {
-                clearPendingSelection();
-                return;
+            const has_canvas = Boolean(window.Blockly?.derivWorkspace);
+            // Read the flag live: this effect is not re-created when it changes. Give up waiting on
+            // it after a few seconds — a canvas that is on screen is settled enough to hand the
+            // blocks to, even if the flag was left behind by a failure.
+            const canvas_settled = has_canvas && (!blockly_store.is_loading || Date.now() - started_at > 3000);
+
+            if (canvas_settled) {
+                const xml = buildWorkspaceXml(readSavedSelection());
+                if (!xml) {
+                    clearPendingSelection();
+                    return;
+                }
+                const loaded = await applySelectionToWorkspace(xml);
+                if (loaded && !cancelled) {
+                    // The app's own initial strategy can still land on top of this, so confirm the
+                    // blocks are here to stay before treating the hand-off as done.
+                    timer = setTimeout(() => {
+                        if (cancelled) return;
+                        if (workspaceHolds(loaded)) {
+                            clearPendingSelection();
+                        } else if (attempts++ < 40) {
+                            applySelection();
+                        }
+                    }, 400);
+                    return;
+                }
             }
-            if (!window.Blockly?.derivWorkspace) {
-                // The canvas is created asynchronously, so wait for it rather than lose the selection.
-                if (attempts++ < 40) timer = setTimeout(applySelection, 250);
-                return;
-            }
-            applySelectionToWorkspace(xml).then(applied => {
-                if (applied) clearPendingSelection();
-            });
+
+            if (attempts++ < 40) timer = setTimeout(applySelection, 250);
         };
 
         applySelection();
@@ -144,7 +174,8 @@ const BotBuilder = observer(() => {
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [is_loading]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selection_request]);
 
     return (
         <>

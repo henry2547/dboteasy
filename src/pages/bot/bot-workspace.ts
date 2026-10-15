@@ -45,17 +45,36 @@ export const buildWorkspaceXml = (selection: TBotSelection): string => {
     return `<xml xmlns="http://www.w3.org/1999/xhtml">${blocks.join('')}</xml>`;
 };
 
-/** Put the selected blocks on the Bot Builder canvas. Resolves true once they are in place. */
-export const applySelectionToWorkspace = (xml: string): Promise<boolean> => {
+/**
+ * Put the selected blocks on the Bot Builder canvas, replacing what it held.
+ *
+ * Resolves with the block types now on the canvas, or null when they could not be placed yet. The
+ * canvas is built and loaded asynchronously by the app (which loads its own initial strategy at the
+ * same time), so the caller reads null as "the canvas was not ready — try again shortly" rather
+ * than "nothing to do". This is the app's own way of loading a workspace, so the blocks arrive
+ * exactly as they do when a strategy is loaded from a file.
+ */
+export const applySelectionToWorkspace = async (xml: string): Promise<string[] | null> => {
     const window_blockly = blockly();
     const workspace = window_blockly?.derivWorkspace;
-    if (!workspace || !xml) return Promise.resolve(false);
+    if (!workspace || !xml) return null;
 
-    return Promise.resolve(workspace.asyncClear())
-        .then(() => {
-            window_blockly.Xml.domToWorkspace(window_blockly.utils.xml.textToDom(xml), workspace);
-            workspace.cleanUp();
-            return true;
-        })
-        .catch(() => false);
+    try {
+        const xml_dom = window_blockly.utils.xml.textToDom(xml);
+        window_blockly.Events.setGroup(`bot_tab_load${Date.now()}`);
+        await workspace.asyncClear();
+        window_blockly.Xml.clearWorkspaceAndLoadFromXml(xml_dom, workspace);
+        workspace.cleanUp();
+
+        const types = (workspace.getAllBlocks(false) ?? []).map((block: any) => block.type);
+        return types.length ? types : null;
+    } catch {
+        return null;
+    }
+};
+
+/** Whether the canvas still holds these blocks — how the hand-off checks that its blocks stayed. */
+export const workspaceHolds = (types: string[]): boolean => {
+    const blocks = blockly()?.derivWorkspace?.getAllBlocks(false) ?? [];
+    return types.every(type => blocks.some((block: any) => block.type === type));
 };

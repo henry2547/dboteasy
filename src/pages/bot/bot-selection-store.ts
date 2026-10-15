@@ -36,10 +36,23 @@ export const saveSelection = (selection: TBotSelection): void => {
     }
 };
 
+type TSelectionPendingListener = () => void;
+
+const pending_listeners = new Set<TSelectionPendingListener>();
+
+/** Told the moment a selection is handed over, so the canvas can pick it up without a reload. */
+export const onSelectionPending = (listener: TSelectionPendingListener): (() => void) => {
+    pending_listeners.add(listener);
+    return () => {
+        pending_listeners.delete(listener);
+    };
+};
+
 /**
- * Hand the selection to the Bot Builder: its canvas reads the saved selection once, when it loads,
- * and clears the marker. The marker is stored (not held in memory) so it survives the canvas being
- * built in another chunk, and a reload.
+ * Hand the selection to the Bot Builder: its canvas reads the saved selection and clears the marker.
+ * The marker is stored (not held in memory) so it survives the canvas being built in another chunk,
+ * and a reload. The Bot Builder itself stays mounted for the app's whole life, so it is told at once
+ * rather than discovering the marker when it next mounts.
  */
 export const markSelectionPending = (selection: TBotSelection): void => {
     saveSelection(selection);
@@ -48,6 +61,7 @@ export const markSelectionPending = (selection: TBotSelection): void => {
     } catch {
         /* an unavailable localStorage must not break the hand-off */
     }
+    pending_listeners.forEach(listener => listener());
 };
 
 export const hasPendingSelection = (): boolean => {
