@@ -12,10 +12,11 @@ import { getActiveTabUrl } from '@/utils/getActiveTabUrl';
 import { OFFERED_LANGUAGES } from '@/utils/offered-languages';
 // [/AI]
 import { useTranslations } from '@deriv-com/translations';
-import { Drawer, MobileLanguagesDrawer, useDevice } from '@deriv-com/ui';
+import { Drawer, MobileLanguagesDrawer } from '@deriv-com/ui';
 import NetworkStatus from './../../footer/NetworkStatus';
 import ServerTime from './../../footer/ServerTime';
 import BackButton from './back-button';
+import BlocksHelpSubmenu from './blocks-help-submenu';
 import DigitsHelpSubmenu from './digits-help-submenu';
 import MenuContent from './menu-content';
 import MenuHeader from './menu-header';
@@ -35,7 +36,6 @@ const MobileMenu = ({ onLogout }: TMobileMenuProps) => {
     const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
     const { currentLang = 'EN', localize, switchLanguage } = useTranslations();
     const { hideModal, isModalOpenFor, showModal } = useModalManager();
-    const { isDesktop } = useDevice();
     // [AI] Get client from store to check menu items
     const { client } = useStore() ?? {};
     // [/AI]
@@ -62,7 +62,7 @@ const MobileMenu = ({ onLogout }: TMobileMenuProps) => {
     const openLanguageSetting = () => showModal('MobileLanguagesDrawer');
     const isLanguageSettingVisible = Boolean(isModalOpenFor('MobileLanguagesDrawer'));
 
-    if (isDesktop) return null;
+    // [AI] The hamburger is shown at every width, desktop included, so the drawer stays reachable.
     // [AI] Hide mobile menu if there are no menu items to display
     if (!hasMenuItems) return null;
     // [/AI]
@@ -119,6 +119,13 @@ const MobileMenu = ({ onLogout }: TMobileMenuProps) => {
                                 <BackButton buttonText={localize('Digits help')} onClick={closeSubmenu} />
                             </div>
                             <DigitsHelpSubmenu />
+                        </>
+                    ) : activeSubmenu === 'blocks' ? (
+                        <>
+                            <div className='mobile-menu__back-btn'>
+                                <BackButton buttonText={localize('Blocks help')} onClick={closeSubmenu} />
+                            </div>
+                            <BlocksHelpSubmenu />
                         </>
                     ) : activeSubmenu === 'reports' ? (
                         <>

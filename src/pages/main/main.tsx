@@ -36,7 +36,6 @@ import {
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
-    LabelPairedSquareListCaptionRegularIcon,
     LabelPairedTableLayoutCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { Localize, localize } from '@deriv-com/translations';
@@ -50,7 +49,6 @@ import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
-const BotsPage = lazy(() => import('../bots'));
 const StatisticsPage = lazy(() => import('../statistics'));
 
 const AppWrapper = observer(() => {
@@ -84,7 +82,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'bots', 'statistics'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -456,25 +454,6 @@ const AppWrapper = observer(() => {
                                         <DigitsPage />
                                     </ErrorBoundary>
                                 </Suspense>
-                            </div>
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedSquareListCaptionRegularIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='Bots' />
-                                    </>
-                                }
-                                id='id-bots'
-                            >
-                                <ErrorBoundary label='Bots'>
-                                    <Suspense fallback={<ChunkLoader message={localize('Please wait, loading bots...')} />}>
-                                        <BotsPage onOpenBuilder={() => handleTabChange(DBOT_TABS.BOT_BUILDER)} />
-                                    </Suspense>
-                                </ErrorBoundary>
                             </div>
                             <div
                                 label={

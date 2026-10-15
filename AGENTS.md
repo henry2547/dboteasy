@@ -8,7 +8,7 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
 - `docker compose -f docker-compose.base44.yml up -d` starts the dev server.
 - Node 22 base image; source is bind-mounted at `/app`; `node_modules` lives in an anonymous volume.
 - Dev server listens on port 4003 inside the container, mapped to host port 3000.
-- `npm install` runs on container startup before `npm run dev`. There is no lockfile in the repo.
+- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, using the committed `package-lock.json`.
 
 ### Sandbox-only dev override: eager compilation
 Rsbuild turns on Rspack's lazy ("compile on demand") dev compilation by default. Here the browser
@@ -86,9 +86,10 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has seven tabs: Dashboard, Bot Builder, Charts, Tutorials, Digits, Bots, Statistics.
+The main tab bar has five tabs: Dashboard, Bot Builder, Charts, Digits, Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
-`src/pages/main/main.tsx` must stay in the same order.
+`src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
+ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
 
 - **Digits + Statistics share ONE feed.** `DigitsLabProvider`
   (`src/pages/digits/digits-lab-context.tsx`) is mounted around `<Tabs>` in `main.tsx`; both pages read
@@ -106,18 +107,124 @@ Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and th
   page in `main.tsx`, so a broken view shows a recoverable card instead of a blank app.
 - **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
   `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
+- **Blocks guide (hamburger):** the `'blocks'` submenu ("Blocks help") renders
+  `mobile-menu/blocks-help-submenu.tsx`, an accordion over the five Blocks-menu groups — Digits plus the
+  four observer groups. Its content comes from `mobile-menu/blocks-help-data.ts`, which reads `GROUPS` /
+  `blocksInGroup` from `observer-catalog.js`, so the block lists cannot drift from the palette; per block
+  it shows only the observer `help` text that differs from the generic
+  `<label>. Evaluated only on a real market event; missing data is Inconclusive.` sentence. Adding a
+  group to `GROUPS` shows it here automatically, but its "what it is / how to use it" copy needs an entry
+  in that file's `GROUP_TEXT`.
 - **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
-  `digits_matches_differs` and `digits_frequency` live in
-  `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
-  category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
-  sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
-  `modifyContextMenu` from `../../../utils` breaks the whole dev build. The Bots tab still ships
-  recipe cards plus a guide.
+  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold` and
+  `digits_streak` live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot
+  Builder's "Digits" category (its Blocks-menu flyout lists them with an add button). Mind the import
+  depth: those files sit one level under `blocks/`, so shared helpers come from `../../utils` —
+  importing `modifyContextMenu` from `../../../utils` breaks the whole dev build.
+- The count / hot-cold / streak blocks call `Bot.getDigitCount`, `Bot.getHotColdDigit(mode, sample)`
+  and `Bot.getDigitStreak()`. Those helpers live in `services/tradeEngine/trade/Ticks.js` and are
+  exposed through `services/tradeEngine/Interface/TicksInterface.js` — both files must be updated
+  together, or the generated code calls an undefined function.
+- **Digit blocks guide:** the toolbar's `?` icon (`#db-toolbar__digit-help-button` in
+  `toolbar/workspace-group.tsx`) opens `toolbar/digit-blocks-help.tsx`, a step-by-step modal for the
+  digit blocks. Its stylesheet widens the shared dialog (`dc-dialog__dialog`) and makes
+  `dc-dialog__content` scroll. Note the flyout `+` buttons are hover-revealed
+  (`flyout__button-add--hide`), so a scripted click reports `found: false` — hover first, or drive it
+  by hand.
 
 ### Verifying these tabs
-- The tab targets are the `<li>` elements `#id-digits`, `#id-bots`, `#id-statistics` — click these to
+- The tab targets are the `<li>` elements `#id-digits`, `#id-statistics` — click these to
   switch; the URL hash only selects a tab on first load, not after mount.
 - Digits: check the market-conditions panel, the chart cursor + ticker trail, the digit-circle marker
   and the floating "Scan markets" button.
 - The scanner returns ~8 volatility markets; picking one switches the whole tab to that market.
 - Known pre-existing console warning: `Failed to load image` (branding logo) — unrelated to this work.
+
+## Observer blocks in the Bot Builder
+The former "Bots" tab is gone: `src/pages/bots/`, the `/bot-lab.html` Rsbuild entry and the isolated
+observer workspace were removed, and the observational block language now ships in the ordinary Bot
+Builder palette. `rsbuild.config.ts` has a single `index` entry again.
+- `src/external/bot-skeleton/scratch/blocks/Observer/observer-catalog.js` is the single source of
+  truth — pure data, deliberately free of any `window.Blockly` access so React can read it while
+  rendering the toolbox. It exports `CATEGORIES` (the 15 original observer categories), `BLOCKS` (one
+  spec per block: `type: 'obs_<id>'`, `label`, `category`, `op`, `fields`, `inputs`, `body`,
+  `output`), and `GROUPS` — the four palette groups below, each with a colour triple and the list of
+  categories it owns.
+- `Observer/index.js` walks `BLOCKS` and registers each spec as a real block (field types come from
+  the spec, `inputs`/`body` become `input_value`/`input_statement` sockets; `op === 'if_else'` adds an
+  `else` statement) and then imports `./generator`, so those two files are the only ones in that
+  folder touching `window.Blockly`. The folder is picked up by `blocks/index.js`
+  (`import './Observer'`), so no extra wiring is needed.
+- `Observer/generator.js` registers one JavaScript generator per observer block, and every generated
+  call is a hand-back to the observer runtime (`services/observer/`) rather than a second
+  implementation of the language: a condition emits `Bot.observerCondition(block_id)`, any other
+  value block emits `Bot.observerValue(block_id, neutral)`, and a statement block emits
+  `Bot.observerStatement(block_id)`. An event block ("When …") and any block that belongs to a
+  canvas-driven observer program (its stack root is an observer block) emit a comment instead — the
+  runtime dispatches those from the tick stream, so generating them would run them twice.
+  `BotInterface.js` exposes those three calls next to `observerEntryPassed`. Without a generator for
+  a block type `Run` failed with
+  `JavaScript generator does not know how to generate code for block type "obs_…"`.
+- The palette entry point is `src/pages/bot-builder/toolbox/toolbox-items.tsx`: right after the
+  legacy `digits` category it maps `GROUPS` to four `<Category>` elements and lists each group's
+  blocks with their default field values. The legacy trading categories are untouched.
+
+| Group id | Palette name | Observer categories inside |
+| --- | --- | --- |
+| `observer_digit_frequency` | Digit & frequency | Digits, Digit Conditions, Frequency & Stability, Matches & Differs, Over & Under, Even & Odd, Digit Statistics |
+| `observer_pattern_parity` | Pattern detection & parity | Pattern Detector, Pattern State, Even/Odd Patterns, Streaks & Transitions |
+| `observer_control` | Observer control | Bot Control, Market Selection, Logic & Comparison, Variables |
+| `observer_entry_monitoring` | Entry & monitoring | Entry Conditions, Restart & Cooldown, Stop & Safety, Learning & Observation, Notifications, Observational Controls, Strategy Comparison |
+
+- Field names that must stay whole numbers (`PERCENT`, `TOLERANCE`, `VALUE`, `LOW`, `HIGH`) are pinned
+  to `precision: 0` in `Observer/index.js`; every other number field keeps one decimal. A block's
+  colour comes from its group, and `meta()` returns the localised label/description used by search.
+- Verify by opening `#bot-builder`: each of the four groups expands in the palette, and dragging one
+  of its blocks onto the canvas places it with its default field values preserved. To check
+  generation without a logged-in account (Run is login-gated), load a workspace XML of observer
+  blocks into a scratch workspace and call
+  `window.Blockly.JavaScript.javascriptGenerator.workspaceToCode(workspace)`: it must not throw; an
+  observer block sitting inside an ordinary trading block must emit
+  `Bot.observerCondition(…)` / `Bot.observerValue(…)` / `Bot.observerStatement(…)`, and an event hat
+  or a free-standing observer program must emit a comment only.
+- Note: adding a category to `CATEGORIES` without listing it in one of `GROUPS` makes its blocks
+  invisible in the palette, since `toolbox-items.tsx` renders groups, not categories.
+- Production build verification can use a temporary Rsbuild config in `/tmp` overriding only
+  `output.distPath.root`, avoiding churn of tracked `dist/` assets (do not commit such a config).
+
+### What the observer blocks actually do at run time
+`src/external/bot-skeleton/services/observer/` is a bounded, deterministic reader of the canvas: it
+reads blocks off the workspace (`observer-program.js`), walks them with an operation budget
+(`observer-engine.js`), and uses `eval`/generated JS nowhere — that is why the palette's generators
+stay inert placeholders. `index.js` exposes the whole thing as the `observerRuntime` singleton.
+- **One tick stream.** `trade/Ticks.js` hands every genuine tick to `observerRuntime.feedTick()` from
+  inside the existing subscription, so the observer never opens a second WebSocket and never invents
+  data: a missing value is `Inconclusive`, which never signals.
+- **Two ways a block runs.** An event hat, and a free-standing observer statement dragged straight
+  onto the canvas (`program.roots`), are driven by that tick stream. A block the generated program
+  reaches instead runs where the program reaches it, through
+  `observerRuntime.valueOfBlock()` / `conditionOfBlock()` / `runStatement()`. Both paths share one
+  evaluation cache, cleared once per tick, so a value the program reads always belongs to the tick it
+  trades on.
+- **The trade gate.** `dbot.js` starts the session before generating code and asks
+  `observerRuntime.gateEnabled()`; only a canvas carrying observer *entry* blocks gets
+  `if (!Bot.observerEntryPassed()) { sleep(1); continue; }` injected into the generated loop.
+  `Bot.observerEntryPassed()` (`BotInterface.js`) consumes the signal exactly once per entry, so the
+  existing trade setup — amount, contract, duration — is untouched and starts a trade only when the
+  observed conditions pass. A canvas with no observer entry blocks generates the loop it had before.
+- Stop paths (`stopBot`, `terminateBot`) call `observerRuntime.detach()`, so a stopped bot feeds no
+  more ticks; without that the session would outlive the bot.
+- **The canvas is validated before a session starts.** `observer-validate.js` checks every block
+  `readProgram` returned: a block with no evaluator, an `obs_…` type this version no longer defines
+  (recorded as `program.unknown`), or a "When …" hat whose event the tick stream never raises
+  (`DISPATCH_EVENTS` in `observer-engine.js`) is written to the journal and the observer session is
+  not started at all — the bot then runs the plain trading program it had before those blocks. An
+  unconnected socket or an empty field is a warning only, and the block stays Inconclusive. Adding a
+  "When …" hat means adding its event to `DISPATCH_EVENTS` and raising it from the engine (a hat with
+  no matching `dispatch('…')` call would never run).
+- Unit coverage lives in `services/observer/__tests__/` — `observer-engine.test.js` (runtime),
+  `observer-generation.test.js` (one generator per palette block, plus every block in
+  `scratch/blocks` has a `forBlock` registration) and `observer-validation.test.js` (validation,
+  every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
+  `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
+  login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.

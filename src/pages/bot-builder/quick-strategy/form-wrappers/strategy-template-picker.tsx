@@ -67,15 +67,15 @@ const StrategyTemplatePicker = observer(({ setCurrentStep, setSelectedTradeType 
                 <button
                     className='strategy-template-picker__icon'
                     onClick={() => {
-                        setActiveTab(DBOT_TABS.BOTS);
+                        setActiveTab(DBOT_TABS.BOT_BUILDER);
                         setActiveTabTutorial(2);
                         setFormVisibility(false);
 
                         // Add a small delay to ensure the tab is selected before scrolling
                         setTimeout(() => {
-                            const botsSection = document.getElementById('id-bots');
-                            if (botsSection) {
-                                botsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            const builderSection = document.getElementById('id-bot-builder');
+                            if (builderSection) {
+                                builderSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             }
                         }, 100);
                     }}

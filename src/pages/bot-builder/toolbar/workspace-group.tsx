@@ -1,3 +1,4 @@
+import React from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
@@ -12,11 +13,13 @@ import {
     LabelPairedMagnifyingGlassMinusMdRegularIcon,
     LabelPairedMagnifyingGlassPlusMdRegularIcon,
     LabelPairedObjectsAlignLeftMdRegularIcon,
+    LabelPairedQuestionMdRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
 /* [/AI] */
+import DigitBlocksHelp from './digit-blocks-help';
 import ToolbarIcon from './toolbar-icon';
 
 const WorkspaceGroup = observer(() => {
@@ -26,6 +29,7 @@ const WorkspaceGroup = observer(() => {
     const { toggleSaveModal } = save_modal;
     const { toggleLoadModal } = load_modal;
     const { isDesktop } = useDevice();
+    const [is_help_open, setHelpOpen] = React.useState(false);
 
     return (
         <div className='toolbar__wrapper'>
@@ -174,7 +178,22 @@ const WorkspaceGroup = observer(() => {
                         </span>
                     }
                 />
+                <div className='vertical-divider' />
+                <ToolbarIcon
+                    popover_message={localize('Digit blocks help')}
+                    icon={
+                        <span
+                            className='toolbar__icon'
+                            id='db-toolbar__digit-help-button'
+                            data-testid='dt_toolbar_digit_help_button'
+                            onClick={() => setHelpOpen(true)}
+                        >
+                            <LabelPairedQuestionMdRegularIcon />
+                        </span>
+                    }
+                />
             </div>
+            <DigitBlocksHelp is_visible={is_help_open} onClose={() => setHelpOpen(false)} />
         </div>
     );
 });

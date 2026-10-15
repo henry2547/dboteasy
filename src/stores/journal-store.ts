@@ -127,8 +127,12 @@ export default class JournalStore {
 
     playAudio = (sound: string) => {
         if (sound !== config().lists.NOTIFICATION_SOUND[0][1]) {
-            const audio = document.getElementById(sound) as HTMLAudioElement;
-            audio.play();
+            const audio = document.getElementById(sound) as HTMLAudioElement | null;
+            if (!audio) return;
+            // Browsers block sound until the user has interacted with the page; that rejection is expected.
+            audio.play().catch(() => {
+                /* autoplay blocked — ignore */
+            });
         }
     };
 

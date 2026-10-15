@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDomServer from 'react-dom/server';
+import { BLOCKS, GROUPS } from '@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog';
 import { localize } from '@deriv-com/translations';
 
 const Arg = ({ ...props }) => {
@@ -190,7 +191,40 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                <Block type='digits_frequency_count'>
+                    <Field name='DIGIT'>3</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_hot_cold'>
+                    <Field name='MODE'>hottest</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_streak' />
             </Category>
+
+            {/* Observational digit blocks, grouped the same way as the observer palette they
+                were migrated from. Each item drags the block onto the canvas with its defaults. */}
+            {GROUPS.map(group => (
+                <Category key={group.id} id={group.id} name={localize(group.name)}>
+                    {BLOCKS.filter(spec => group.categories.includes(spec.category)).map(spec => (
+                        <Block key={spec.type} type={spec.type}>
+                            {spec.fields.map(field => (
+                                <Field key={field.name} name={field.name}>
+                                    {String(field.value)}
+                                </Field>
+                            ))}
+                        </Block>
+                    ))}
+                </Category>
+            ))}
 
             <Category id='analysis' name={localize('Analysis')}>
                 <Category id='indicators' name={localize('Indicators')}>

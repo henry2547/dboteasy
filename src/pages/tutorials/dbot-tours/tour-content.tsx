@@ -33,7 +33,7 @@ export const DBOT_ONBOARDING = [
                         <Localize i18n_default_text='Create your bot using our drag-and-drop blocks or click Quick Strategy to choose from the ready-to-use bot templates.' />
                     </>,
                     <>
-                        <Localize i18n_default_text='We also provide ready-made digit bots and a guide on the Bots tab to show you how you can build and execute a simple strategy.' />
+                        <Localize i18n_default_text='The digit, pattern and parity blocks in the Blocks menu let you build and observe a simple digit strategy.' />
                     </>,
                 ]}
                 media={'/assets/videos/dbot-onboarding-tour-step-1.mp4'}
@@ -62,14 +62,14 @@ export const DBOT_ONBOARDING = [
         disableOverlay: false,
     },
     {
-        target: '#id-bots',
+        target: '#id-bot-builder',
         content: (
             <TourSteps
                 label={<Localize i18n_default_text='Start from a ready-made bot' />}
                 content={[
                     <Localize
                         key='explore bots'
-                        i18n_default_text='Load a digit bot from the Bots tab and tune its settings to build your own.'
+                        i18n_default_text='Load a ready-made bot, or drag the digit blocks from the Blocks menu and tune them to build your own.'
                     />,
                 ]}
                 media={'/assets/videos/dbot-onboarding-tour-step-3.mp4'}
@@ -136,13 +136,13 @@ export const DBOT_ONBOARDING = [
         disableOverlay: false,
     },
     {
-        target: '#id-bots',
+        target: '#id-bot-builder',
         content: (
             <TourSteps
                 label={<Localize i18n_default_text='Build your own digit bot' />}
                 content={[
-                    <Text key={`${0}-id-bots`} as='p'>
-                        <Localize i18n_default_text='The Bots tab holds the recipes; the Bot Builder holds the drag-and-drop blocks.' />
+                    <Text key={`${0}-id-bot-builder`} as='p'>
+                        <Localize i18n_default_text='The Bot Builder holds the drag-and-drop blocks, including the digit, pattern and parity blocks for observational strategies.' />
                     </Text>,
                 ]}
                 step_index={7}

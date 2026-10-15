@@ -1,0 +1,106 @@
+/* Bot builder block guide shown inside the hamburger drawer. */
+
+.blocks-help {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.8rem 1.2rem 2rem;
+    font-size: 1.2rem;
+    line-height: 1.7rem;
+    color: var(--text-general);
+
+    &__intro {
+        margin: 0;
+        color: var(--text-less-prominent);
+    }
+
+    &__note {
+        margin: 0 0 0.4rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__section {
+        border-radius: 10px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+        overflow: hidden;
+    }
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        width: 100%;
+        padding: 0.9rem 1.1rem;
+        border: none;
+        background: transparent;
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: var(--text-prominent);
+        text-align: start;
+        cursor: pointer;
+    }
+
+    &__chevron {
+        font-size: 1rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__content {
+        padding: 0 1.1rem 1.1rem;
+    }
+
+    &__what {
+        margin: 0 0 0.8rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__heading {
+        margin: 1.2rem 0 0.6rem;
+        font-weight: bold;
+        color: var(--text-prominent);
+    }
+
+    &__steps {
+        padding-inline-start: 2rem;
+        list-style: decimal;
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    &__category {
+        margin-bottom: 0.8rem;
+    }
+
+    &__category-name {
+        margin: 0.8rem 0 0.4rem;
+        font-weight: bold;
+        color: var(--text-prominent);
+    }
+
+    &__category-note {
+        margin: 0 0 0.4rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__blocks {
+        padding-inline-start: 2rem;
+        list-style: disc;
+
+        li {
+            margin-bottom: 0.4rem;
+        }
+    }
+
+    &__block-name {
+        color: var(--text-prominent);
+    }
+
+    &__block-note {
+        display: block;
+        color: var(--text-less-prominent);
+    }
+}

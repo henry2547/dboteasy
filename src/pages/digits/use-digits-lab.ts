@@ -365,7 +365,7 @@ export function useDigitsLab() {
 
     const currentTick = ticks.length > 0 ? ticks[ticks.length - 1] : null;
     const previousTick = ticks.length > 1 ? ticks[ticks.length - 2] : null;
-    const direction =
+    const direction: 'up' | 'down' | 'flat' =
         currentTick && previousTick
             ? currentTick.quote > previousTick.quote
                 ? 'up'

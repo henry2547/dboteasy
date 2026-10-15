@@ -14,4 +14,5 @@ import './Binary/Trade Definition';
 import './Digits';
 import './Logic';
 import './Math';
+import './Observer';
 import './Text';

@@ -40,8 +40,8 @@ export const updateXmlValues = blockly_options => {
     };
 };
 
-export const getSelectedTradeType = (workspace = window.Blockly.derivWorkspace) => {
-    const trade_type_block = workspace.getAllBlocks(true).find(block => block.type === 'trade_definition_tradetype');
+export const getSelectedTradeType = (workspace = window.Blockly?.derivWorkspace) => {
+    const trade_type_block = workspace?.getAllBlocks(true).find(block => block.type === 'trade_definition_tradetype');
     const selected_trade_type = trade_type_block?.getFieldValue('TRADETYPE_LIST');
     let mandatory_tradeoptions_block = 'trade_definition_tradeoptions';
     if (selected_trade_type === 'multiplier') mandatory_tradeoptions_block = 'trade_definition_multiplier';
