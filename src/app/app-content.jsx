@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { ToastContainer } from 'react-toastify';
+import { Slide, ToastContainer } from 'react-toastify';
 import AuthLoadingWrapper from '@/components/auth-loading-wrapper';
 import ErrorBoundary from '@/components/error-boundary/error-boundary';
 import { botNotification } from '@/components/bot-notification/bot-notification';
@@ -203,7 +203,11 @@ const AppContent = observer(() => {
                             <BotBuilder />
                             <BotStopped />
                             <TransactionDetailsModal />
-                            <ToastContainer limit={3} draggable={false} />
+                            {/* The transition must be passed explicitly: React 19 ignores
+                                `ToastContainer.defaultProps`, and without it react-toastify renders
+                                undefined as an element type, which used to crash the whole page the
+                                first time any bot notification appeared. */}
+                            <ToastContainer limit={3} draggable={false} transition={Slide} />
                         </div>
                     </ThemeProvider>
                 </AuthLoadingWrapper>
