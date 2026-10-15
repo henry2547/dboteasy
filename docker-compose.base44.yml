@@ -8,7 +8,7 @@ services:
     ports:
       - "3000:4003"
     environment:
-      - BASE44_PREVIEW_MODE=1
+      - BASE44_PREVIEW_MODE
     command: ["sh", "-ec", "npm install && exec npm run dev -- --host 0.0.0.0"]
     restart: on-failure
     healthcheck:

@@ -10,6 +10,18 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
 - Dev server listens on port 4003 inside the container, mapped to host port 3000.
 - `npm install` runs on container startup before `npm run dev`. There is no lockfile in the repo.
 
+### Sandbox-only dev override: eager compilation
+Rsbuild turns on Rspack's lazy ("compile on demand") dev compilation by default. Here the browser
+fetches each module separately, and if a hot update lands while such a fetch is in flight the
+disposed module factory is required again — the browser console then shows
+`RuntimeError: factory is undefined` (HMR `warnUnexpectedRequire`) and a chunk of the page can
+fail to resolve. `rsbuild.config.ts` therefore sets `dev.lazyCompilation: false` when
+`BASE44_PREVIEW_MODE === '1'`, which is only true inside the sandbox (`docker-compose.base44.yml`
+passes the flag through, it is not hardcoded there). With the flag unset or any other value the
+Rsbuild default (lazy on) stands, and production builds never read `dev` at all.
+Effect: the first dev build compiles everything eagerly (~5 s here) instead of returning instantly
+and compiling per request; hot updates after that are unchanged.
+
 ## Environment Variables
 - `.env.production` (committed) is loaded by `loadEnv({ mode: 'production' })` in `rsbuild.config.ts` and injected via `source.define` at compile time. No `.env` file is needed for dev.
 - `NEXT_PUBLIC_DERIV_APP_ID` is set in `.env.production` — required for OAuth login; without it Log in / Sign up stay disabled.

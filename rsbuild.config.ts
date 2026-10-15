@@ -9,6 +9,15 @@ loadEnv({ mode: 'production' });
 
 const isStaticBuild = process.env.NEXT_PUBLIC_APP_BUILD === 'true';
 
+// Sandbox dev override. Rsbuild enables Rspack's lazy ("compile on demand") dev
+// compilation by default. With it, the browser requests modules one by one; when a
+// hot update replaces a chunk while such a request is in flight, the module factory
+// the update disposed is required again and the HMR runtime throws
+// "RuntimeError: factory is undefined". Compiling eagerly in the sandbox removes that
+// race at the cost of a slower first dev build. Only the Base44 sandbox sets
+// BASE44_PREVIEW_MODE=1 — anywhere else Rsbuild's default (lazy on) is kept.
+const isSandboxPreview = process.env.BASE44_PREVIEW_MODE === '1';
+
 // Resolve smartcharts from wherever the package actually lives so the asset
 // copy works both standalone and inside the monorepo (npm workspaces hoist the
 // package to the repo root, so a cwd-relative './node_modules/...' glob fails).
@@ -95,7 +104,11 @@ export default defineConfig({
   server: {
     compress: true,
   },
-  dev: { hmr: true },
+  dev: {
+    hmr: true,
+    // See isSandboxPreview above. Sandbox only — production builds never read `dev`.
+    ...(isSandboxPreview ? { lazyCompilation: false } : {}),
+  },
   tools: {
     rspack(config, { appendPlugins, appendRules }) {
       // @deriv-com/quill-ui@1.x vendors a React 18 jsx-runtime that reads
