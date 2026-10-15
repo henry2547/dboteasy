@@ -25,6 +25,12 @@ and compiling per request; hot updates after that are unchanged.
 ## Environment Variables
 - `.env.production` (committed) is loaded by `loadEnv({ mode: 'production' })` in `rsbuild.config.ts` and injected via `source.define` at compile time. No `.env` file is needed for dev.
 - `NEXT_PUBLIC_DERIV_APP_ID` is set in `.env.production` — required for OAuth login; without it Log in / Sign up stay disabled.
+  This app id is **intentionally kept in `.env.production`** and is the single source for OAuth login/sign-up
+  and the WebSocket client id. It is a public client id, not a credential: do not move it to Base44 secrets,
+  do not hardcode a copy in `docker-compose.base44.yml`, and do not point the sandbox at a different app id.
+  `loadEnv({ mode: 'production' })` + `source.define` in `rsbuild.config.ts` inject it at compile time, so
+  editing the file is enough — restart the `web` service (`docker compose -f docker-compose.base44.yml restart web`)
+  because a dev-server config change is not hot-reloaded.
 - Google Drive credentials (`GD_CLIENT_ID`, `GD_APP_ID`, `GD_API_KEY`) are optional; blank disables the feature.
 - No external service credentials are required for local development.
 
