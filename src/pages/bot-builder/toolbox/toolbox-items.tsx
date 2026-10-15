@@ -191,6 +191,23 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                <Block type='digits_frequency_count'>
+                    <Field name='DIGIT'>3</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_hot_cold'>
+                    <Field name='MODE'>hottest</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_streak' />
             </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they

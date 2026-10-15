@@ -108,11 +108,21 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
 - **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
   `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
 - **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
-  `digits_matches_differs` and `digits_frequency` live in
-  `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
-  category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
-  sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
-  `modifyContextMenu` from `../../../utils` breaks the whole dev build.
+  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold` and
+  `digits_streak` live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot
+  Builder's "Digits" category (its Blocks-menu flyout lists them with an add button). Mind the import
+  depth: those files sit one level under `blocks/`, so shared helpers come from `../../utils` —
+  importing `modifyContextMenu` from `../../../utils` breaks the whole dev build.
+- The count / hot-cold / streak blocks call `Bot.getDigitCount`, `Bot.getHotColdDigit(mode, sample)`
+  and `Bot.getDigitStreak()`. Those helpers live in `services/tradeEngine/trade/Ticks.js` and are
+  exposed through `services/tradeEngine/Interface/TicksInterface.js` — both files must be updated
+  together, or the generated code calls an undefined function.
+- **Digit blocks guide:** the toolbar's `?` icon (`#db-toolbar__digit-help-button` in
+  `toolbar/workspace-group.tsx`) opens `toolbar/digit-blocks-help.tsx`, a step-by-step modal for the
+  digit blocks. Its stylesheet widens the shared dialog (`dc-dialog__dialog`) and makes
+  `dc-dialog__content` scroll. Note the flyout `+` buttons are hover-revealed
+  (`flyout__button-add--hide`), so a scripted click reports `found: false` — hover first, or drive it
+  by hand.
 
 ### Verifying these tabs
 - The tab targets are the `<li>` elements `#id-digits`, `#id-statistics` — click these to

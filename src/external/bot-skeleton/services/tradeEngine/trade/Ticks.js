@@ -133,6 +133,54 @@ export default Engine =>
                 })
             );
         }
+        getDigitCount(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    const recent_digits = digits.slice(-size);
+                    resolve(recent_digits.filter(value => Number(value) === Number(digit)).length);
+                })
+            );
+        }
+
+        getHotColdDigit(mode, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    const counts = new Array(10).fill(0);
+                    digits.slice(-size).forEach(value => {
+                        const digit = Number(value);
+                        if (digit >= 0 && digit <= 9) counts[digit] += 1;
+                    });
+                    const wants_coldest = mode === 'coldest';
+                    const best_digit = counts.reduce(
+                        (best, count, digit) =>
+                            wants_coldest ? (count < counts[best] ? digit : best) : count > counts[best] ? digit : best,
+                        0
+                    );
+                    resolve(best_digit);
+                })
+            );
+        }
+
+        getDigitStreak() {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    if (!digits.length) {
+                        resolve(0);
+                        return;
+                    }
+                    const latest_digit = Number(digits[digits.length - 1]);
+                    let streak = 0;
+                    for (let index = digits.length - 1; index >= 0; index -= 1) {
+                        if (Number(digits[index]) !== latest_digit) break;
+                        streak += 1;
+                    }
+                    resolve(streak);
+                })
+            );
+        }
+
         getLastDigitsFromList(ticks) {
             const digits = ticks.map(tick => {
                 return getLastDigit(tick.toFixed(this.getPipSize()));
