@@ -1,0 +1,8 @@
+.bot-config-summary {
+    display: block;
+    margin-block-start: 0.2rem;
+    color: var(--text-less-prominent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
