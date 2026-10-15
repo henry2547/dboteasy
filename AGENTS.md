@@ -225,6 +225,7 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
 - Unit coverage lives in `services/observer/__tests__/` — `observer-engine.test.js` (runtime),
   `observer-generation.test.js` (one generator per palette block, plus every block in
   `scratch/blocks` has a `forBlock` registration) and `observer-validation.test.js` (validation,
-  every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
+  every "When …" hat's event is raised, ops kept for renamed blocks) and `observer-pattern-pair.test.js` (the pair rule: the two newest digits
+  must be the same digit inside the picked set, confirmation separate). Run them with
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
