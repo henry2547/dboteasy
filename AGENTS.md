@@ -107,6 +107,14 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
   page in `main.tsx`, so a broken view shows a recoverable card instead of a blank app.
 - **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
   `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
+- **Blocks guide (hamburger):** the `'blocks'` submenu ("Blocks help") renders
+  `mobile-menu/blocks-help-submenu.tsx`, an accordion over the five Blocks-menu groups — Digits plus the
+  four observer groups. Its content comes from `mobile-menu/blocks-help-data.ts`, which reads `GROUPS` /
+  `blocksInGroup` from `observer-catalog.js`, so the block lists cannot drift from the palette; per block
+  it shows only the observer `help` text that differs from the generic
+  `<label>. Evaluated only on a real market event; missing data is Inconclusive.` sentence. Adding a
+  group to `GROUPS` shows it here automatically, but its "what it is / how to use it" copy needs an entry
+  in that file's `GROUP_TEXT`.
 - **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
   `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold` and
   `digits_streak` live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot
