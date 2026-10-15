@@ -22,6 +22,11 @@ const getBotInterface = tradeEngine => {
         // Observer entry gate: true once per signalled entry, so a canvas whose observer
         // program holds entry blocks trades only when those conditions pass.
         observerEntryPassed: () => observerRuntime.consumeEntry(),
+        // Observer blocks reached by the generated program hand themselves back to the observer
+        // runtime, which evaluates them against the genuine tick stream.
+        observerValue: (id, fallback) => observerRuntime.valueOfBlock(id, fallback),
+        observerCondition: id => observerRuntime.conditionOfBlock(id),
+        observerStatement: id => observerRuntime.runStatement(id),
     };
 };
 

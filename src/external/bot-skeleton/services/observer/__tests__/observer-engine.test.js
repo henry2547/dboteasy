@@ -37,6 +37,23 @@ const program = ({ entry_condition = 'sample1', condition = { op: 'even' } } = {
         blocks: new Map(blocks.map(item => [item.id, item])),
         events: new Map([['tick', ['hat']]]),
         entries: ['entry1'],
+        roots: [],
+        has_entry_gate: true,
+    };
+};
+
+/** The same entry, dragged onto the canvas on its own instead of under an event hat. */
+const rootProgram = () => {
+    const blocks = [
+        block('entry1', 'entry', { inputs: { CONDITION: 'even1' }, body: 'note1', label: 'When All Entry Conditions Pass' }),
+        block('even1', 'even', { label: 'Latest Digit Is Even' }),
+        block('note1', 'note', { fields: { TEXT: 'Setup seen' } }),
+    ];
+    return {
+        blocks: new Map(blocks.map(item => [item.id, item])),
+        events: new Map(),
+        entries: ['entry1'],
+        roots: ['entry1'],
         has_entry_gate: true,
     };
 };
@@ -134,6 +151,35 @@ describe('observer engine', () => {
         expect(outcome.status).toBe('Fail');
         const unbuilt = engine.evaluate('unbuilt1');
         expect(unbuilt.status).toBe('Inconclusive');
+    });
+
+    it('runs a free-standing program on every genuine tick and signals its entry', () => {
+        const journal = journalFor();
+        const engine = new ObserverEngine(rootProgram(), { journal: journal.write });
+        engine.start({ symbol: 'R_100' });
+
+        feed(engine, [1.03]);
+        expect(engine.consumeEntry()).toBe(false);
+
+        feed(engine, [1.06]);
+        expect(engine.consumeEntry()).toBe(true);
+        expect(journal.lines.join('\n')).toContain('Setup seen');
+    });
+
+    it('evaluates and runs a block the generated program reached', () => {
+        const journal = journalFor();
+        const engine = new ObserverEngine(program(), { journal: journal.write });
+        expect(engine.evaluateBlock('even1')).toBe(null);
+
+        engine.start({ symbol: 'R_100' });
+        feed(engine, [1.04]);
+        expect(engine.evaluateBlock('even1')).toMatchObject({ status: 'Pass', value: true });
+
+        engine.runStatementById('note1');
+        expect(journal.lines.join('\n')).toContain('Setup seen');
+
+        // An unknown id is Inconclusive, never a value the generated program could act on.
+        expect(engine.evaluateBlock('gone1').status).toBe('Inconclusive');
     });
 
     it('records a pending observation and completes it on the next genuine tick', () => {

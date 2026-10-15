@@ -26,15 +26,16 @@ const readFields = (block, spec) => {
 };
 
 /**
- * @returns {{ blocks: Map<string, object>, events: Map<string, string[]>, entries: string[], has_entry_gate: boolean }}
+ * @returns {{ blocks: Map<string, object>, events: Map<string, string[]>, entries: string[], roots: string[], has_entry_gate: boolean }}
  */
 export const readProgram = workspace => {
     const blocks = new Map();
     const events = new Map();
     const entries = [];
+    const roots = [];
     let gate = false;
 
-    if (!workspace) return { blocks, events, entries, has_entry_gate: gate };
+    if (!workspace) return { blocks, events, entries, roots, has_entry_gate: gate };
 
     workspace.getAllBlocks(false).forEach(block => {
         const spec = SPEC.get(block.type);
@@ -60,7 +61,15 @@ export const readProgram = workspace => {
         if (spec.op === 'pattern_emit') gate = true;
     });
 
-    return { blocks, events, entries, has_entry_gate: gate || entries.length > 0 };
+    // A free-standing statement is still the program the canvas shows — an entry block, a reset or a
+    // limit dragged straight onto the workspace — so the runtime runs it on every genuine tick too.
+    workspace.getTopBlocks(false).forEach(block => {
+        const spec = SPEC.get(block.type);
+        if (!spec || spec.event || spec.output || block.isShadow?.() || !isActive(block)) return;
+        roots.push(block.id);
+    });
+
+    return { blocks, events, entries, roots, has_entry_gate: gate || entries.length > 0 };
 };
 
 /**

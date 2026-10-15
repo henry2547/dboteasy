@@ -192,6 +192,8 @@ export class ObserverEngine {
         ctx.market_ready = true;
         ctx.duplicate_setup = false;
         ctx.force_inconclusive = false;
+        // Every value the generated program asks for belongs to this tick, never the previous one.
+        this.cache.clear();
 
         // A silent stretch of ticks means the data feed was interrupted, not that ticks vanished.
         if (previous && gap > ctx.freshness_seconds) {
@@ -209,6 +211,7 @@ export class ObserverEngine {
         this.resolvePending();
         this.advancePattern();
         this.dispatch('tick');
+        this.runRoots();
         if (ctx.tick_index >= ctx.analysis_window && ctx.tick_index % ctx.analysis_window === 0) this.dispatch('window');
         this.checkLimits();
     }
@@ -259,6 +262,21 @@ export class ObserverEngine {
             this.budget = MAX_OPS;
             this.once = new Set();
             this.runSequence(hat?.body, event);
+        });
+    }
+
+    /**
+     * Free-standing observer statements are driven by the tick stream exactly like the event hats,
+     * so a program dragged straight onto the canvas — an entry block, a guard, a limit — is
+     * evaluated on every genuine tick instead of sitting there unused.
+     */
+    runRoots() {
+        if (!this.ctx.monitoring || this.ctx.paused) return;
+        (this.program.roots ?? []).forEach(id => {
+            this.cache.clear();
+            this.budget = MAX_OPS;
+            this.once = new Set();
+            this.runSequence(id, 'tick');
         });
     }
 
@@ -417,6 +435,23 @@ export class ObserverEngine {
             args[name] = this.evaluate(child_id);
         });
         return args;
+    }
+
+    /** A value or condition block the generated program reached: evaluated on the spot. */
+    evaluateBlock(id) {
+        if (!this.active) return null;
+        this.budget = MAX_OPS;
+        return this.evaluate(id);
+    }
+
+    /** A statement block the generated program reached: run it, and the sequence it holds. */
+    runStatementById(id) {
+        if (!this.active) return;
+        const block = this.program.blocks.get(id);
+        if (!block) return;
+        this.budget = MAX_OPS;
+        this.ctx.current_block = block;
+        this.runStatement(block, 'program');
     }
 
     reportUnimplemented(block) {

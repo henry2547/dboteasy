@@ -75,6 +75,24 @@ export const observerRuntime = {
         return Boolean(engine?.consumeEntry());
     },
 
+    /** A value block the generated program reached: its value, or `fallback` when Inconclusive. */
+    valueOfBlock(id, fallback) {
+        const outcome = engine?.evaluateBlock(id);
+        const usable = outcome?.status === 'Pass' && outcome.value !== null && outcome.value !== undefined;
+        return usable ? outcome.value : fallback;
+    },
+
+    /** A condition block the generated program reached: true only when it genuinely passes. */
+    conditionOfBlock(id) {
+        const outcome = engine?.evaluateBlock(id);
+        return Boolean(outcome?.status === 'Pass' && outcome.value);
+    },
+
+    /** A statement block the generated program reached: run it through the observer. */
+    runStatement(id) {
+        engine?.runStatementById(id);
+    },
+
     /** Diagnostics for tests and manual checks — never used by the bots themselves. */
     get current() {
         return engine;
