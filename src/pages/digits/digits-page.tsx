@@ -128,7 +128,10 @@ export default function DigitsPage() {
 
             <MarketConditionsPanel statistics={statistics} signals={lab.signals} />
 
-            <DigitGrid statistics={statistics} />
+            <DigitGrid
+                statistics={statistics}
+                currentDigit={recentDigits.length ? recentDigits[recentDigits.length - 1] : null}
+            />
             <DigitDistribution statistics={statistics} recentDigits={recentDigits} />
             <BarrierPanel barriers={lab.barrierStats} />
             <StrategyPanel performance={lab.rulePerformance} signals={lab.signals} />

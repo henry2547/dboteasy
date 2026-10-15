@@ -72,8 +72,13 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   do not fit a narrow phone viewport.
 - The digit-frequency grid (`.digits-grid`) is a fixed 5-column grid at every width — digits 0–4 on
   the first row, 5–9 on the second — so it never scrolls sideways on a phone; below the 768px
-  breakpoint `.digits-card` / `.digits-badge` tighten their type and padding to keep five columns
+  breakpoint `.digit-bubble` / `.digits-badge` tighten their type and padding to keep five columns
   inside a narrow viewport.
+- Digit frequency is drawn as circles (`.digit-bubble`, one SVG per digit in `digit-grid.tsx`), not
+  cards: the coloured disc inside grows with the digit's share of the busiest digit, green
+  (`--brand-success`) for the hottest digit, red (`--status-danger`) for the coldest, and a yellow
+  (`--brand-warning`) cursor ring plus pin marks the digit the ticker is on right now. The grid takes
+  `currentDigit` from the newest tick on the page — same value the distribution panel's cursor uses.
 
 ## Verification
 - `curl http://localhost:3000/` returns 200 with the app HTML; JS bundles are served live at `/static/js/index.js`.
@@ -101,8 +106,13 @@ Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and th
   page in `main.tsx`, so a broken view shows a recoverable card instead of a blank app.
 - **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
   `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
-- **Blockly note:** drag-and-drop digit blocks for the Bot Builder are NOT implemented yet — the Bots
-  tab currently ships recipe cards plus a guide, and links to the existing Bot Builder.
+- **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
+  `digits_matches_differs` and `digits_frequency` live in
+  `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
+  category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
+  sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
+  `modifyContextMenu` from `../../../utils` breaks the whole dev build. The Bots tab still ships
+  recipe cards plus a guide.
 
 ### Verifying these tabs
 - The tab targets are the `<li>` elements `#id-digits`, `#id-bots`, `#id-statistics` — click these to
