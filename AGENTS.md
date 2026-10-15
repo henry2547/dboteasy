@@ -115,19 +115,45 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
   `modifyContextMenu` from `../../../utils` breaks the whole dev build.
 
 ### Verifying these tabs
-- The tab targets are the `<li>` elements `#id-digits`, `#id-bots`, `#id-statistics` — click these to
+- The tab targets are the `<li>` elements `#id-digits`, `#id-statistics` — click these to
   switch; the URL hash only selects a tab on first load, not after mount.
 - Digits: check the market-conditions panel, the chart cursor + ticker trail, the digit-circle marker
   and the floating "Scan markets" button.
 - The scanner returns ~8 volatility markets; picking one switches the whole tab to that market.
 - Known pre-existing console warning: `Failed to load image` (branding logo) — unrelated to this work.
 
-## Isolated observational bot workspace
-- The Bots tab embeds `/bot-lab.html`, a second Rsbuild entry, not a React Router path. Keep it in a separate document: the legacy trading builder patches Blockly globals/prototypes and must not share the observer's stock Blockly instance. The static preview prefix is `/bot/preview/bot-lab.html`.
-- `src/pages/bots/pattern-program.ts` compiles connected declarations; `pattern-engine.ts` is the single chronological state machine used by live monitoring, replay, and comparison. No generated JavaScript, account API, or trade messages are used by this lab.
-- A pattern row begins at the qualifying adjacent run. Only a later confirmation creates the setup; only the next genuine tick creates the outcome. Timeout 0 means unlimited. Stop/pause/gaps invalidate incomplete patterns; restored journals retain completion watermarks to prevent re-evaluation.
-- History seeds statistics, not live detector adjacency. Reconnect, stale data, malformed data, precision changes, and missing tick epochs require history synchronisation. The supported cadences are 1 second for the 1-second group and 2 seconds for classic Volatility; transitions do not bridge missing epochs.
-- Pattern stage is distinct from session state. `Setup detected` is exposed before `Evaluation pending`; the live session's existing timer advances the label without manufacturing a tick. Replay advances only when a genuine historical tick is stepped.
-- Configurations, bounded journals, and traces are browser-local under `dboteasy.observational-bots.v1`. JSON import is local parsing, not a server upload. CSV includes pair/confirmation/outcome timestamps, config version, lifecycle, and interruptions.
-- Verify with `docker compose -f docker-compose.base44.yml exec -T web npm test -- --runInBand src/pages/bots --coverage=false` and `npm run type-check` inside the web container. Deterministic fixture ticks exist only in tests; live/replay UI always uses the public provider.
-- Production build verification can use a temporary Rsbuild config in `/tmp` overriding only `output.distPath.root`, avoiding churn of tracked `dist/` assets. Both `index.html` and `bot-lab.html` must be produced.
+## Observer blocks in the Bot Builder
+The former "Bots" tab is gone: `src/pages/bots/`, the `/bot-lab.html` Rsbuild entry and the isolated
+observer workspace were removed, and the observational block language now ships in the ordinary Bot
+Builder palette. `rsbuild.config.ts` has a single `index` entry again.
+- `src/external/bot-skeleton/scratch/blocks/Observer/observer-catalog.js` is the single source of
+  truth — pure data, deliberately free of any `window.Blockly` access so React can read it while
+  rendering the toolbox. It exports `CATEGORIES` (the 15 original observer categories), `BLOCKS` (one
+  spec per block: `type: 'obs_<id>'`, `label`, `category`, `op`, `fields`, `inputs`, `body`,
+  `output`), and `GROUPS` — the four palette groups below, each with a colour triple and the list of
+  categories it owns.
+- `Observer/index.js` is the only file in that folder that touches `window.Blockly`: it walks `BLOCKS`
+  and registers each spec as a real block (field types come from the spec, `inputs`/`body` become
+  `input_value`/`input_statement` sockets; `op === 'if_else'` adds an `else` statement). It is picked
+  up by `blocks/index.js` (`import './Observer'`), so no extra wiring is needed.
+- The palette entry point is `src/pages/bot-builder/toolbox/toolbox-items.tsx`: right after the
+  legacy `digits` category it maps `GROUPS` to four `<Category>` elements and lists each group's
+  blocks with their default field values. The legacy trading categories are untouched.
+
+| Group id | Palette name | Observer categories inside |
+| --- | --- | --- |
+| `observer_digit_frequency` | Digit & frequency | Digits, Digit Conditions, Frequency & Stability, Matches & Differs, Over & Under, Even & Odd, Digit Statistics |
+| `observer_pattern_parity` | Pattern detection & parity | Pattern Detector, Pattern State, Even/Odd Patterns, Streaks & Transitions |
+| `observer_control` | Observer control | Bot Control, Market Selection, Logic & Comparison, Variables |
+| `observer_entry_monitoring` | Entry & monitoring | Entry Conditions, Restart & Cooldown, Stop & Safety, Learning & Observation, Notifications, Observational Controls, Strategy Comparison |
+
+- Field names that must stay whole numbers (`PERCENT`, `TOLERANCE`, `VALUE`, `LOW`, `HIGH`) are pinned
+  to `precision: 0` in `Observer/index.js`; every other number field keeps one decimal. A block's
+  colour comes from its group, and `meta()` returns the localised label/description used by search.
+- Verify by opening `#bot-builder`: each of the four groups expands in the palette, and dragging one
+  of its blocks onto the canvas places it with its default field values preserved. These blocks are
+  declarative only — no generated JavaScript, account API or trade messages.
+- Note: adding a category to `CATEGORIES` without listing it in one of `GROUPS` makes its blocks
+  invisible in the palette, since `toolbox-items.tsx` renders groups, not categories.
+- Production build verification can use a temporary Rsbuild config in `/tmp` overriding only
+  `output.distPath.root`, avoiding churn of tracked `dist/` assets (do not commit such a config).
