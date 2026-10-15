@@ -64,6 +64,10 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   must own its own scrolling. `.digits` uses a viewport-based height with `overflow-y: auto`.
 - The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because five tabs
   do not fit a narrow phone viewport.
+- The digit-frequency grid (`.digits-grid`) is a fixed 5-column grid at every width — digits 0–4 on
+  the first row, 5–9 on the second — so it never scrolls sideways on a phone; below the 768px
+  breakpoint `.digits-card` / `.digits-badge` tighten their type and padding to keep five columns
+  inside a narrow viewport.
 
 ## Verification
 - `curl http://localhost:3000/` returns 200 with the app HTML; JS bundles are served live at `/static/js/index.js`.
