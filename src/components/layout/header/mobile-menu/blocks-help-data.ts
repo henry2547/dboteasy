@@ -1,5 +1,10 @@
 // @ts-nocheck — the observer catalogue is plain JS data (see AGENTS.md); types are inferred loosely.
-import { GROUPS, blocksInGroup } from '@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog';
+import {
+    GROUPS,
+    blocksInGroup,
+    categoryGuide,
+    helpFor,
+} from '@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog';
 
 export type TGuideEntry = { name: string; note?: string };
 export type TGuideGroup = {
@@ -7,8 +12,8 @@ export type TGuideGroup = {
     title: string;
     what: string;
     steps: string[];
-    /** Categories of the Blocks menu, each with the blocks it holds (observer groups). */
-    categories?: { name: string; blocks: TGuideEntry[] }[];
+    /** Categories of the Blocks menu, each with its advice and the blocks it holds (observer groups). */
+    categories?: { name: string; note?: string; blocks: TGuideEntry[] }[];
     /** Flat block list for a group that has no categories (Digits). */
     blocks?: TGuideEntry[];
 };
@@ -27,10 +32,9 @@ const DIGIT_BLOCKS: TGuideEntry[] = [
     { name: 'Digit streak', note: 'How many ticks in a row ended with the same last digit as the newest tick.' },
 ];
 
-/** The observer catalogue ships a generic sentence on every block; only custom help is worth showing. */
-const genericHelp = (label: string) => `${label}. Evaluated only on a real market event; missing data is Inconclusive.`;
+/** The catalogue gives every block its category's advice; only wording of its own is worth repeating here. */
 const noteOf = (spec: any): string | undefined =>
-    spec.help && spec.help !== genericHelp(spec.label) ? spec.help : undefined;
+    spec.help && spec.help !== helpFor(spec.label, spec.category) ? spec.help : undefined;
 
 const observerCategories = (groupId: string) => {
     const group = GROUPS.find(item => item.id === groupId);
@@ -39,6 +43,8 @@ const observerCategories = (groupId: string) => {
     return group.categories
         .map(category => ({
             name: category as string,
+            // The advice the catalogue gives every block in this category.
+            note: categoryGuide(category),
             blocks: specs
                 .filter(spec => spec.category === category)
                 .map(spec => ({ name: spec.label as string, note: noteOf(spec) })),

@@ -65,6 +65,7 @@ export default function BlocksHelpSubmenu() {
                                 {group.categories?.map(category => (
                                     <div key={category.name} className='blocks-help__category'>
                                         <p className='blocks-help__category-name'>{category.name}</p>
+                                        {category.note && <p className='blocks-help__category-note'>{category.note}</p>}
                                         <BlockList entries={category.blocks} />
                                     </div>
                                 ))}

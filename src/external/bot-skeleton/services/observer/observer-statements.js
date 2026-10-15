@@ -16,6 +16,16 @@ const numericArg = (args, name) => {
 
 const variableName = block => String(block.fields.NAME ?? 'counter');
 
+/** One journal line per strategy, from genuinely completed observations only. */
+const describeComparisons = rows =>
+    rows
+        .map(row =>
+            row.sufficient
+                ? `${row.strategy} ${row.passes}/${row.completed} (older ${row.older.frequency.toFixed(2)}% → newer ${row.newer.frequency.toFixed(2)}%)`
+                : `${row.strategy} insufficient sample (${row.older.completed} / ${row.newer.completed} completed)`
+        )
+        .join('; ');
+
 export const STATEMENTS = {
     // Journal.
     note: (ctx, block) => ctx.note(String(block.fields.TEXT), block.type === 'obs_notification'),
@@ -92,6 +102,7 @@ export const STATEMENTS = {
     monitor_stop: ctx => ctx.setMonitoring(false),
     next_genuine: () => 'end',
     inconclusive: ctx => ctx.markInconclusive(),
+    adv_window: (ctx, block) => ctx.setAnalysisWindow(Number(block.fields.N)),
 
     // Pattern detector.
     pattern_detect_pair: (ctx, block) => ctx.detectPair(String(block.fields.PAIRS)),
@@ -125,6 +136,31 @@ export const STATEMENTS = {
     pattern_allow_next: ctx => ctx.allowNextSetup(),
     pattern_explain: ctx => ctx.explainPattern(),
     pattern_minimum: (ctx, block) => ctx.setMinimumSample(Number(block.fields.N)),
+    research_windows: (ctx, block) => {
+        const rows = values.compareObservedStrategies(ctx.completed, {
+            digit: ctx.digit,
+            minimum: Number(block.fields.MINIMUM),
+            window: Number(block.fields.N),
+        });
+        ctx.note(
+            `Compare Strategy Across Windows (${block.fields.N} ticks per window): ${describeComparisons(rows)}. Descriptive frequencies of completed observations, not probabilities.`
+        );
+    },
+    research_rank: (ctx, block) => {
+        const eligible = values
+            .compareObservedStrategies(ctx.completed, { digit: ctx.digit, minimum: Number(block.fields.MINIMUM) })
+            .filter(row => row.sufficient)
+            .sort((a, b) => b.frequency - a.frequency);
+        if (!eligible.length) {
+            ctx.note(`Rank Strategies By Observed Results: no strategy has ${block.fields.MINIMUM} completed setups in each half-window yet.`);
+            return;
+        }
+        ctx.note(
+            `Rank Strategies By Observed Results: ${eligible
+                .map((row, index) => `${index + 1}. ${row.strategy} ${row.frequency.toFixed(2)}% (${row.passes}/${row.completed})`)
+                .join(', ')}. Descriptive frequency of completed observations, not a probability.`
+        );
+    },
     research_explain: ctx => ctx.explainResearch(),
     use_market: () => {},
 

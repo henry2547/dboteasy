@@ -183,3 +183,42 @@ export const outcome = (strategy, digit, selected, barrier) => {
             return null;
     }
 };
+
+/** The strategies an observation can be armed with, in the order the palette lists them. */
+export const STRATEGIES = ['over', 'under', 'matches', 'differs', 'even', 'odd'];
+
+/** Share of a set of completed observations that qualified, or NaN for an empty set. */
+export const qualifiedFrequency = rows => percentage(rows.filter(record => record.qualified).length, rows.length);
+
+/**
+ * The observed outcomes of one strategy in this session, older half against newer half.
+ *
+ * Nothing is re-simulated or predicted: these are the observations the running bot genuinely
+ * completed. `minimum` is how many completed observations each half needs before the comparison is
+ * worth reading, and `window` (optional) keeps only the newest 2×N ticks of them.
+ */
+export const observedComparison = (completed, { strategy, digit, minimum = 1, window } = {}) => {
+    let rows = completed.filter(record => record.strategy === strategy);
+    if (strategy === 'matches' || strategy === 'differs') rows = rows.filter(record => Number(record.digit) === Number(digit));
+    if (Number.isFinite(window) && rows.length) {
+        const newest = Number(rows[rows.length - 1].tick_index) || 0;
+        rows = rows.filter(record => Number(record.tick_index) > newest - Number(window) * 2);
+    }
+    const half = Math.floor(rows.length / 2);
+    const older = rows.slice(0, half);
+    const newer = rows.slice(half);
+    const required = Math.max(1, Math.trunc(Number(minimum) || 1));
+    return {
+        strategy,
+        completed: rows.length,
+        passes: rows.filter(record => record.qualified).length,
+        frequency: rows.length ? qualifiedFrequency(rows) : NaN,
+        older: { completed: older.length, frequency: older.length ? qualifiedFrequency(older) : NaN },
+        newer: { completed: newer.length, frequency: newer.length ? qualifiedFrequency(newer) : NaN },
+        sufficient: older.length >= required && newer.length >= required,
+    };
+};
+
+/** Every strategy compared on its own completed observations, for the Strategy Comparison blocks. */
+export const compareObservedStrategies = (completed, options = {}) =>
+    STRATEGIES.map(strategy => observedComparison(completed, { ...options, strategy }));

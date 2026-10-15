@@ -106,6 +106,7 @@ export class ObserverEngine {
             requestStop: () => engine.requestStop(),
             setMonitoring: flag => engine.setMonitoring(flag),
             markInconclusive: () => engine.markInconclusive(),
+            setAnalysisWindow: size => engine.setAnalysisWindow(size),
             explainPattern: () => engine.explainPattern(),
             explainResearch: () => engine.explainResearch(),
             detectPair: pairs => engine.detectPair(pairs),
@@ -686,6 +687,13 @@ export class ObserverEngine {
         this.ctx.minimum_sample = Math.max(1, Number(ticks) || 1);
     }
 
+    /** "Analyse Last N Ticks": the window every frequency read is taken over. */
+    setAnalysisWindow(size) {
+        const window = Math.max(1, Math.trunc(Number(size) || this.ctx.analysis_window));
+        this.ctx.analysis_window = window;
+        this.note(`Analysis window set to the newest ${window} genuine tick(s); the frequency and stability reads now use it.`);
+    }
+
     setDedupe(flag) {
         this.ctx.pattern.dedupe = Boolean(flag);
     }
@@ -709,7 +717,17 @@ export class ObserverEngine {
     }
 
     explainResearch() {
-        this.note('Strategy comparison is not evaluated by the observer yet, so its numbers stay Inconclusive.');
+        const rows = values.compareObservedStrategies(this.ctx.completed, { digit: this.ctx.digit });
+        const observed = rows.filter(row => row.completed > 0);
+        if (!observed.length) {
+            this.note('Strategy comparison: no strategy has completed an observation in this session yet, so every candidate stays Inconclusive.');
+            return;
+        }
+        this.note(
+            `Strategy comparison: ${observed
+                .map(row => `${row.strategy} ${row.passes}/${row.completed} observed`)
+                .join(', ')}. Descriptive frequency of genuinely completed observations, never a probability or a signal.`
+        );
     }
 
     // ---------------------------------------------------------------- session state

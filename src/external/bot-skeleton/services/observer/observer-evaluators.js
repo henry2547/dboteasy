@@ -196,6 +196,25 @@ export const EVALUATORS = {
     },
     number: (ctx, block) => read(Number(block.fields.VALUE), 'Fixed number.'),
 
+    // Strategy comparison: the observed outcomes of one armed strategy, never a prediction.
+    research_candidate: (ctx, block) => {
+        const comparison = values.observedComparison(ctx.completed, {
+            strategy: String(block.fields.STRATEGY),
+            digit: Number(block.fields.DIGIT),
+            minimum: Number(block.fields.MINIMUM),
+        });
+        if (!comparison.completed) return unknown('Inconclusive: this candidate has no completed observation in this session yet.');
+        if (!comparison.sufficient) {
+            return unknown(
+                `Inconclusive: ${comparison.older.completed} / ${comparison.newer.completed} completed setups in the two half-windows, ${block.fields.MINIMUM} required in each.`
+            );
+        }
+        return finite(
+            comparison.frequency,
+            `${block.fields.STRATEGY}: ${comparison.passes}/${comparison.completed} observed outcomes; older half ${comparison.older.frequency.toFixed(2)}% against newer half ${comparison.newer.frequency.toFixed(2)}%. Descriptive frequency, not a probability.`
+        );
+    },
+
     // Digit conditions.
     eq: digitComparison((a, b) => a === b, 'equals', 'does not equal'),
     ne: digitComparison((a, b) => a !== b, 'differs from', 'matches'),

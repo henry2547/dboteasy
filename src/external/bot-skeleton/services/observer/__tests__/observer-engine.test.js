@@ -8,7 +8,13 @@
  * - every verdict lands in the journal.
  */
 import { ObserverEngine } from '../observer-engine';
+import { EVALUATORS } from '../observer-evaluators';
+import { STATEMENTS } from '../observer-statements';
 import * as values from '../observer-values';
+import { BLOCKS } from '../../../scratch/blocks/Observer/observer-catalog';
+
+/** Ops the engine drives itself, so they need no evaluator or statement entry. */
+const ENGINE_OPS = new Set(['event', 'if', 'if_else', 'repeat', 'once', 'wait', 'entry', 'end', 'continue']);
 
 const block = (id, op, extra = {}) => ({
     id,
@@ -31,7 +37,8 @@ const program = ({ entry_condition = 'sample1', condition = { op: 'even' } } = {
         block('entry1', 'entry', { inputs: { CONDITION: entry_condition }, body: 'note1', label: 'When All Entry Conditions Pass' }),
         block('note1', 'note', { fields: { TEXT: 'Setup seen' } }),
         block('sample1', 'sample', { fields: { N: 2 }, label: 'Check Minimum Sample Size' }),
-        block('unbuilt1', 'research_rank', { fields: { MINIMUM: 10 }, label: 'Rank Strategies By Observed Results' }),
+        // An op the observer has no evaluator for yet: it can never signal.
+        block('unbuilt1', 'future_op', { label: 'Some Future Block' }),
     ];
     return {
         blocks: new Map(blocks.map(item => [item.id, item])),
@@ -58,6 +65,32 @@ const rootProgram = () => {
     };
 };
 
+/** A program that arms an observation every tick and holds the Strategy Comparison blocks. */
+const researchProgram = () => {
+    const blocks = [
+        block('hat', 'event', { event: 'tick', body: 'obs1', label: 'When New Tick Arrives' }),
+        block('obs1', 'observe_matches', { next: null }),
+        block('research1', 'research_candidate', {
+            fields: { STRATEGY: 'matches', DIGIT: 2, MINIMUM: 1 },
+            label: 'Compare Matches Candidate',
+        }),
+        block('rank1', 'research_rank', { fields: { MINIMUM: 1 }, label: 'Rank Strategies By Observed Results' }),
+        block('window1', 'adv_window', { fields: { N: 3 }, label: 'Analyse Last N Ticks' }),
+        block('windows1', 'research_windows', {
+            fields: { N: 3, MINIMUM: 1 },
+            label: 'Compare Strategy Across Windows',
+        }),
+        block('explain1', 'research_explain', { label: 'Explain Strategy Comparison' }),
+    ];
+    return {
+        blocks: new Map(blocks.map(item => [item.id, item])),
+        events: new Map([['tick', ['hat']]]),
+        entries: [],
+        roots: [],
+        has_entry_gate: false,
+    };
+};
+
 let epoch = 1000;
 const feed = (engine, prices) => {
     // Epochs move forward across calls too: the runtime treats one epoch as one genuine tick.
@@ -81,6 +114,26 @@ describe('observer-values', () => {
         expect(values.matchesSequence([1, 2, 3], [2, 3])).toBe(true);
         expect(values.matchesSequence([1, 2], [1, 2, 3])).toBeNull();
         expect(Number.isNaN(values.frequencyOf([], 1))).toBe(true);
+    });
+});
+
+describe('observer catalogue coverage', () => {
+    it('evaluates or runs every block the palette offers', () => {
+        // A statement block needs a STATEMENTS entry; every other block needs an EVALUATORS entry.
+        const unimplemented = BLOCKS.filter(spec => {
+            if (ENGINE_OPS.has(spec.op)) return false;
+            return spec.output ? !EVALUATORS[spec.op] : !STATEMENTS[spec.op];
+        })
+            .map(spec => `${spec.type} (${spec.op})`)
+            .sort();
+        expect(unimplemented).toEqual([]);
+    });
+
+    it('gives every block a description that says more than its own name', () => {
+        const thin = BLOCKS.filter(
+            spec => !spec.help || spec.help.length < 40 || spec.help.trim() === `${spec.label}.`
+        ).map(spec => spec.type);
+        expect(thin).toEqual([]);
     });
 });
 
@@ -180,6 +233,65 @@ describe('observer engine', () => {
 
         // An unknown id is Inconclusive, never a value the generated program could act on.
         expect(engine.evaluateBlock('gone1').status).toBe('Inconclusive');
+    });
+
+    it('compares observed outcomes only once each half-window has enough completed setups', () => {
+        const engine = new ObserverEngine(researchProgram(), { journal: () => {} });
+        engine.start({ symbol: 'R_100' });
+
+        // Nothing observed yet: a candidate is Inconclusive, never a fabricated number.
+        expect(engine.evaluate('research1').status).toBe('Inconclusive');
+
+        engine.setDigit(2, 'test');
+        feed(engine, [1.02, 1.09, 1.02, 1.09, 1.02, 1.09]);
+        expect(engine.ctx.completed.length).toBeGreaterThanOrEqual(4);
+
+        const outcome = engine.evaluate('research1');
+        expect(outcome.status).toBe('Pass');
+        expect(outcome.value).toBeGreaterThanOrEqual(0);
+        expect(outcome.value).toBeLessThanOrEqual(100);
+
+        // The same data cannot satisfy a minimum sample of 22 completed setups per half-window.
+        const strict = new ObserverEngine(researchProgram(), { journal: () => {} });
+        strict.program.blocks.get('research1').fields.MINIMUM = 22;
+        strict.start({ symbol: 'R_100' });
+        strict.setDigit(2, 'test');
+        feed(strict, [1.02, 1.09, 1.02, 1.09, 1.02, 1.09]);
+        expect(strict.evaluate('research1').status).toBe('Inconclusive');
+    });
+
+    it('ranks and explains strategies from completed observations, and sets the analysis window', () => {
+        const journal = journalFor();
+        const engine = new ObserverEngine(researchProgram(), { journal: journal.write });
+        engine.start({ symbol: 'R_100' });
+
+        engine.runStatementById('rank1');
+        engine.runStatementById('explain1');
+        expect(journal.lines.join('\n')).toContain('no strategy has 1 completed setups in each half-window yet');
+        expect(journal.lines.join('\n')).toContain('no strategy has completed an observation in this session yet');
+
+        engine.setDigit(2, 'test');
+        feed(engine, [1.02, 1.09, 1.02, 1.09, 1.02, 1.09]);
+
+        engine.runStatementById('rank1');
+        engine.runStatementById('window1');
+        engine.runStatementById('explain1');
+        const written = journal.lines.join('\n');
+        expect(written).toContain('Rank Strategies By Observed Results: 1. matches');
+        expect(written).toContain('Analysis window set to the newest 3 genuine tick(s)');
+        expect(written).toContain('Strategy comparison: matches');
+        expect(engine.ctx.analysis_window).toBe(3);
+    });
+
+    it('compares strategies across tick windows without inventing an outcome', () => {
+        const journal = journalFor();
+        const engine = new ObserverEngine(researchProgram(), { journal: journal.write });
+        engine.start({ symbol: 'R_100' });
+        engine.setDigit(2, 'test');
+        feed(engine, [1.02, 1.09, 1.02, 1.09, 1.02, 1.09]);
+
+        engine.runStatementById('windows1');
+        expect(journal.lines.join('\n')).toContain('Compare Strategy Across Windows (3 ticks per window)');
     });
 
     it('records a pending observation and completes it on the next genuine tick', () => {
