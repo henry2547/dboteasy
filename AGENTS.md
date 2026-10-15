@@ -150,10 +150,16 @@ Builder palette. `rsbuild.config.ts` has a single `index` entry again.
   spec per block: `type: 'obs_<id>'`, `label`, `category`, `op`, `fields`, `inputs`, `body`,
   `output`), and `GROUPS` — the four palette groups below, each with a colour triple and the list of
   categories it owns.
-- `Observer/index.js` is the only file in that folder that touches `window.Blockly`: it walks `BLOCKS`
-  and registers each spec as a real block (field types come from the spec, `inputs`/`body` become
-  `input_value`/`input_statement` sockets; `op === 'if_else'` adds an `else` statement). It is picked
-  up by `blocks/index.js` (`import './Observer'`), so no extra wiring is needed.
+- `Observer/index.js` walks `BLOCKS` and registers each spec as a real block (field types come from
+  the spec, `inputs`/`body` become `input_value`/`input_statement` sockets; `op === 'if_else'` adds an
+  `else` statement) and then imports `./generator`, so those two files are the only ones in that
+  folder touching `window.Blockly`. The folder is picked up by `blocks/index.js`
+  (`import './Observer'`), so no extra wiring is needed.
+- `Observer/generator.js` registers one JavaScript generator per observer block. **These blocks have
+  no runtime**, so every generator is an inert placeholder: value blocks emit a neutral literal
+  (`false` / `0` / `''` / `[]`) and statement blocks emit a comment only — the `do` sequence they
+  hold is never generated. Without those generators `Run` failed with
+  `JavaScript generator does not know how to generate code for block type "obs_…"`.
 - The palette entry point is `src/pages/bot-builder/toolbox/toolbox-items.tsx`: right after the
   legacy `digits` category it maps `GROUPS` to four `<Category>` elements and lists each group's
   blocks with their default field values. The legacy trading categories are untouched.
@@ -170,7 +176,11 @@ Builder palette. `rsbuild.config.ts` has a single `index` entry again.
   colour comes from its group, and `meta()` returns the localised label/description used by search.
 - Verify by opening `#bot-builder`: each of the four groups expands in the palette, and dragging one
   of its blocks onto the canvas places it with its default field values preserved. These blocks are
-  declarative only — no generated JavaScript, account API or trade messages.
+  declarative only — no account API and no trade messages — and the generated program ignores them
+  (see `generator.js` above). To check generation without a logged-in account (Run is login-gated),
+  load a workspace XML of observer blocks into the live workspace and call
+  `window.Blockly.JavaScript.javascriptGenerator.workspaceToCode(workspace)`: it must not throw, and
+  the output must hold only the placeholder comments/literals.
 - Note: adding a category to `CATEGORIES` without listing it in one of `GROUPS` makes its blocks
   invisible in the palette, since `toolbox-items.tsx` renders groups, not categories.
 - Production build verification can use a temporary Rsbuild config in `/tmp` overriding only

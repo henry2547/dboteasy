@@ -7,6 +7,7 @@
 import { localize } from '@deriv-com/translations';
 import { modifyContextMenu } from '../../utils';
 import { BLOCKS, groupFor } from './observer-catalog';
+import './generator';
 
 /** Precision 0 keeps the percentage/tolerance fields whole, as in the observer workspace. */
 const WHOLE_NUMBER_FIELDS = ['PERCENT', 'TOLERANCE', 'VALUE', 'LOW', 'HIGH'];
