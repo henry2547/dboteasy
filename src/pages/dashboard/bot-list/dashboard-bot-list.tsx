@@ -2,7 +2,7 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import Text from '@/components/shared_ui/text';
-import { getSavedWorkspaces } from '@/external/bot-skeleton';
+import { getBots } from '@/services/bots.service';
 import { useStore } from '@/hooks/useStore';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
@@ -31,17 +31,21 @@ const HEADERS: THeader[] = [
 ];
 
 const DashboardBotList = observer(() => {
-    const { load_modal, dashboard } = useStore();
+    const { load_modal, dashboard, run_panel } = useStore();
     const { setDashboardStrategies, dashboard_strategies } = load_modal;
     const { setStrategySaveType, strategy_save_type } = dashboard;
+    const { is_running } = run_panel;
     const { isDesktop } = useDevice();
     const get_first_strategy_info = React.useRef(false);
     const get_instacee = React.useRef(false);
 
+    // The bot being traded right now, so the list can show the true status of each bot.
+    const running_id = is_running ? window.Blockly?.derivWorkspace?.current_strategy_id ?? '' : '';
+
     React.useEffect(() => {
         setStrategySaveType('');
         const getStrategies = async () => {
-            const recent_strategies = await getSavedWorkspaces();
+            const recent_strategies = await getBots(running_id);
             setDashboardStrategies(recent_strategies);
             if (!get_instacee.current) {
                 get_instacee.current = true;
@@ -50,7 +54,7 @@ const DashboardBotList = observer(() => {
         getStrategies();
         //this dependency is used when we use the save modal popup
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [strategy_save_type]);
+    }, [strategy_save_type, running_id]);
 
     React.useEffect(() => {
         if (!dashboard_strategies?.length && !get_first_strategy_info.current) {

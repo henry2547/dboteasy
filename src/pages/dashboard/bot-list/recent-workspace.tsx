@@ -11,6 +11,7 @@ import { useComponentVisibility } from '@/hooks/useComponentVisibility';
 import { useStore } from '@/hooks/useStore';
 import {
     LabelPairedPageCircleArrowRightSmRegularIcon,
+    LabelPairedStopLossSmRegularIcon,
     LabelPairedTrashSmRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { LegacyMenuDots1pxIcon, LegacySave1pxIcon } from '@deriv/quill-icons/Legacy';
@@ -19,6 +20,8 @@ import { useDevice } from '@deriv-com/ui';
 /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
 /* [/AI] */
 import { STRATEGY } from '../../../constants/dashboard';
+import BotConfigSummary from './bot-config-summary';
+import BotStatusBadge from './bot-status-badge';
 import './index.scss';
 
 export const CONTEXT_MENU = [
@@ -41,6 +44,11 @@ export const CONTEXT_MENU = [
         label: <Localize i18n_default_text='Save' />,
     },
     {
+        type: STRATEGY.STOP,
+        icon: <LabelPairedStopLossSmRegularIcon fill='var(--text-general)' />,
+        label: <Localize i18n_default_text='Stop' />,
+    },
+    {
         type: STRATEGY.DELETE,
         icon: <LabelPairedTrashSmRegularIcon fill='var(--text-general)' />,
         label: <Localize i18n_default_text='Delete' />,
@@ -54,7 +62,7 @@ type TRecentWorkspace = {
 };
 
 const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
-    const { dashboard, load_modal, save_modal } = useStore();
+    const { dashboard, load_modal, save_modal, run_panel } = useStore();
     const { setActiveTab } = dashboard;
     const { toggleSaveModal, updateBotName } = save_modal;
     const {
@@ -123,6 +131,11 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                 handleSave();
                 break;
 
+            case STRATEGY.STOP:
+                // Only the bot trading right now can be stopped.
+                run_panel.onStopBotClick();
+                break;
+
             case STRATEGY.DELETE:
                 onToggleDeleteDialog(true);
                 /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
@@ -134,6 +147,9 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
         }
     };
 
+    const is_running_bot = workspace.status === 'running';
+    // Stop is offered only for the bot that is trading, so the menu never shows a dead action.
+    const context_menu = CONTEXT_MENU.filter(item => item.type !== STRATEGY.STOP || is_running_bot);
     const is_active_mobile = selected_strategy_id === workspace.id && is_dropdown_visible;
     const text_size = isDesktop ? 'xs' : 'xxs';
 
@@ -159,6 +175,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                         {workspace.name}
                     </Text>
                 </div>
+                <BotConfigSummary config={workspace.config} />
             </div>
             <div className='bot-list__item__time-stamp'>
                 <Text align='left' as='p' size={text_size} lineHeight='l'>
@@ -166,6 +183,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                 </Text>
             </div>
             <div className='bot-list__item__load-type'>
+                <BotStatusBadge status={workspace.status} />
                 {getRecentFileIcon(workspace.save_type, 'bot-list__item__load-type__icon--active')}
                 <div className='bot-list__item__load-type__icon--saved'>
                     <Text align='left' as='p' size={text_size} lineHeight='l'>
@@ -175,7 +193,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
             </div>
             {isDesktop ? (
                 <div className='bot-list__item__actions'>
-                    {CONTEXT_MENU.map(item => (
+                    {context_menu.map(item => (
                         <div
                             key={item.type}
                             className='bot-list__item__actions__action-item'
@@ -203,7 +221,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                             'bot-list__item__responsive--min': dashboard_strategies.length <= 5,
                         })}
                     >
-                        {CONTEXT_MENU.map(item => (
+                        {context_menu.map(item => (
                             <div
                                 key={item.type}
                                 className='bot-list__item__responsive__menu'
