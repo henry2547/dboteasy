@@ -1,14 +1,16 @@
 /**
  * JavaScript generators for the observer blocks.
  *
- * The observer language describes market observation, not trading: it has no runtime in the Bot
- * Builder, so a bot containing one of these blocks used to fail to run with
- * `JavaScript generator does not know how to generate code for block type "obs_…"`.
+ * The observer program is NOT executed by the generated JavaScript: `services/observer/` reads the
+ * blocks straight off the canvas and evaluates them on genuine ticks (journal + entry gate). The
+ * generated program only asks the runtime, once per trade cycle, whether an entry was signalled —
+ * see `generateCode` in `scratch/dbot.js`.
  *
- * Each block therefore registers an inert placeholder. A value block (a condition, number, string
- * or digit list) generates a neutral literal, and a statement block — together with the sequence
- * it holds — generates a comment only. The block stays on the canvas and the generated program
- * stays valid, but an observer block never takes part in it.
+ * These generators therefore stay inert, and that is deliberate: without them `Run` failed with
+ * `JavaScript generator does not know how to generate code for block type "obs_…"`, and a strategy
+ * that merely contains an observer block must still compile. A value block (a condition, number,
+ * string or digit list) emits a neutral literal, a statement block — together with the sequence it
+ * holds — emits a comment only.
  */
 import { BLOCKS } from './observer-catalog';
 

@@ -2,6 +2,7 @@ import { save_types } from '../constants';
 import { config } from '../constants/config';
 import { api_base } from '../services/api/api-base';
 import ApiHelpers from '../services/api/api-helpers';
+import { observerRuntime } from '../services/observer';
 import Interpreter from '../services/tradeEngine/utils/interpreter';
 import { compareXml, observer as globalObserver } from '../utils';
 import { getSavedWorkspaces, saveWorkspaceToRecent } from '../utils/local-storage';
@@ -276,6 +277,9 @@ class DBot {
 
         try {
             api_base.is_stopping = false;
+            // The observer session must exist before the code is generated: the generated loop
+            // asks it whether an entry has been signalled.
+            this.startObserverSession();
             const code = this.generateCode();
             if (!this.interpreter?.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
 
@@ -300,6 +304,9 @@ class DBot {
      * @param {Object} limitations Optional limitations (legacy argument)
      */
     generateCode(limitations = {}) {
+        // A canvas that carries observer entry blocks trades only on a signalled entry; every other
+        // strategy keeps the loop it had before.
+        const observer_gate = observerRuntime.gateEnabled();
         return `
             var BinaryBotPrivateInit;
             var BinaryBotPrivateStart;
@@ -348,6 +355,7 @@ class DBot {
             BinaryBotPrivateRun(BinaryBotPrivateInit);
             while (true) {
                 BinaryBotPrivateTickAnalysis();
+                ${observer_gate ? 'if (!Bot.observerEntryPassed()) { sleep(1); continue; }' : ''}
                 BinaryBotPrivateRun(BinaryBotPrivateStart);
                 if (!BinaryBotPrivateHasCalledTradeOptions) {
                     sleep(1);
@@ -371,6 +379,17 @@ class DBot {
     }
 
     /**
+     * Starts the observer session for the current canvas. A canvas with no observer blocks gets no
+     * session at all, so the bot behaves exactly as it did before.
+     */
+    startObserverSession() {
+        observerRuntime.attach({
+            workspace: this.workspace,
+            onStop: () => this.stopBot(),
+        });
+    }
+
+    /**
      * Instructs the interpreter to stop the bot. If there is an active trade
      * that trade will be completed first to reflect correct contract status in UI.
      */
@@ -380,6 +399,7 @@ class DBot {
         api_base.setIsRunning(false);
 
         this.is_bot_running = false;
+        observerRuntime.detach('Bot stopped');
 
         // The interpreter only exists once a workspace has been initialised, so a stop
         // request that arrives before that (or after a failed run) has nothing to stop.
@@ -411,6 +431,7 @@ class DBot {
      * Immediately instructs the interpreter to terminate the WS connection and bot.
      */
     async terminateBot() {
+        observerRuntime.detach('Session terminated');
         if (this.interpreter) {
             await this.interpreter.terminateSession();
             this.interpreter = null;

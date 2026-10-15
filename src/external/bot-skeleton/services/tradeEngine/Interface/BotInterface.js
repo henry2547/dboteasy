@@ -1,4 +1,5 @@
 import { observer as globalObserver } from '../../../utils/observer';
+import { observerRuntime } from '../../observer';
 import { createDetails } from '../utils/helpers';
 
 const getBotInterface = tradeEngine => {
@@ -18,6 +19,9 @@ const getBotInterface = tradeEngine => {
         isResult: result => getDetail(10) === result,
         isTradeAgain: result => globalObserver.emit('bot.trade_again', result),
         readDetails: i => getDetail(i - 1),
+        // Observer entry gate: true once per signalled entry, so a canvas whose observer
+        // program holds entry blocks trades only when those conditions pass.
+        observerEntryPassed: () => observerRuntime.consumeEntry(),
     };
 };
 

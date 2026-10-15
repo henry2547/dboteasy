@@ -81,6 +81,8 @@ const GROUP_TEXT: Record<string, { what: string; steps: string[] }> = {
             'Add the guards you want: Require Minimum Sample Size, Require Fresh Market Data, Require No Duplicate Setup, Require Cooldown Complete.',
             'Control how often a setup can fire with Restart After N New Ticks or Restart After Cooldown, and bound the session with Stop After N Setups, Stop After N Evaluations or Stop When Data Becomes Stale.',
             'Review the run with Learning & Observation blocks such as Read Historical Sample Size, Calculate Historical Outcome Frequency and Report Statistic.',
+            'A passing entry trades with the trade parameters you already set in 1. Trade parameters — stake, contract type and duration stay yours; the observer only decides when to start.',
+            'After a setup, another trade needs Restart Monitoring, Restart After N New Ticks or Restart After Cooldown first, so a condition that keeps passing cannot trade on every tick.',
         ],
     },
 };
