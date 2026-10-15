@@ -110,6 +110,6 @@
             }
         },
         "show_name": true,
-        "logo_path": null
+        "logo_path": "/logo.png"
     }
 }

@@ -1,0 +1,1025 @@
+/* Digits Analysis Lab — read-only public-market-data views. */
+
+.digits {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    box-sizing: border-box;
+    width: 100%;
+    /* The app's main area is a fixed-height, overflow-hidden flex box, so the lab
+       owns its own scrolling to keep long analysis reachable at every width. */
+    height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding: 2rem 1.2rem 4.8rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+
+    @media (min-width: 768px) {
+        height: calc(100vh - 17rem);
+        padding: 2.4rem 2.4rem 5.6rem;
+    }
+
+    @media (min-width: 1200px) {
+        padding: 2.8rem 3.2rem 6.4rem;
+    }
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.digits-hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    align-items: center;
+    justify-content: space-between;
+
+    &__titles {
+        min-width: 0;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.9rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    &__subtitle {
+        margin: 0.4rem 0 0;
+        font-size: 1.25rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+}
+
+.digits-status {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: var(--general-section-1);
+    color: var(--text-less-prominent);
+    border: 1px solid var(--general-main-3);
+
+    &--connected {
+        color: var(--text-profit-success);
+        border-color: var(--text-profit-success);
+    }
+
+    &--error,
+    &--disconnected {
+        color: var(--text-loss-danger);
+        border-color: var(--text-loss-danger);
+    }
+
+    &--connecting,
+    &--reconnecting {
+        color: var(--text-warning);
+        border-color: var(--text-warning);
+    }
+}
+
+.digits-button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid var(--brand-primary);
+    background: transparent;
+    color: var(--brand-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--brand-primary);
+        color: #fff;
+    }
+}
+
+/* ------------------------------------------------------------- controls */
+
+.digits-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 900px) {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
+}
+
+.digits-market {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+
+    &__trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        width: 100%;
+        padding: 0.9rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+        color: var(--text-general);
+        font-size: 1.35rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+
+    &__trigger-label {
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__trigger-symbol {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: var(--text-less-prominent);
+    }
+
+    &__trigger-caret {
+        font-size: 0.9rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__panel {
+        position: absolute;
+        z-index: 5;
+        top: calc(100% + 0.6rem);
+        left: 0;
+        right: 0;
+        border-radius: 12px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-main-1);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+        overflow: hidden;
+    }
+
+    &__filters {
+        display: grid;
+        gap: 0.6rem;
+        padding: 1rem;
+        border-bottom: 1px solid var(--general-main-3);
+
+        @media (min-width: 640px) {
+            grid-template-columns: 2fr 1fr auto;
+            align-items: center;
+        }
+    }
+
+    &__search,
+    &__category {
+        width: 100%;
+        padding: 0.7rem 0.9rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-main-1);
+        color: var(--text-general);
+        font-size: 1.25rem;
+    }
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+        white-space: nowrap;
+    }
+
+    &__list {
+        max-height: 46vh;
+        overflow-y: auto;
+    }
+
+    &__empty {
+        margin: 0;
+        padding: 1.4rem;
+        font-size: 1.25rem;
+        color: var(--text-less-prominent);
+        text-align: center;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        width: 100%;
+        padding: 0.9rem 1.1rem;
+        border: 0;
+        border-bottom: 1px solid var(--general-main-3);
+        background: transparent;
+        color: var(--text-general);
+        cursor: pointer;
+        text-align: left;
+
+        &:hover {
+            background: var(--general-section-1);
+        }
+
+        &--active {
+            background: var(--general-section-1);
+            box-shadow: inset 3px 0 0 var(--brand-primary);
+        }
+    }
+
+    &__item-main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        min-width: 0;
+    }
+
+    &__item-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__item-meta {
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__item-tags {
+        display: flex;
+        gap: 0.4rem;
+        flex: 0 0 auto;
+    }
+}
+
+.digits-tag {
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--general-section-1);
+    color: var(--text-less-prominent);
+
+    &--open {
+        color: var(--text-profit-success);
+    }
+
+    &--closed {
+        color: var(--text-loss-danger);
+    }
+}
+
+.digits-window {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+
+    &__label {
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+        margin-right: 0.2rem;
+    }
+
+    &__option {
+        min-width: 4.2rem;
+        padding: 0.55rem 0.7rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+        color: var(--text-general);
+        font-size: 1.15rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &--active {
+            border-color: var(--brand-primary);
+            background: var(--brand-primary);
+            color: #fff;
+        }
+    }
+}
+
+.digits-banner {
+    margin: 0;
+    padding: 0.9rem 1.1rem;
+    border-radius: 10px;
+    font-size: 1.25rem;
+
+    &--warning {
+        border: 1px solid var(--text-warning);
+        color: var(--text-warning);
+        background: var(--general-section-1);
+    }
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.digits-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.4rem;
+    border-radius: 14px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-section-1);
+
+    &__head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.45rem;
+        font-weight: 700;
+    }
+
+    &__note {
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.digits-empty,
+.digits-disclaimer {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text-less-prominent);
+}
+
+.digits-disclaimer {
+    text-align: center;
+    padding: 0 1rem;
+}
+
+/* ------------------------------------------------------------ tick panel */
+
+.digits-tick {
+    &__market {
+        display: flex;
+        align-items: baseline;
+        gap: 0.8rem;
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+    }
+
+    &__symbol {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: var(--text-less-prominent);
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+
+        @media (min-width: 900px) {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+
+    &__quote,
+    &__digit,
+    &__cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    &__quote,
+    &__digit {
+        grid-column: span 2;
+
+        @media (min-width: 900px) {
+            grid-column: span 1;
+        }
+    }
+
+    &__label {
+        font-size: 1.05rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-less-prominent);
+    }
+
+    &__value {
+        font-size: 2.4rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__digit-value {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 4.4rem;
+        height: 4.4rem;
+        border-radius: 12px;
+        background: var(--brand-primary);
+        color: #fff;
+        font-size: 2.4rem;
+        font-weight: 700;
+    }
+
+    &__cell-value {
+        font-size: 1.4rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__source {
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: var(--text-less-prominent);
+    }
+}
+
+.digits-direction {
+    &--up {
+        color: var(--text-profit-success);
+    }
+
+    &--down {
+        color: var(--text-loss-danger);
+    }
+}
+
+/* ---------------------------------------------------------------- summary */
+
+.digits-summary {
+    display: grid;
+    gap: 1.2rem;
+
+    @media (min-width: 900px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    &__card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        padding: 1.3rem;
+        border-radius: 14px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    &__split {
+        height: 0.8rem;
+        border-radius: 999px;
+        background: var(--general-main-3);
+        overflow: hidden;
+    }
+
+    &__share {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--brand-primary);
+    }
+
+    &__line {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--text-general);
+    }
+}
+
+/* ------------------------------------------------------------ digit grid */
+
+/* Five columns at every width — digits 0–4 fill the first row, 5–9 the second — so the
+   grid never scrolls sideways on a phone. Below the 768px breakpoint the cards tighten
+   their type and padding so all five still fit a narrow column. */
+.digits-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.4rem;
+
+    @media (min-width: 768px) {
+        gap: 0.8rem;
+    }
+}
+
+.digits-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0.55rem 0.35rem;
+    border-radius: 12px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-main-1);
+
+    @media (min-width: 768px) {
+        gap: 0.3rem;
+        padding: 0.9rem;
+    }
+
+    &--top {
+        border-color: var(--brand-primary);
+        box-shadow: inset 0 0 0 1px var(--brand-primary);
+    }
+
+    &--low {
+        border-style: dashed;
+    }
+
+    &__digit {
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1;
+
+        @media (min-width: 768px) {
+            font-size: 2.2rem;
+        }
+    }
+
+    &__percent {
+        font-size: 1rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+
+        @media (min-width: 768px) {
+            font-size: 1.5rem;
+        }
+    }
+
+    &__count,
+    &__rank {
+        font-size: 0.7rem;
+        line-height: 1.25;
+        color: var(--text-less-prominent);
+
+        @media (min-width: 768px) {
+            font-size: 1.05rem;
+            line-height: 1.4;
+        }
+    }
+
+    &__deviation {
+        font-size: 0.75rem;
+        font-weight: 600;
+
+        @media (min-width: 768px) {
+            font-size: 1.1rem;
+        }
+
+        &--up {
+            color: var(--text-profit-success);
+        }
+
+        &--down {
+            color: var(--text-loss-danger);
+        }
+    }
+
+    &__badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+}
+
+.digits-badge {
+    padding: 0.1rem 0.3rem;
+    border-radius: 5px;
+    font-size: 0.6rem;
+    font-style: normal;
+    font-weight: 700;
+    background: var(--brand-primary);
+    color: #fff;
+
+    @media (min-width: 768px) {
+        padding: 0.15rem 0.45rem;
+        font-size: 0.95rem;
+    }
+
+    &--tie {
+        background: var(--brand-secondary);
+    }
+}
+
+/* ------------------------------------------------------- distribution */
+
+.digits-distribution {
+    display: grid;
+    gap: 1.4rem;
+
+    @media (min-width: 900px) {
+        grid-template-columns: 1.5fr 1fr;
+        align-items: center;
+    }
+}
+
+.digits-chart {
+    width: 100%;
+    height: auto;
+
+    &__grid {
+        stroke: var(--general-main-3);
+        stroke-width: 1;
+    }
+
+    &__axis {
+        fill: var(--text-less-prominent);
+        font-size: 9px;
+        text-anchor: end;
+    }
+
+    &__axis--digit {
+        text-anchor: middle;
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+    &__reference {
+        stroke: var(--brand-primary);
+        stroke-width: 1.2;
+        stroke-dasharray: 4 3;
+    }
+
+    &__reference-label {
+        fill: var(--brand-primary);
+        font-size: 9px;
+        text-anchor: end;
+    }
+
+    &__bar {
+        fill: var(--brand-secondary);
+
+        &--top {
+            fill: var(--brand-primary);
+        }
+    }
+}
+
+.digits-circle {
+    width: 100%;
+    max-width: 26rem;
+    height: auto;
+    margin: 0 auto;
+
+    &__ring {
+        fill: none;
+        stroke: var(--general-main-3);
+        stroke-dasharray: 3 4;
+    }
+
+    &__node {
+        fill: var(--brand-primary);
+    }
+
+    &__digit {
+        fill: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        text-anchor: middle;
+    }
+
+    &__percent {
+        fill: var(--text-general);
+        font-size: 9px;
+        font-weight: 600;
+        text-anchor: middle;
+    }
+
+    &__center-value {
+        fill: var(--text-general);
+        font-size: 15px;
+        font-weight: 700;
+        text-anchor: middle;
+    }
+
+    &__center-label {
+        fill: var(--text-less-prominent);
+        font-size: 9px;
+        text-anchor: middle;
+    }
+}
+
+/* ------------------------------------------------------------- barriers */
+
+.digits-barriers {
+    display: grid;
+    gap: 1.2rem;
+
+    @media (min-width: 900px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.digits-barrier {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 1.2rem;
+    border-radius: 12px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-main-1);
+
+    &__head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+
+    &__label {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    &__rates {
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__bar {
+        display: flex;
+        height: 1.1rem;
+        border-radius: 999px;
+        overflow: hidden;
+        background: var(--general-main-3);
+    }
+
+    &__segment {
+        height: 100%;
+
+        &--below {
+            background: var(--brand-primary);
+        }
+
+        &--at {
+            background: var(--brand-warning);
+        }
+
+        &--above {
+            background: var(--brand-success);
+        }
+    }
+
+    &__legend {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 1.1rem;
+        color: var(--text-general);
+    }
+
+    &__touches {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.6rem 1rem;
+        margin: 0;
+
+        div {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.4rem;
+            border-top: 1px solid var(--general-main-3);
+            padding-top: 0.4rem;
+        }
+
+        dt {
+            font-size: 1.05rem;
+            color: var(--text-less-prominent);
+        }
+
+        dd {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+    }
+}
+
+.digits-dot {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 2px;
+    margin-right: 0.3rem;
+
+    &--below {
+        background: var(--brand-primary);
+    }
+
+    &--at {
+        background: var(--brand-warning);
+    }
+
+    &--above {
+        background: var(--brand-success);
+    }
+}
+
+/* ----------------------------------------------------------- strategies */
+
+.digits-strategies {
+    display: grid;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (min-width: 1200px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.digits-strategy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.1rem;
+    border-radius: 12px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-main-1);
+
+    &__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+    }
+
+    &__label {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    &__rate {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+    }
+
+    &__rate-bar {
+        flex: 1 1 auto;
+        height: 0.7rem;
+        border-radius: 999px;
+        background: var(--general-main-3);
+        overflow: hidden;
+    }
+
+    &__rate-fill {
+        display: block;
+        height: 100%;
+        background: var(--brand-primary);
+    }
+
+    &__rate-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.25rem 0.8rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+
+        strong {
+            color: var(--text-general);
+        }
+    }
+
+    &__reason {
+        margin: 0;
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.digits-signal {
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+
+    &--enter {
+        background: rgba(16, 185, 129, 0.16);
+        color: var(--text-profit-success);
+    }
+
+    &--skip {
+        background: rgba(239, 68, 68, 0.14);
+        color: var(--text-loss-danger);
+    }
+}
+
+/* ------------------------------------------------------------ backtest */
+
+.digits-backtest {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+
+    &__row {
+        display: grid;
+        gap: 0.8rem;
+        align-items: center;
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-main-1);
+
+        @media (min-width: 900px) {
+            grid-template-columns: 1.2fr 1.2fr 2fr;
+        }
+    }
+
+    &__label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        font-size: 1.3rem;
+
+        span {
+            font-size: 1.05rem;
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__spark {
+        width: 100%;
+        height: 2.8rem;
+
+        &--empty {
+            display: inline-block;
+            font-size: 1.05rem;
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__spark-line {
+        fill: none;
+        stroke: var(--brand-primary);
+        stroke-width: 1.6;
+        stroke-linejoin: round;
+    }
+
+    &__metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.4rem 1rem;
+        margin: 0;
+
+        @media (min-width: 900px) {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        dt {
+            font-size: 1rem;
+            color: var(--text-less-prominent);
+        }
+
+        dd {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+}

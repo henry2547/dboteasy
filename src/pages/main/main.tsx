@@ -33,6 +33,7 @@ import {
 import {
     LabelPairedChartLineCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
+    LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { LegacyGuide1pxIcon } from '@deriv/quill-icons/Legacy';
@@ -45,6 +46,7 @@ import RunStrategy from '../dashboard/run-strategy';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
+const DigitsPage = lazy(() => import('../digits'));
 const Tutorial = lazy(() => import('../tutorials'));
 
 const AppWrapper = observer(() => {
@@ -78,7 +80,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'digits'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -376,7 +378,13 @@ const AppWrapper = observer(() => {
                 >
                     <div>
                         {!isDesktop && left_tab_shadow && <span className='tabs-shadow tabs-shadow--left' />}{' '}
-                        <Tabs active_index={active_tab} className='main__tabs' onTabItemClick={handleTabChange} top>
+                        <Tabs
+                            active_index={active_tab}
+                            className='main__tabs'
+                            is_scrollable={!isDesktop}
+                            onTabItemClick={handleTabChange}
+                            top
+                        >
                             <div
                                 label={
                                     <>
@@ -451,6 +459,27 @@ const AppWrapper = observer(() => {
                                         <Tutorial handleTabChange={handleTabChange} />
                                     </Suspense>
                                 </div>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedPercentCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Digits' />
+                                    </>
+                                }
+                                id='id-digits'
+                            >
+                                <Suspense
+                                    fallback={
+                                        <ChunkLoader message={localize('Please wait, loading the digits lab...')} />
+                                    }
+                                >
+                                    <DigitsPage />
+                                </Suspense>
                             </div>
                         </Tabs>
                         {!isDesktop && right_tab_shadow && <span className='tabs-shadow tabs-shadow--right' />}{' '}
