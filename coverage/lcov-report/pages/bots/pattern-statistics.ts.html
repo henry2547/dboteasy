@@ -1,0 +1,343 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for pages/bots/pattern-statistics.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">pages/bots</a> pattern-statistics.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">91.86% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>79/86</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">83.44% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>121/145</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>8/8</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">91.86% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>79/86</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">33x</span>
+<span class="cline-any cline-yes">33x</span>
+<span class="cline-any cline-yes">33x</span>
+<span class="cline-any cline-yes">33x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">322x</span>
+<span class="cline-any cline-yes">322x</span>
+<span class="cline-any cline-yes">322x</span>
+<span class="cline-any cline-yes">322x</span>
+<span class="cline-any cline-yes">323x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">144x</span>
+<span class="cline-any cline-yes">144x</span>
+<span class="cline-any cline-yes">144x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { ALL_DIGITS, frequency, result, type BotConfig, type Node, type Result, type Tick, type Strategy } from './bot-model';
+import { PatternEngine } from './pattern-engine';
+import { compilePattern, isDetector, type PatternProgram } from './pattern-program';
+export function transitionCounts(digits: number[], from: number, to: number) {
+    let hits = 0, total = 0;
+    for (let i = 0; i + 1 &lt; digits.length; i++) if (digits[i] === from) { total++; if (digits[i + 1] === to) hits++; }
+    return { hits, total, frequency: total ? hits / total * 100 <span class="branch-0 cbranch-no" title="branch not covered" >: NaN </span>};
+}
+export function streakLengths(digits: number[]) {
+    let current = digits.length ? 1 <span class="branch-0 cbranch-no" title="branch not covered" >: 0,</span> longest = current, run = current;
+    for (let i = 1; i &lt; digits.length; i++) { run = digits[i] === digits[i - 1] <span class="branch-0 cbranch-no" title="branch not covered" >? run + 1 </span>: 1; longest = Math.max(longest, run); }
+    if (digits.length) { current = 1; while (current &lt; digits.length &amp;&amp; digits[digits.length - current - 1] === digits.at(-1)) <span class="branch-0 cbranch-no" title="branch not covered" >current++; </span>}
+    return { current, longest };
+}
+export function advancedValue(op: string, node: Node, history: Tick[], config: BotConfig, engine: PatternEngine): Result | undefined {
+    if (!op.startsWith('adv_') || op === 'adv_window') return undefined;
+    const f = node.fields, n = Number(f.N), digit = Number(f.DIGIT), to = Number(f.TO);
+    const ds = history.slice(-config.window).map(t =&gt; t.digit), latest = ds.at(-1), previous = ds.at(-2);
+    const num = (value: number, reason: string) =&gt; Number.isFinite(value) ? result('Pass', reason, value) <span class="branch-0 cbranch-no" title="branch not covered" >: result('Inconclusive', reason, null);</span>
+    const bool = (value: boolean, reason: string) =&gt; result(value ? 'Pass' : 'Fail', reason);
+    if (op === 'adv_stage') return result('Pass', engine.reason, engine.stage);
+    if (op === 'adv_state') return bool(engine.stage === f.STAGE, `Current stage: ${engine.stage}. Required: ${f.STAGE}.`);
+    if (op === 'adv_confirmation_after') return engine.latest<span class="branch-0 cbranch-no" title="branch not covered" >?.confirmation <span class="branch-0 cbranch-no" title="branch not covered" ></span>? bool(engine.latest.confirmation.key !== engine.latest.pair.at(-1)!.key, 'Confirmation is strictly after the qualifying adjacent run.') </span>: result('Inconclusive', 'No confirmation recorded yet.', null);
+    if (latest === undefined) <span class="branch-0 cbranch-no" title="branch not covered" >return result('Inconclusive', 'No genuine ticks available.', null);</span>
+    if (op === 'adv_parity') return result('Pass', `Final digit ${latest}.`, latest % 2 ? 'Odd' <span class="branch-0 cbranch-no" title="branch not covered" >: 'Even')</span>;
+    const streak = streakLengths(ds);
+    if (op === 'adv_streak' || op === 'adv_longest') return num(op === 'adv_streak' ? streak.current : streak.longest, `Equal-digit streak in ${ds.length} available ticks.`);
+    if (op === 'adv_streak_minimum') return bool(streak.current &gt;= n, `Current equal-digit streak ${streak.current}; requires ${n}.`);
+    if (['adv_streak_ended', 'adv_parity_switched', 'adv_repeated', 'adv_transition_now', 'adv_parity_transition'].includes(op)) {
+        if (previous === undefined || op === 'adv_streak_ended' &amp;&amp; ds.length &lt; 3) <span class="branch-0 cbranch-no" title="branch not covered" >return result('Inconclusive', 'Insufficient adjacent ticks.', null);</span>
+        const passes = op === 'adv_streak_ended' ? ds.at(-3) === previous<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; latest !== previous </span>: op === 'adv_parity_switched' ? previous % 2 !== latest % 2 : op === 'adv_repeated' ? previous === latest : op === 'adv_transition_now' ? previous === digit<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; latest === to </span>: previous % 2 === (f.FROM === 'Even' ? 0 <span class="branch-0 cbranch-no" title="branch not covered" >: 1)</span> &amp;&amp; latest % 2 === (f.TO_PARITY === 'Even' <span class="branch-0 cbranch-no" title="branch not covered" >? 0 </span>: 1);
+        return bool(passes, `Chronological adjacent transition ${previous} → ${latest}; A occurs before B.`);
+    }
+    if (op.includes('transition')) {
+        const counts = transitionCounts(ds, digit, to);
+        const explanation = `${counts.hits}/${counts.total} observed ${digit} → ${to} transitions (A first, B on the next genuine tick).`;
+        if (op === 'adv_transition_count') return num(counts.hits, explanation);
+        if (op === 'adv_transition_sample') return result(counts.total &gt;= n <span class="branch-0 cbranch-no" title="branch not covered" >? 'Pass' </span>: 'Inconclusive', `${counts.total}/${n} observed outgoing transitions from ${digit}.`, counts.total);
+        const minimum = Number(f.MINIMUM);
+        if (op === 'adv_transition_windows') {
+            if (history.length &lt; n * 2) return result('Inconclusive', `Requires ${n * 2} ticks in two non-overlapping windows.`, null);
+<span class="cstat-no" title="statement not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >            const all = history.slice(-n * 2).map(t =&gt; t.digit), a = transitionCounts(all.slice(0, n), digit, to), b = transitionCounts(all.slice(n), digit, to);</span></span>
+            if (a.total &lt; minimum || b.total &lt; minimum) <span class="branch-0 cbranch-no" title="branch not covered" >return result('Inconclusive', `Transition samples ${a.total} / ${b.total}; requires ${minimum} in each window.`, null);</span>
+<span class="cstat-no" title="statement not covered" >            return num(b.frequency - a.frequency, `Older ${a.hits}/${a.total}; newer ${b.hits}/${b.total}. Newer minus older percentage points.`);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+        return counts.total &lt; minimum ? result('Inconclusive', `${explanation} Minimum ${minimum} observations required.`, null) <span class="branch-0 cbranch-no" title="branch not covered" >: num(counts.frequency, explanation);</span>
+    }
+    if (op === 'adv_frequency_windows' || op === 'adv_stability') {
+        if (history.length &lt; 2 * n) return result('Inconclusive', `Needs ${2 * n} ticks in complete disjoint windows; ${history.length} available.`, null);
+<span class="cstat-no" title="statement not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >        const all = history.slice(-2 * n).map(t =&gt; t.digit), a = frequency(all.slice(0, n), [digit]), b = frequency(all.slice(n), [digit]);</span></span>
+<span class="cstat-no" title="statement not covered" >        const reason = `Older ${a.toFixed(2)}% / newer ${b.toFixed(2)}%, ${n} ticks each; change ${(b - a).toFixed(2)} percentage points.`;</span>
+        return op === 'adv_frequency_windows' ? num(b - a, reason) <span class="branch-0 cbranch-no" title="branch not covered" >: bool(Math.abs(b - a) &lt;= Number(f.TOLERANCE), reason);</span>
+    }
+    if (ds.length &lt; config.minSamples) <span class="branch-0 cbranch-no" title="branch not covered" >return result('Inconclusive', `Sample ${ds.length}; requires ${config.minSamples}.`, null);</span>
+    if (op === 'adv_count') return num(ds.filter(d =&gt; d === digit).length, `${ds.length} genuine ticks sampled.`);
+    if (op === 'adv_frequency') return num(frequency(ds, [digit]), `${digit} in ${ds.length} genuine ticks.`);
+    if (op === 'adv_combined') return num(frequency(ds, String(f.DIGITS).split(',').map(Number)), `Combined share of ${ds.length} genuine ticks.`);
+    if (op === 'adv_most' || op === 'adv_least') {
+        const ranked = ALL_DIGITS.slice().sort((a, b) =&gt; (frequency(ds, [a]) - frequency(ds, [b])) * (op === 'adv_most' ? -1 : 1) || a - b);
+        return num(ranked[0], `Observed ${op === 'adv_most' ? 'most' : 'least'} frequent digit; ties choose the lowest digit. Sample ${ds.length}. Not a prediction.`);
+    }
+    if (op === 'adv_parity_frequency') { const pct = frequency(ds, f.PARITY === 'Even' ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]); return bool(pct &gt;= Number(f.PERCENT), `${f.PARITY}: ${pct.toFixed(2)}% of ${ds.length}; threshold ${f.PERCENT}%.`); }
+<span class="cstat-no" title="statement not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >    return result('Inconclusive', 'No value available for this block.', null);</span></span>
+<span class="cstat-no" title="statement not covered" >}</span>
+export interface StrategyComparison { name: string; strategy: Strategy; setups: number; completed: number; passes: number; frequency: number | null; meanDelay: number | null; windows: { completed: number; frequency: number | null }[]; stability: number | null; score: number | null; reason: string }
+function wilsonLower(passes: number, total: number) { const z = 1.96, p = passes / total; return (p + z * z / (2 * total) - z * Math.sqrt(p * (1 - p) / total + z * z / (4 * total * total))) / (1 + z * z / total); }
+export function compareStrategies(history: Tick[], config: BotConfig, minimum = 10, window = Math.floor(history.length / 2), candidateDigit = config.digit): StrategyComparison[] {
+    const detector = config.nodes.find(isDetector);
+    const base: PatternProgram = detector ? compilePattern(detector, config) : { blockId: 'comparison', name: '', version: 'comparison', kind: 'pair', pairs: [0, 1], length: 2, initial: 'Even', transitions: [], confirmation: 0, intervening: true, timeout: 0, cooldown: 0, minimum: config.minSamples, strategy: 'over', digit: candidateDigit, barrier: 1 };
+    const available = history.slice(-Math.max(2, window * 2));
+    const run = (ticks: Tick[], program: PatternProgram) =&gt; {
+        const e = new PatternEngine();
+        ticks.forEach((t, i) =&gt; { if (i &amp;&amp; (t.symbol !== ticks[i - 1].symbol || t.epoch - ticks[i - 1].epoch &gt; config.freshnessSeconds)) <span class="branch-0 cbranch-no" title="branch not covered" >e.interrupt('Historical discontinuity.'); </span>e.process(program, t, i + 1, config.allowOverlap, 500); });
+        return e.records;
+    };
+    return (['over', 'under', 'matches', 'differs', 'even', 'odd'] as Strategy[]).map(strategy =&gt; {
+        const p: PatternProgram = { ...base, strategy, digit: candidateDigit, version: `${base.version}-${strategy}-${candidateDigit}` };
+        if (strategy === 'over' || strategy === 'under') { p.kind = 'pair'; p.pairs = strategy === 'over' ? [0, 1] : [8, 9]; p.confirmation = strategy === 'over' ? 0 : 9; p.barrier = strategy === 'over' ? 1 : 8; }
+        const records = run(available, p), completed = records.filter(r =&gt; r.result === 'Pass' || r.result === 'Fail'), passes = completed.filter(r =&gt; r.result === 'Pass').length;
+        const windows = [available.slice(0, window), available.slice(window)].map(ts =&gt; { const rows = run(ts, p).filter(r =&gt; r.result === 'Pass' || r.result === 'Fail'); return { completed: rows.length, frequency: rows.length ? rows.filter(r =&gt; r.result === 'Pass').length / rows.length * 100 : null }; });
+        const stability = windows.every(w =&gt; w.frequency !== null) ? Math.abs(windows[1].frequency! - windows[0].frequency!) : null;
+        const sufficient = window &gt;= 1 &amp;&amp; available.length &gt;= window * 2 &amp;&amp; windows.every(w =&gt; w.completed &gt;= minimum);
+        const stable = stability !== null &amp;&amp; stability &lt;= config.tolerance;
+        return { name: strategy === 'over' ? 'Over 1 · 00/11 → 0' : strategy === 'under' ? 'Under 8 · 88/99 → 9' : `${strategy} ${['matches','differs'].includes(strategy) ? candidateDigit : ''} · configured trigger`, strategy, setups: records.filter(r =&gt; r.confirmation).length, completed: completed.length, passes, frequency: completed.length ? passes / completed.length * 100 : null, meanDelay: completed.length ? completed.reduce((n, r) =&gt; n + r.intervening.length + 1, 0) / completed.length : null, windows, stability, score: sufficient &amp;&amp; stable ? wilsonLower(passes, completed.length) : null, reason: !sufficient ? `Inconclusive: requires ${minimum} completed outcomes in each disjoint window (${windows.map(w =&gt; w.completed).join(' / ')} observed).` : !stable <span class="branch-0 cbranch-no" title="branch not covered" >? `Not ranked: window variation ${stability?.toFixed(2)}pp exceeds tolerance ${config.tolerance}pp.` </span>: 'Rank eligible: sample minimum and stability gate passed; score uses 95% Wilson lower bound, not raw win rate. Descriptive only.' };
+    });
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-15T18:23:11.008Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

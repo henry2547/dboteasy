@@ -1,0 +1,493 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for pages/bots/validation.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">pages/bots</a> validation.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>136/136</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">74.61% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>144/193</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>10/10</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>136/136</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">203x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">4872x</span>
+<span class="cline-any cline-yes">4872x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">203x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">2627x</span>
+<span class="cline-any cline-yes">2627x</span>
+<span class="cline-any cline-yes">2627x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">205x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">620x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">1236x</span>
+<span class="cline-any cline-yes">200x</span>
+<span class="cline-any cline-yes">200x</span>
+<span class="cline-any cline-yes">200x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">556x</span>
+<span class="cline-any cline-yes">556x</span>
+<span class="cline-any cline-yes">556x</span>
+<span class="cline-any cline-yes">555x</span>
+<span class="cline-any cline-yes">555x</span>
+<span class="cline-any cline-yes">556x</span>
+<span class="cline-any cline-yes">556x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">693x</span>
+<span class="cline-any cline-yes">693x</span>
+<span class="cline-any cline-yes">691x</span>
+<span class="cline-any cline-yes">691x</span>
+<span class="cline-any cline-yes">691x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">691x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">80x</span>
+<span class="cline-any cline-yes">80x</span>
+<span class="cline-any cline-yes">80x</span>
+<span class="cline-any cline-yes">80x</span>
+<span class="cline-any cline-yes">80x</span>
+<span class="cline-any cline-yes">80x</span>
+<span class="cline-any cline-yes">692x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">116x</span>
+<span class="cline-any cline-yes">116x</span>
+<span class="cline-any cline-yes">116x</span>
+<span class="cline-any cline-yes">116x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { SPEC } from './block-catalog';
+import { isDetector, patternSequence } from './pattern-program';
+import { defaultConfig, STRATEGIES, WINDOWS, type BotConfig, type Node } from './bot-model';
+export interface Issue { severity: 'error' | 'warning'; message: string; blockId?: string }
+const ownKeys = (value: object, keys: string[]) =&gt; Object.keys(value).every(k =&gt; keys.includes(k));
+const record = (v: unknown): v is Record&lt;string, any&gt; =&gt; !!v &amp;&amp; typeof v === 'object' &amp;&amp; !Array.isArray(v) &amp;&amp; Object.getPrototypeOf(v) === Object.prototype;
+export function parseConfig(input: unknown): BotConfig {
+    if (!record(input) || !ownKeys(input, Object.keys(defaultConfig()))) throw new Error('Configuration contains unexpected fields.');
+    const base = defaultConfig();
+    for (const key of Object.keys(base) as (keyof BotConfig)[]) {
+        if (!(key in input) || typeof input[key] !== typeof base[key]) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error(`Missing or invalid configuration field: ${key}`);</span>
+    }
+    if (input.version !== 1 || !Array.isArray(input.nodes) || input.nodes.length &gt; 250) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Unsupported version or block count (maximum 250).');</span>
+    if (!['Volatility Indices','1-Second Volatility Indices'].includes(input.group) || !STRATEGIES.includes(input.strategy)) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Unsupported market group or strategy.');</span>
+    if (!['cancel','invalidate','preserve'].includes(input.pendingOnStop)) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Choose how pending observations are handled on Stop.');</span>
+    if (input.name.length &lt; 1 || input.name.length &gt; 100 || input.description.length &gt; 2000 || input.id.length &gt; 100 || input.symbol.length &gt; 100) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Invalid name, description, identifier or symbol.');</span>
+    const ranges: Record&lt;string,number[]&gt; = { digit:[0,9],barrier:[0,9],window:[25,1000],minSamples:[1,1000],threshold:[0,100],stabilityWindows:[2,10],tolerance:[0,100],cooldownTicks:[0,1000],cooldownSeconds:[0,86400],observeTicks:[1,100],consecutivePasses:[1,1000],maxSetups:[1,500],freshnessSeconds:[3,120] };
+    for (const [key,[min,max]] of Object.entries(ranges)) {
+        const n = input[key];
+        if (!Number.isFinite(n) || n &lt; min || n &gt; max || (!['threshold','tolerance'].includes(key) &amp;&amp; !Number.isInteger(n))) throw new Error(`Invalid ${key}: expected ${min}–${max}.`);
+    }
+    if (!WINDOWS.includes(input.window)) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Invalid analysis window.');</span>
+    for (const node of input.nodes) {
+        if (!record(node) || !ownKeys(node,['id','type','fields','inputs','next','x','y']) || typeof node.id !== 'string' || !node.id || node.id.length &gt; 100 || typeof node.type !== 'string') <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Malformed block.');</span>
+        const spec = SPEC.get(node.type);
+        if (!spec) throw new Error(`Unsupported block: ${node.type}. Remove it before importing.`);
+        if (!record(node.fields) || !record(node.inputs) || !ownKeys(node.fields,spec.fields.map(f=&gt;f.name)) || !ownKeys(node.inputs,[...Object.keys(spec.inputs), ...(spec.body ? ['DO'] : []), ...(spec.op === 'if_else' <span class="branch-0 cbranch-no" title="branch not covered" >? ['ELSE'] </span>: [])])) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error(`Unexpected fields or connections on ${spec.label}.`);</span>
+        for (const field of spec.fields) {
+            const v = node.fields[field.name];
+            if (field.kind === 'number' &amp;&amp; (typeof v !== 'number' || !Number.isFinite(v) || v &lt; field.min! || v &gt; field.max! || (!['PERCENT','TOLERANCE','VALUE','LOW','HIGH'].includes(field.name) &amp;&amp; !Number.isInteger(v)))) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error(`Invalid ${field.label} in ${spec.label}.`);</span>
+            if (field.kind !== 'number' &amp;&amp; (typeof v !== 'string' || v.length &gt; 500 || (field.kind === 'select' &amp;&amp; !field.choices!.includes(v)))) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error(`Invalid ${field.label} in ${spec.label}.`);</span>
+            if (field.name === 'PARITIES' &amp;&amp; !/^(Even|Odd)(\s*,\s*(Even|Odd)){1,19}$/.test(String(v))) throw new Error('Parity transitions require 2–20 comma-separated Even or Odd values, oldest first.');
+            if (field.name === 'DIGITS' &amp;&amp; !/^\s*[0-9](\s*,\s*[0-9])*\s*$/.test(String(v))) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Digit lists must contain comma-separated digits 0–9, oldest first for sequences.');</span>
+            if (field.name === 'NAME' &amp;&amp; (!/^[a-zA-Z][a-zA-Z0-9_]{0,39}$/.test(String(v)) || /^(system|current|active|setup|__|constructor|prototype)/i.test(String(v)))) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Variable name is invalid or reserved.');</span>
+        }
+        if (Object.values(node.inputs).some(v =&gt; typeof v !== 'string') || (node.next !== undefined &amp;&amp; typeof node.next !== 'string') || ['x','y'].some(k =&gt; node[k] !== undefined &amp;&amp; (typeof node[k] !== 'number' || !Number.isFinite(node[k]) || Math.abs(node[k]) &gt; 100000))) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error('Malformed block connection or position.');</span>
+    }
+    // Return detached JSON, not caller-owned objects or executable properties.
+    return JSON.parse(JSON.stringify(input)) as BotConfig;
+}
+export function validate(config: BotConfig, markets?: { apiSymbol: string; category: string }[]): Issue[] {
+    const issues: Issue[] = [];
+    try { parseConfig(config); } <span class="branch-0 cbranch-no" title="branch not covered" >catch (e) { return [{severity:'error',message:(e as Error).message}]; }</span>
+    const error = (message: string, blockId?: string) =&gt; issues.push({severity:'error',message,blockId});
+    const warning = (message: string, blockId?: string) =&gt; issues.push({severity:'warning',message,blockId});
+    if (!config.symbol) <span class="branch-0 cbranch-no" title="branch not covered" >error('Cannot start: no Volatility market has been selected.');</span>
+    if (markets<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; !markets.some(m=&gt;m.apiSymbol===config.symbol &amp;&amp; m.category===config.group))</span> <span class="branch-0 cbranch-no" title="branch not covered" >error('Selected market is not available in the discovered market group.');</span>
+    if ((config.strategy==='over' &amp;&amp; config.barrier&gt;8) || (config.strategy==='under' &amp;&amp; config.barrier&lt;1)) <span class="branch-0 cbranch-no" title="branch not covered" >error('Invalid barrier: Over supports 0–8; Under supports 1–9.');</span>
+    if (config.minSamples &gt; config.window) <span class="branch-0 cbranch-no" title="branch not covered" >error('Minimum sample size cannot exceed the analysis window.');</span>
+    if (config.window * config.stabilityWindows &gt; 1000) <span class="branch-0 cbranch-no" title="branch not covered" >warning('Insufficient rolling capacity for these stability windows; the condition will remain Inconclusive.');</span>
+    const byId = new Map(config.nodes.map(n=&gt;[n.id,n]));
+    if (byId.size !== config.nodes.length) <span class="branch-0 cbranch-no" title="branch not covered" >error('Duplicate block identifier.');</span>
+    const incoming = new Map&lt;string,number&gt;();
+    for (const node of config.nodes) {
+        const spec = SPEC.get(node.type)!;
+        for (const name of Object.keys(spec.inputs)) if (!node.inputs[name]) <span class="branch-0 cbranch-no" title="branch not covered" >error(`Missing ${name} input in ${spec.label}.`,node.id);</span>
+        if (spec.body &amp;&amp; !node.inputs.DO) <span class="branch-0 cbranch-no" title="branch not covered" >error(`Connect a sequence inside ${spec.label}.`,node.id);</span>
+        for (const [name,target] of Object.entries({...node.inputs,...(node.next ? {$next:node.next} : {})})) {
+            const child = byId.get(target);
+            incoming.set(target,(incoming.get(target) ?? 0)+1);
+            if (!child) { error('Connection refers to a missing block.',node.id); continue; }
+            const childSpec = SPEC.get(child.type)!;
+            const port = spec.inputs[name];
+            if (port ? childSpec.output !== port : !!childSpec.output || !!childSpec.event) error(`Incompatible connection in ${spec.label}.`,node.id);
+        }
+        if (spec.output &amp;&amp; node.next) <span class="branch-0 cbranch-no" title="branch not covered" >error('Value blocks cannot have a next statement.',node.id);</span>
+        if (spec.event &amp;&amp; node.next) <span class="branch-0 cbranch-no" title="branch not covered" >error('Lifecycle blocks use their inner sequence, not next.',node.id);</span>
+        if (spec.op==='entry') {
+            const body = byId.get(node.inputs.DO);
+            const seen = new Set&lt;string&gt;();
+            let b = body; let observes = 0;
+            while (b &amp;&amp; !seen.has(b.id)) { seen.add(b.id); if (SPEC.get(b.type)?.op.startsWith('observe')) observes++; b=b.next ? byId.get(b.next) : undefined; }
+            if (observes !== 1) <span class="branch-0 cbranch-no" title="branch not covered" >error('Each entry needs exactly one connected observation block in its sequence.',node.id);</span>
+        }
+        if (spec.op==='between'<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; Number(node.fields.LOW)&gt;Number(node.fields.HIGH))</span> <span class="branch-0 cbranch-no" title="branch not covered" >error('Lower bound exceeds upper bound.',node.id);</span>
+        if (spec.op==='configure_over' &amp;&amp; config.barrier&gt;8 || spec.op==='configure_under'<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; config.barrier&lt;1)</span> <span class="branch-0 cbranch-no" title="branch not covered" >error('Strategy block conflicts with the configured barrier.',node.id);</span>
+    }
+    incoming.forEach((count,id)=&gt;{ if(count&gt;1) error('Ambiguous graph: block is connected to multiple parents.',id); });
+    const roots = config.nodes.filter(n=&gt;SPEC.get(n.type)?.event);
+    if (!roots.some(n=&gt;SPEC.get(n.type)?.event==='start')) <span class="branch-0 cbranch-no" title="branch not covered" >error('Missing When Bot Starts block.');</span>
+    if (!roots.some(n=&gt;SPEC.get(n.type)?.event==='tick')) <span class="branch-0 cbranch-no" title="branch not covered" >error('Missing When New Tick Arrives block.');</span>
+    const detectors=config.nodes.filter(isDetector);
+    if (!config.nodes.some(n=&gt;SPEC.get(n.type)?.op==='entry')&amp;&amp;!detectors.length) <span class="branch-0 cbranch-no" title="branch not covered" >error('Missing entry-condition block or pattern detector.');</span>
+    if(detectors.length&gt;1) <span class="branch-0 cbranch-no" title="branch not covered" >error('Use one detector per bot; compare independent strategies with comparison blocks.');</span>
+    if(detectors.length&amp;&amp;config.nodes.some(n=&gt;SPEC.get(n.type)?.op==='entry'))<span class="branch-0 cbranch-no" title="branch not covered" >error('Choose either a pattern pipeline or a generic entry, not both.');</span>
+    for(const detector of detectors){
+        const chain=patternSequence(detector,config.nodes);const ops=chain.map(n=&gt;SPEC.get(n.type)!.op);
+        const confirmations=ops.filter(op=&gt;op.startsWith('pattern_confirm_')).length;
+        if(confirmations!==1&amp;&amp;!(confirmations===0&amp;&amp;SPEC.get(detector.type)!.op==='pattern_detect_parity'))<span class="branch-0 cbranch-no" title="branch not covered" >error('Connect exactly one confirmation block after the detector (Parity Pattern includes its own confirmation).',detector.id);</span>
+        if(ops.filter(op=&gt;op==='pattern_emit').length!==1)<span class="branch-0 cbranch-no" title="branch not covered" >error('Connect exactly one Emit Setup Detected block after confirmation.',detector.id);</span>
+        if(ops.filter(op=&gt;['pattern_barrier','pattern_parity_outcome','pattern_subsequent'].includes(op)).length!==1)error('Connect exactly one subsequent-tick evaluation block.',detector.id);
+        if(!ops.includes('pattern_record'))error('Connect Record Observed Outcome to the pattern sequence.',detector.id);
+        const confirm=ops.findIndex(op=&gt;op.startsWith('pattern_confirm_'));const emit=ops.indexOf('pattern_emit');const evaluate=ops.findIndex(op=&gt;['pattern_barrier','pattern_parity_outcome','pattern_subsequent'].includes(op));
+        if(confirm&gt;emit||emit&gt;evaluate||evaluate&gt;ops.indexOf('pattern_record'))error('Sequence must be detector → confirmation → emit → next-tick evaluation → record.',detector.id);
+        if(chain.slice(1).some(n=&gt;!SPEC.get(n.type)!.op.startsWith('pattern_')||isDetector(n)))<span class="branch-0 cbranch-no" title="branch not covered" >error('Pattern declarations must form one uninterrupted pipeline; put unrelated controls in another event.',detector.id);</span>
+    }
+    const declarations=new Set(detectors.flatMap(d=&gt;patternSequence(d,config.nodes).slice(1).map(n=&gt;n.id)));
+    for(const n of config.nodes){const op=SPEC.get(n.type)!.op;if(op.startsWith('pattern_')&amp;&amp;!isDetector(n)&amp;&amp;!['pattern_reset','pattern_allow_next','pattern_explain'].includes(op)&amp;&amp;!declarations.has(n.id))error('Connect this declaration after a pattern detector.',n.id);}
+    if (config.nodes.filter(n=&gt;SPEC.get(n.type)?.op==='entry').length&gt;1) <span class="branch-0 cbranch-no" title="branch not covered" >error('Use one entry definition per bot to avoid ambiguous setups.');</span>
+    const visited = new Set&lt;string&gt;(); const active = new Set&lt;string&gt;();
+    const walk = (id: string, depth: number) =&gt; {
+        if (active.has(id)) { error('Cycle detected: unbounded loops are not allowed.',id); return; }
+        if (depth&gt;50) <span class="branch-0 cbranch-no" title="branch not covered" >{ error('Graph nesting exceeds 50.',id); return; }</span>
+        if (visited.has(id)) <span class="branch-0 cbranch-no" title="branch not covered" >return;</span>
+        visited.add(id); active.add(id);
+        const n=byId.get(id);
+        if(n) [...Object.values(n.inputs),...(n.next?[n.next]:[])].forEach(child=&gt;walk(child,depth+1));
+        active.delete(id);
+    };
+    roots.forEach(n=&gt;walk(n.id,0));
+    const parentOf = (id: string) =&gt; config.nodes.find(n=&gt;Object.values(n.inputs).includes(id)||n.next===id);
+    for(const node of config.nodes) {
+        const op=SPEC.get(node.type)!.op;
+        if(op==='entry'||op.startsWith('observe')||isDetector(node)) {
+            const chain: Node[]=[];let current:Node|undefined=node;const seen=new Set&lt;string&gt;();
+            while(current&amp;&amp;!seen.has(current.id)){seen.add(current.id);chain.push(current);current=parentOf(current.id);}
+            if((op==='entry'||isDetector(node))&amp;&amp;!chain.some(n=&gt;SPEC.get(n.type)?.event==='tick'))<span class="branch-0 cbranch-no" title="branch not covered" >error('Entry definitions must run inside When New Tick Arrives.',node.id);</span>
+            if(op.startsWith('observe')&amp;&amp;!chain.some(n=&gt;SPEC.get(n.type)?.op==='entry'))<span class="branch-0 cbranch-no" title="branch not covered" >error('Observation blocks must be connected inside an entry definition.',node.id);</span>
+            if(op.startsWith('observe_')<span class="branch-0 cbranch-no" title="branch not covered" >&amp;&amp;op.slice(8)!==config.strategy)<span class="branch-0 cbranch-no" title="branch not covered" ></span>error('Observation strategy must match the selected strategy.',node.id);</span>
+        }
+    }
+    config.nodes.filter(n=&gt;!visited.has(n.id)).forEach(n=&gt;error('Unreachable block: connect or delete it.',n.id));
+    const hasInEntry = (op: string) =&gt; {
+        const entry=config.nodes.find(n=&gt;SPEC.get(n.type)?.op==='entry');
+        const seen = new Set&lt;string&gt;();
+        const search=(id?:string):boolean=&gt;{if(!id || seen.has(id)) return false;seen.add(id);const n=byId.get(id);return !!n&amp;&amp;(SPEC.get(n.type)?.op===op||Object.values(n.inputs).some(search));};
+        return search(entry?.inputs.CONDITION);
+    };
+    if (!hasInEntry('fresh')) warning('Add Require Fresh Market Data to explain quality checks visually. The engine always enforces freshness.');
+    if (!hasInEntry('sample')) warning('Add a minimum-sample block. The engine always enforces the configured minimum.');
+    // Catch the common direct contradiction without claiming general SAT solving.
+    const equals=config.nodes.filter(n=&gt;SPEC.get(n.type)?.op==='eq');
+    if(new Set(equals.map(n=&gt;n.fields.DIGIT)).size&gt;1<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; config.nodes.some(n=&gt;SPEC.get(n.type)?.op==='and'))</span> <span class="branch-0 cbranch-no" title="branch not covered" >warning('Different digit-equality tests joined with AND may contradict each other.');</span>
+    if(config.nodes.filter(n=&gt;['cooldown_ticks','cooldown_seconds'].includes(SPEC.get(n.type)!.op)).length&gt;1) <span class="branch-0 cbranch-no" title="branch not covered" >error('Conflicting restart blocks: choose one cooldown block; combine tick/second limits in the configuration panel instead.');</span>
+    return issues;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-15T18:23:11.008Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

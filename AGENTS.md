@@ -8,7 +8,7 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
 - `docker compose -f docker-compose.base44.yml up -d` starts the dev server.
 - Node 22 base image; source is bind-mounted at `/app`; `node_modules` lives in an anonymous volume.
 - Dev server listens on port 4003 inside the container, mapped to host port 3000.
-- `npm install` runs on container startup before `npm run dev`. There is no lockfile in the repo.
+- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, using the committed `package-lock.json`.
 
 ### Sandbox-only dev override: eager compilation
 Rsbuild turns on Rspack's lazy ("compile on demand") dev compilation by default. Here the browser
@@ -121,3 +121,13 @@ Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and th
   and the floating "Scan markets" button.
 - The scanner returns ~8 volatility markets; picking one switches the whole tab to that market.
 - Known pre-existing console warning: `Failed to load image` (branding logo) — unrelated to this work.
+
+## Isolated observational bot workspace
+- The Bots tab embeds `/bot-lab.html`, a second Rsbuild entry, not a React Router path. Keep it in a separate document: the legacy trading builder patches Blockly globals/prototypes and must not share the observer's stock Blockly instance. The static preview prefix is `/bot/preview/bot-lab.html`.
+- `src/pages/bots/pattern-program.ts` compiles connected declarations; `pattern-engine.ts` is the single chronological state machine used by live monitoring, replay, and comparison. No generated JavaScript, account API, or trade messages are used by this lab.
+- A pattern row begins at the qualifying adjacent run. Only a later confirmation creates the setup; only the next genuine tick creates the outcome. Timeout 0 means unlimited. Stop/pause/gaps invalidate incomplete patterns; restored journals retain completion watermarks to prevent re-evaluation.
+- History seeds statistics, not live detector adjacency. Reconnect, stale data, malformed data, precision changes, and missing tick epochs require history synchronisation. The supported cadences are 1 second for the 1-second group and 2 seconds for classic Volatility; transitions do not bridge missing epochs.
+- Pattern stage is distinct from session state. `Setup detected` is exposed before `Evaluation pending`; the live session's existing timer advances the label without manufacturing a tick. Replay advances only when a genuine historical tick is stepped.
+- Configurations, bounded journals, and traces are browser-local under `dboteasy.observational-bots.v1`. JSON import is local parsing, not a server upload. CSV includes pair/confirmation/outcome timestamps, config version, lifecycle, and interruptions.
+- Verify with `docker compose -f docker-compose.base44.yml exec -T web npm test -- --runInBand src/pages/bots --coverage=false` and `npm run type-check` inside the web container. Deterministic fixture ticks exist only in tests; live/replay UI always uses the public provider.
+- Production build verification can use a temporary Rsbuild config in `/tmp` overriding only `output.distPath.root`, avoiding churn of tracked `dist/` assets. Both `index.html` and `bot-lab.html` must be produced.

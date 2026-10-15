@@ -3,8 +3,8 @@ import { localize } from '@deriv-com/translations';
 import DBotStore from '../dbot-store';
 
 window.Blockly.BlockSvg.prototype.removeSelect = function () {
-    window.Blockly.utils.dom.removeClass(this.svgGroup_, 'blocklySelected');
-    if (window.Blockly.derivWorkspace.lastAddedBlock === this) {
+    if (this.svgGroup_) window.Blockly.utils.dom.removeClass(this.svgGroup_, 'blocklySelected');
+    if (window.Blockly.derivWorkspace?.lastAddedBlock === this) {
         window.Blockly.derivWorkspace.lastAddedBlock = null;
     }
 };

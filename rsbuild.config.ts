@@ -35,7 +35,7 @@ export default defineConfig({
     pluginReact(),
   ],
   source: {
-    entry: { index: './src/main.tsx' },
+    entry: { index: './src/main.tsx', 'bot-lab': './src/pages/bots/editor-entry.tsx' },
     define: {
       'process.env': {
         // Deriv app id — drives OAuth login/sign-up and WebSocket connections. The
@@ -100,7 +100,7 @@ export default defineConfig({
       { from: path.join(__dirname, 'public') },
     ],
   },
-  html: { template: './index.html' },
+  html: { template: ({ entryName }) => entryName === 'bot-lab' ? './src/pages/bots/editor.html' : './index.html' },
   server: {
     compress: true,
   },

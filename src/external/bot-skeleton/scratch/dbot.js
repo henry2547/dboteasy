@@ -47,7 +47,9 @@ class DBot {
                 if (is_symbol_list_change || is_trade_type_cat_list_change) {
                     const { contracts_for } = ApiHelpers?.instance ?? {};
                     const top_parent_block = this.getTopParent();
-                    const market_block = top_parent_block.getChildByType('trade_definition_market');
+                    // Delete/move events can outlive their parent blocks.
+                    const market_block = top_parent_block?.getChildByType('trade_definition_market');
+                    if (!market_block || !this.workspace) return;
                     const market = market_block.getFieldValue('MARKET_LIST');
                     const submarket = market_block.getFieldValue('SUBMARKET_LIST');
                     const symbol = market_block.getFieldValue('SYMBOL_LIST');
@@ -275,7 +277,7 @@ class DBot {
         try {
             api_base.is_stopping = false;
             const code = this.generateCode();
-            if (!this.interpreter.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
+            if (!this.interpreter?.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
 
             this.is_bot_running = true;
 
@@ -387,11 +389,22 @@ class DBot {
             return;
         }
 
-        await this.interpreter.stop();
-        this.interpreter = null;
-        this.interpreter = Interpreter();
-        await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);
-        forgetAccumulatorsProposalRequest(this);
+        // Keep one teardown in flight; repeated Stop clicks must not replace an
+        // interpreter that another stop is still disposing.
+        if (this.stopPromise) return this.stopPromise;
+        const interpreter = this.interpreter;
+        this.stopPromise = (async () => {
+            try {
+                await interpreter.stop();
+                if (this.interpreter === interpreter) this.interpreter = null;
+            } catch (error) {
+                globalObserver.emit('ui.log.error', error?.message || 'Unable to stop the bot session.');
+            } finally {
+                forgetAccumulatorsProposalRequest(this);
+                this.stopPromise = null;
+            }
+        })();
+        return this.stopPromise;
     }
 
     /**
