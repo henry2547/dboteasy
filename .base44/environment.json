@@ -1,0 +1,13 @@
+{
+    "previewPort": 3000,
+    "healthPath": "/",
+    "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+    "secrets": [
+        {
+            "name": "NEXT_PUBLIC_DERIV_APP_ID",
+            "description": "Deriv application ID for WebSocket connections and OAuth login",
+            "requiredAtBoot": true,
+            "generatedForDevelopment": false
+        }
+    ]
+}
