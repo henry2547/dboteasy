@@ -175,9 +175,10 @@ Builder palette. `rsbuild.config.ts` has a single `index` entry again.
   to `precision: 0` in `Observer/index.js`; every other number field keeps one decimal. A block's
   colour comes from its group, and `meta()` returns the localised label/description used by search.
 - Verify by opening `#bot-builder`: each of the four groups expands in the palette, and dragging one
-  of its blocks onto the canvas places it with its default field values preserved. These blocks are
-  declarative only — no account API and no trade messages — and the generated program ignores them
-  (see `generator.js` above). To check generation without a logged-in account (Run is login-gated),
+  of its blocks onto the canvas places it with its default field values preserved. The generated
+  program still ignores them (see `generator.js` above) — the observer runtime reads the canvas
+  itself — and they place no order of their own. To check generation without a logged-in account
+  (Run is login-gated),
   load a workspace XML of observer blocks into the live workspace and call
   `window.Blockly.JavaScript.javascriptGenerator.workspaceToCode(workspace)`: it must not throw, and
   the output must hold only the placeholder comments/literals.
@@ -185,3 +186,23 @@ Builder palette. `rsbuild.config.ts` has a single `index` entry again.
   invisible in the palette, since `toolbox-items.tsx` renders groups, not categories.
 - Production build verification can use a temporary Rsbuild config in `/tmp` overriding only
   `output.distPath.root`, avoiding churn of tracked `dist/` assets (do not commit such a config).
+
+### What the observer blocks actually do at run time
+`src/external/bot-skeleton/services/observer/` is a bounded, deterministic reader of the canvas: it
+reads blocks off the workspace (`observer-program.js`), walks them with an operation budget
+(`observer-engine.js`), and uses `eval`/generated JS nowhere — that is why the palette's generators
+stay inert placeholders. `index.js` exposes the whole thing as the `observerRuntime` singleton.
+- **One tick stream.** `trade/Ticks.js` hands every genuine tick to `observerRuntime.feedTick()` from
+  inside the existing subscription, so the observer never opens a second WebSocket and never invents
+  data: a missing value is `Inconclusive`, which never signals.
+- **The trade gate.** `dbot.js` starts the session before generating code and asks
+  `observerRuntime.gateEnabled()`; only a canvas carrying observer *entry* blocks gets
+  `if (!Bot.observerEntryPassed()) { sleep(1); continue; }` injected into the generated loop.
+  `Bot.observerEntryPassed()` (`BotInterface.js`) consumes the signal exactly once per entry, so the
+  existing trade setup — amount, contract, duration — is untouched and starts a trade only when the
+  observed conditions pass. A canvas with no observer entry blocks generates the loop it had before.
+- Stop paths (`stopBot`, `terminateBot`) call `observerRuntime.detach()`, so a stopped bot feeds no
+  more ticks; without that the session would outlive the bot.
+- Unit coverage: `services/observer/__tests__/observer-engine.test.js`
+  (`docker compose exec web npx jest src/external/bot-skeleton/services/observer`). Run is
+  login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.

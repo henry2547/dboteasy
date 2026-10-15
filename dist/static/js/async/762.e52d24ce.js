@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkmy_trading_bot=self.webpackChunkmy_trading_bot||[]).push([["762"],{42361(e,t,a){a.r(t),a.d(t,{default:()=>i});var r=a(74848);function i(e){let t=window.location.pathname.includes("/bot/preview")?"/bot/preview/":"/";return(0,r.jsx)("iframe",{className:"observer-frame",title:"Observational bot builder",src:t+"bot-lab.html"})}}}]);
