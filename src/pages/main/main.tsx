@@ -36,6 +36,7 @@ import {
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
+    LabelPairedSlidersCaptionRegularIcon,
     LabelPairedTableLayoutCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { Localize, localize } from '@deriv-com/translations';
@@ -47,6 +48,7 @@ import RunStrategy from '../dashboard/run-strategy';
 import { DigitsLabProvider } from '../digits/digits-lab-context';
 import './main.scss';
 
+const BotPage = lazy(() => import('../bot'));
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const StatisticsPage = lazy(() => import('../statistics'));
@@ -82,7 +84,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics', 'bot'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -148,7 +150,7 @@ const AppWrapper = observer(() => {
 
     React.useEffect(() => {
         const el_dashboard = document.getElementById('id-dbot-dashboard');
-        const el_last_tab = document.getElementById('id-statistics');
+        const el_last_tab = document.getElementById('id-bot');
 
         const observer_dashboard = new window.IntersectionObserver(
             ([entry]) => {
@@ -475,6 +477,27 @@ const AppWrapper = observer(() => {
                                         }
                                     >
                                         <StatisticsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedSlidersCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Bot' />
+                                    </>
+                                }
+                                id='id-bot'
+                            >
+                                <ErrorBoundary label='Bot'>
+                                    <Suspense
+                                        fallback={<ChunkLoader message={localize('Please wait, loading the bot...')} />}
+                                    >
+                                        <BotPage />
                                     </Suspense>
                                 </ErrorBoundary>
                             </div>

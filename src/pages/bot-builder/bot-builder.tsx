@@ -9,6 +9,8 @@ import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import { TBlocklyEvents } from 'Types';
 import LoadModal from '../../components/load-modal';
+import { clearPendingSelection, hasPendingSelection, readSavedSelection } from '../bot/bot-selection-store';
+import { applySelectionToWorkspace, buildWorkspaceXml } from '../bot/bot-workspace';
 import SaveModal from '../dashboard/bot-list/save-modal';
 import BotBuilderTourHandler from '../tutorials/dbot-tours/bot-builder-tour';
 import QuickStrategy1 from './quick-strategy';
@@ -109,6 +111,40 @@ const BotBuilder = observer(() => {
             },
         });
     };
+
+    // The Bot tab's menus hand their selection over here: as soon as this canvas is ready it loads
+    // those blocks, so the tab opens with the blocks the user selected.
+    React.useEffect(() => {
+        if (is_loading || !hasPendingSelection()) return;
+
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout>;
+        let attempts = 0;
+
+        const applySelection = () => {
+            if (cancelled) return;
+
+            const xml = buildWorkspaceXml(readSavedSelection());
+            if (!xml) {
+                clearPendingSelection();
+                return;
+            }
+            if (!window.Blockly?.derivWorkspace) {
+                // The canvas is created asynchronously, so wait for it rather than lose the selection.
+                if (attempts++ < 40) timer = setTimeout(applySelection, 250);
+                return;
+            }
+            applySelectionToWorkspace(xml).then(applied => {
+                if (applied) clearPendingSelection();
+            });
+        };
+
+        applySelection();
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [is_loading]);
 
     return (
         <>
