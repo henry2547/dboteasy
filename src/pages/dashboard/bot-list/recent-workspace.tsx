@@ -175,6 +175,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                         {workspace.name}
                     </Text>
                 </div>
+                <BotConfigSummary config={workspace.config} />
             </div>
             <div className='bot-list__item__time-stamp'>
                 <Text align='left' as='p' size={text_size} lineHeight='l'>
@@ -182,6 +183,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                 </Text>
             </div>
             <div className='bot-list__item__load-type'>
+                <BotStatusBadge status={workspace.status} />
                 {getRecentFileIcon(workspace.save_type, 'bot-list__item__load-type__icon--active')}
                 <div className='bot-list__item__load-type__icon--saved'>
                     <Text align='left' as='p' size={text_size} lineHeight='l'>
@@ -191,7 +193,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
             </div>
             {isDesktop ? (
                 <div className='bot-list__item__actions'>
-                    {CONTEXT_MENU.map(item => (
+                    {context_menu.map(item => (
                         <div
                             key={item.type}
                             className='bot-list__item__actions__action-item'
@@ -219,7 +221,7 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
                             'bot-list__item__responsive--min': dashboard_strategies.length <= 5,
                         })}
                     >
-                        {CONTEXT_MENU.map(item => (
+                        {context_menu.map(item => (
                             <div
                                 key={item.type}
                                 className='bot-list__item__responsive__menu'

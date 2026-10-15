@@ -377,8 +377,17 @@ class DBot {
 
         api_base.setIsRunning(false);
 
-        await this.interpreter.stop();
         this.is_bot_running = false;
+
+        // The interpreter only exists once a workspace has been initialised, so a stop
+        // request that arrives before that (or after a failed run) has nothing to stop.
+        // Bail out instead of dereferencing a null interpreter and crashing the app.
+        if (!this.interpreter) {
+            forgetAccumulatorsProposalRequest(this);
+            return;
+        }
+
+        await this.interpreter.stop();
         this.interpreter = null;
         this.interpreter = Interpreter();
         await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);
