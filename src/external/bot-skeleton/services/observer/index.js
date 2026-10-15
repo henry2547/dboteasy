@@ -15,6 +15,7 @@
 import { observer as globalObserver } from '../../utils/observer';
 import { ObserverEngine } from './observer-engine';
 import { readProgram, readTradeSetupSymbol } from './observer-program';
+import { validateProgram } from './observer-validate';
 
 const journal = message => globalObserver.emit('ui.log.notify', { className: 'info', message });
 
@@ -22,7 +23,20 @@ let engine = null;
 
 const createEngine = ({ workspace, onStop, onPause } = {}) => {
     const program = readProgram(workspace);
-    if (!program.blocks.size) return null;
+    if (!program.blocks.size && !program.unknown.length) return null;
+
+    // Every block is checked before a session starts: an unevaluable block is named in the journal
+    // instead of failing later, and a program that carries one is not run at all (the bot then keeps
+    // the plain trading program it had before these blocks were added).
+    const report = validateProgram(program);
+    report.issues.forEach(issue => journal(`Observer: ${issue.message}`));
+    if (!report.ok) {
+        journal(
+            `Observer: ${report.errors.length} observer block(s) cannot be evaluated, so no observation session was started; the bot runs the program it had before them.`
+        );
+        return null;
+    }
+
     const symbol = readTradeSetupSymbol(workspace);
     if (program.has_entry_gate && !symbol) {
         journal('Observer: an entry block is on the canvas, but the trade parameters are not set, so no trade can start.');

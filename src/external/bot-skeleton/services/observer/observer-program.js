@@ -26,20 +26,27 @@ const readFields = (block, spec) => {
 };
 
 /**
- * @returns {{ blocks: Map<string, object>, events: Map<string, string[]>, entries: string[], roots: string[], has_entry_gate: boolean }}
+ * @returns {{ blocks: Map<string, object>, events: Map<string, string[]>, entries: string[], roots: string[], has_entry_gate: boolean, unknown: object[] }} `unknown` holds the `obs_…` blocks this version does not define, so validation can name them.
  */
 export const readProgram = workspace => {
     const blocks = new Map();
     const events = new Map();
     const entries = [];
     const roots = [];
+    const unknown = [];
     let gate = false;
 
-    if (!workspace) return { blocks, events, entries, roots, has_entry_gate: gate };
+    if (!workspace) return { blocks, events, entries, roots, has_entry_gate: gate, unknown };
 
     workspace.getAllBlocks(false).forEach(block => {
         const spec = SPEC.get(block.type);
-        if (!spec || block.isShadow?.() || !isActive(block)) return;
+        if (!spec) {
+            // An observer block this version no longer defines — a block type from an older or
+            // renamed configuration. It has no evaluator, so validation names it before the run.
+            if (String(block.type).startsWith('obs_')) unknown.push({ id: block.id, type: block.type, label: block.type });
+            return;
+        }
+        if (block.isShadow?.() || !isActive(block)) return;
 
         blocks.set(block.id, {
             id: block.id,
@@ -69,7 +76,7 @@ export const readProgram = workspace => {
         roots.push(block.id);
     });
 
-    return { blocks, events, entries, roots, has_entry_gate: gate || entries.length > 0 };
+    return { blocks, events, entries, roots, has_entry_gate: gate || entries.length > 0, unknown };
 };
 
 /**

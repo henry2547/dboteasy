@@ -214,6 +214,17 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   observed conditions pass. A canvas with no observer entry blocks generates the loop it had before.
 - Stop paths (`stopBot`, `terminateBot`) call `observerRuntime.detach()`, so a stopped bot feeds no
   more ticks; without that the session would outlive the bot.
-- Unit coverage: `services/observer/__tests__/observer-engine.test.js`
-  (`docker compose exec web npx jest src/external/bot-skeleton/services/observer`). Run is
+- **The canvas is validated before a session starts.** `observer-validate.js` checks every block
+  `readProgram` returned: a block with no evaluator, an `obs_…` type this version no longer defines
+  (recorded as `program.unknown`), or a "When …" hat whose event the tick stream never raises
+  (`DISPATCH_EVENTS` in `observer-engine.js`) is written to the journal and the observer session is
+  not started at all — the bot then runs the plain trading program it had before those blocks. An
+  unconnected socket or an empty field is a warning only, and the block stays Inconclusive. Adding a
+  "When …" hat means adding its event to `DISPATCH_EVENTS` and raising it from the engine (a hat with
+  no matching `dispatch('…')` call would never run).
+- Unit coverage lives in `services/observer/__tests__/` — `observer-engine.test.js` (runtime),
+  `observer-generation.test.js` (one generator per palette block, plus every block in
+  `scratch/blocks` has a `forBlock` registration) and `observer-validation.test.js` (validation,
+  every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
+  `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.

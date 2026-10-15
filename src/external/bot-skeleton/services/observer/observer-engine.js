@@ -20,6 +20,29 @@ const MAX_SEQUENCE_STEPS = 200;
 const MAX_HISTORY = 1000;
 const MAX_REPEAT = 20;
 
+/**
+ * The events the tick stream raises. Every "When …" hat names one of these, so a hat whose event is
+ * missing from this list could never run — `observer-validate.js` refuses such a program before the
+ * session starts rather than letting the block sit there silently.
+ */
+export const DISPATCH_EVENTS = new Set([
+    'start',
+    'market',
+    'tick',
+    'window',
+    'setup',
+    'complete',
+    'lost',
+    'restored',
+    'resume',
+]);
+
+/**
+ * Ops the statement walker below handles itself (control flow, the entry signal, the lifecycle), so
+ * they need no `STATEMENTS` entry of their own.
+ */
+export const FLOW_OPS = new Set(['if', 'if_else', 'repeat', 'once', 'wait', 'entry', 'entry_any', 'end', 'continue']);
+
 export const STAGES = {
     WAITING_PAIR: 'Waiting for pair',
     WAITING_CONFIRMATION: 'Waiting for confirmation',
@@ -35,6 +58,7 @@ export class ObserverEngine {
         this.onStop = hooks.onStop ?? (() => {});
         this.active = false;
         this.entry_pending = false;
+        this.resume_pending = false;
         this.unimplemented = new Set();
         this.waiters = new Map();
         this.cache = new Map();
@@ -208,6 +232,12 @@ export class ObserverEngine {
         if (this.interrupted) return;
 
         ctx.connected = true;
+        // "When Bot Is Resumed" runs once after Resume, on the first tick that follows and before
+        // that tick is judged.
+        if (this.resume_pending) {
+            this.resume_pending = false;
+            this.dispatch('resume');
+        }
         this.resolveWaiters();
         this.resolvePending();
         this.advancePattern();
@@ -812,8 +842,13 @@ export class ObserverEngine {
     }
 
     setMonitoring(flag) {
-        this.ctx.monitoring = Boolean(flag);
-        this.ctx.paused = false;
+        const ctx = this.ctx;
+        // Resuming from a pause or a stop is a transition; the "When Bot Is Resumed" hat is raised
+        // for it on the next tick. Starting monitoring that was never stopped is not a resume.
+        const was_running = ctx.monitoring && !ctx.paused;
+        ctx.monitoring = Boolean(flag);
+        ctx.paused = false;
+        if (flag && !was_running) this.resume_pending = true;
         this.note(flag ? 'Monitoring started.' : 'Monitoring stopped by the observer program.');
     }
 
