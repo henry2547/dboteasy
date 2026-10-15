@@ -1,5 +1,5 @@
 import { localize } from '@deriv-com/translations';
-import { modifyContextMenu } from '../../../utils';
+import { modifyContextMenu } from '../../utils';
 import { digitOptions } from './digit-options';
 
 window.Blockly.Blocks.digits_frequency = {

@@ -1,5 +1,5 @@
 import { localize } from '@deriv-com/translations';
-import { modifyContextMenu } from '../../../utils';
+import { modifyContextMenu } from '../../utils';
 
 window.Blockly.Blocks.digits_even_odd = {
     init() {
