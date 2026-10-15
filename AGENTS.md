@@ -86,9 +86,10 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has seven tabs: Dashboard, Bot Builder, Charts, Tutorials, Digits, Bots, Statistics.
+The main tab bar has five tabs: Dashboard, Bot Builder, Charts, Digits, Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
-`src/pages/main/main.tsx` must stay in the same order.
+`src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
+ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
 
 - **Digits + Statistics share ONE feed.** `DigitsLabProvider`
   (`src/pages/digits/digits-lab-context.tsx`) is mounted around `<Tabs>` in `main.tsx`; both pages read
@@ -111,8 +112,7 @@ Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and th
   `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
   category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
   sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
-  `modifyContextMenu` from `../../../utils` breaks the whole dev build. The Bots tab still ships
-  recipe cards plus a guide.
+  `modifyContextMenu` from `../../../utils` breaks the whole dev build.
 
 ### Verifying these tabs
 - The tab targets are the `<li>` elements `#id-digits`, `#id-bots`, `#id-statistics` — click these to
