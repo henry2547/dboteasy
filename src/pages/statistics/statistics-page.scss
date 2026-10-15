@@ -1,0 +1,87 @@
+/* Statistics tab — detail view for the selected market. */
+
+.statistics-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem 1.6rem;
+    margin: 0;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    dt {
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    dd {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+    }
+}
+
+.statistics-digits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.statistics-digit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.6rem;
+    height: 2.6rem;
+    padding: 0 0.4rem;
+    border-radius: 8px;
+    background: var(--general-section-1);
+    border: 1px solid var(--general-main-3);
+    font-size: 1.3rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+
+    &--latest {
+        background: var(--brand-primary);
+        border-color: var(--brand-primary);
+        color: #fff;
+    }
+}
+
+.statistics-table-wrap {
+    overflow-x: auto;
+}
+
+.statistics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.2rem;
+    font-variant-numeric: tabular-nums;
+
+    th,
+    td {
+        padding: 0.55rem 0.7rem;
+        text-align: left;
+        border-bottom: 1px solid var(--general-main-3);
+        white-space: nowrap;
+    }
+
+    th {
+        color: var(--text-less-prominent);
+        font-weight: 600;
+    }
+
+    &__empty {
+        text-align: center;
+        color: var(--text-less-prominent);
+    }
+}

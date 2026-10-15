@@ -115,6 +115,21 @@ export function groupMarkets(markets: MarketSymbol[]): MarketGroup[] {
     }));
 }
 
+/**
+ * The Digits lab only trades the digit-friendly market families, so everything
+ * else (step, jump, boom/crash, range break) stays out of the picker and the
+ * scanner.
+ */
+export const DIGIT_MARKET_CATEGORIES = ['1-Second Volatility Indices', 'Volatility Indices'];
+
+export function isDigitMarket(market: MarketSymbol): boolean {
+    return DIGIT_MARKET_CATEGORIES.includes(market.category);
+}
+
+export function filterDigitMarkets(markets: MarketSymbol[]): MarketSymbol[] {
+    return markets.filter(isDigitMarket);
+}
+
 /** Picks a sensible default market: the classic R_100 volatility index, else any open synthetic. */
 export function pickDefaultMarket(markets: MarketSymbol[]): MarketSymbol | null {
     const preferred = markets.find(market => market.apiSymbol === 'R_100' && market.isOpen);

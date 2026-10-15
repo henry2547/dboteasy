@@ -90,6 +90,49 @@ export default Engine =>
         getLastDigitList() {
             return new Promise(resolve => this.getTicks().then(ticks => resolve(this.getLastDigitsFromList(ticks))));
         }
+
+        isLastDigitOver(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit > Number(digit)))
+            );
+        }
+
+        isLastDigitUnder(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit < Number(digit)))
+            );
+        }
+
+        isLastDigitParity(parity) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit =>
+                    resolve(parity === 'odd' ? last_digit % 2 === 1 : last_digit % 2 === 0)
+                )
+            );
+        }
+
+        isLastDigitMatches(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit === Number(digit)))
+            );
+        }
+
+        isLastDigitDiffers(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit !== Number(digit)))
+            );
+        }
+
+        getDigitFrequency(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    const recent_digits = digits.slice(-size);
+                    const hits = recent_digits.filter(value => Number(value) === Number(digit)).length;
+                    resolve(recent_digits.length ? (hits / recent_digits.length) * 100 : 0);
+                })
+            );
+        }
         getLastDigitsFromList(ticks) {
             const digits = ticks.map(tick => {
                 return getLastDigit(tick.toFixed(this.getPipSize()));

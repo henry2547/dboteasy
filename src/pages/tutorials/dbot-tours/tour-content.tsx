@@ -33,7 +33,7 @@ export const DBOT_ONBOARDING = [
                         <Localize i18n_default_text='Create your bot using our drag-and-drop blocks or click Quick Strategy to choose from the ready-to-use bot templates.' />
                     </>,
                     <>
-                        <Localize i18n_default_text='We also provide a guide on the Tutorial tab to show you how you can build and execute a simple strategy.' />
+                        <Localize i18n_default_text='We also provide ready-made digit bots and a guide on the Bots tab to show you how you can build and execute a simple strategy.' />
                     </>,
                 ]}
                 media={'/assets/videos/dbot-onboarding-tour-step-1.mp4'}
@@ -62,14 +62,14 @@ export const DBOT_ONBOARDING = [
         disableOverlay: false,
     },
     {
-        target: '#id-tutorials',
+        target: '#id-bots',
         content: (
             <TourSteps
-                label={<Localize i18n_default_text='Learn more with our tutorials' />}
+                label={<Localize i18n_default_text='Start from a ready-made bot' />}
                 content={[
                     <Localize
-                        key='explore tutorials'
-                        i18n_default_text='Explore the video guides and FAQs to build your bot in the tutorials tab.'
+                        key='explore bots'
+                        i18n_default_text='Load a digit bot from the Bots tab and tune its settings to build your own.'
                     />,
                 ]}
                 media={'/assets/videos/dbot-onboarding-tour-step-3.mp4'}
@@ -136,13 +136,13 @@ export const DBOT_ONBOARDING = [
         disableOverlay: false,
     },
     {
-        target: '#id-tutorials',
+        target: '#id-bots',
         content: (
             <TourSteps
-                label={<Localize i18n_default_text='Want to retake the tour?' />}
+                label={<Localize i18n_default_text='Build your own digit bot' />}
                 content={[
-                    <Text key={`${0}-id-tutorials`} as='p'>
-                        <Localize i18n_default_text='Head to the Tutorials tab to do so.' />
+                    <Text key={`${0}-id-bots`} as='p'>
+                        <Localize i18n_default_text='The Bots tab holds the recipes; the Bot Builder holds the drag-and-drop blocks.' />
                     </Text>,
                 ]}
                 step_index={7}

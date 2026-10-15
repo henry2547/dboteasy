@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { ToastContainer } from 'react-toastify';
 import AuthLoadingWrapper from '@/components/auth-loading-wrapper';
+import ErrorBoundary from '@/components/error-boundary/error-boundary';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import useLiveChat from '@/components/chat/useLiveChat';
 import { getUrlBase } from '@/components/shared';
@@ -196,7 +197,9 @@ const AppContent = observer(() => {
                         <BlocklyLoading />
                         <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
                             <Audio />
-                            <Main />
+                            <ErrorBoundary label='App'>
+                                <Main />
+                            </ErrorBoundary>
                             <BotBuilder />
                             <BotStopped />
                             <TransactionDetailsModal />

@@ -72,10 +72,52 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   do not fit a narrow phone viewport.
 - The digit-frequency grid (`.digits-grid`) is a fixed 5-column grid at every width — digits 0–4 on
   the first row, 5–9 on the second — so it never scrolls sideways on a phone; below the 768px
-  breakpoint `.digits-card` / `.digits-badge` tighten their type and padding to keep five columns
+  breakpoint `.digit-bubble` / `.digits-badge` tighten their type and padding to keep five columns
   inside a narrow viewport.
+- Digit frequency is drawn as circles (`.digit-bubble`, one SVG per digit in `digit-grid.tsx`), not
+  cards: the coloured disc inside grows with the digit's share of the busiest digit, green
+  (`--brand-success`) for the hottest digit, red (`--status-danger`) for the coldest, and a yellow
+  (`--brand-warning`) cursor ring plus pin marks the digit the ticker is on right now. The grid takes
+  `currentDigit` from the newest tick on the page — same value the distribution panel's cursor uses.
 
 ## Verification
 - `curl http://localhost:3000/` returns 200 with the app HTML; JS bundles are served live at `/static/js/index.js`.
 - The Digits tab: open `#digits`, confirm markets load, ~1000 stored ticks, the digit grid, the
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
+
+## Tabs added for digit trading
+The main tab bar has seven tabs: Dashboard, Bot Builder, Charts, Tutorials, Digits, Bots, Statistics.
+Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
+`src/pages/main/main.tsx` must stay in the same order.
+
+- **Digits + Statistics share ONE feed.** `DigitsLabProvider`
+  (`src/pages/digits/digits-lab-context.tsx`) is mounted around `<Tabs>` in `main.tsx`; both pages read
+  it with `useDigitsLabContext()`. `useDigitsLab()` keeps the single public WebSocket, so the market
+  picked on Digits is the market Statistics analyses. Children of the provider are passed as stable
+  element props, so a tick does not re-render the whole shell.
+- **Market filter:** `filterDigitMarkets` in `markets.ts` keeps only the `1-Second Volatility Indices`
+  and `Volatility Indices` categories. The picker and the scanner both use it.
+- **Scanner:** `scan-markets.ts` opens its OWN short-lived public WebSocket (never disturbs the live
+  subscription) and ranks volatility markets. Remember `ticks_history` needs `subscribe: 1`; the scan
+  sends `forget` straight after each request.
+- **Statistics from raw digits:** `calculateStatisticsFromDigits` in `statistics.ts` is the digits-only
+  entry point; `calculateDigitStatistics` now delegates to it.
+- **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab
+  page in `main.tsx`, so a broken view shows a recoverable card instead of a blank app.
+- **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
+  `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
+- **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
+  `digits_matches_differs` and `digits_frequency` live in
+  `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
+  category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
+  sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
+  `modifyContextMenu` from `../../../utils` breaks the whole dev build. The Bots tab still ships
+  recipe cards plus a guide.
+
+### Verifying these tabs
+- The tab targets are the `<li>` elements `#id-digits`, `#id-bots`, `#id-statistics` — click these to
+  switch; the URL hash only selects a tab on first load, not after mount.
+- Digits: check the market-conditions panel, the chart cursor + ticker trail, the digit-circle marker
+  and the floating "Scan markets" button.
+- The scanner returns ~8 volatility markets; picking one switches the whole tab to that market.
+- Known pre-existing console warning: `Failed to load image` (branding logo) — unrelated to this work.

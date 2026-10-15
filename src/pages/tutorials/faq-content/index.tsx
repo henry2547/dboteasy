@@ -58,7 +58,7 @@ const FAQContent = ({ faq_list, handleTabChange }: TFAQContent) => {
                     if (Number(faq_title.split('-')[1]) === index) {
                         data.click();
                         setFaqTitle('');
-                        handleTabChange(DBOT_TABS.TUTORIAL);
+                        handleTabChange(DBOT_TABS.BOTS);
                     }
                 });
             }

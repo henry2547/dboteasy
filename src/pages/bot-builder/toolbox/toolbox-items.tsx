@@ -170,6 +170,27 @@ export const ToolboxItems = () =>
                 <Block type='after_purchase' />
                 <Block type='trade_again' />
             </Category>
+            <Category id='digits' name={localize('Digits')}>
+                <Block type='digits_over_under'>
+                    <Field name='SIDE'>over</Field>
+                    <Field name='DIGIT'>2</Field>
+                </Block>
+                <Block type='digits_even_odd'>
+                    <Field name='PARITY'>even</Field>
+                </Block>
+                <Block type='digits_matches_differs'>
+                    <Field name='MODE'>matches</Field>
+                    <Field name='DIGIT'>1</Field>
+                </Block>
+                <Block type='digits_frequency'>
+                    <Field name='DIGIT'>3</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+            </Category>
 
             <Category id='analysis' name={localize('Analysis')}>
                 <Category id='indicators' name={localize('Indicators')}>
