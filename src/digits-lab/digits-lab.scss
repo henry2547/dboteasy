@@ -1,4 +1,5 @@
 /* Deriv Digits Analysis Lab — Styles */
+@use 'sass:color';
 
 $dl-bg: #0f1117;
 $dl-bg-card: #1a1d27;
@@ -87,7 +88,7 @@ $dl-radius: 8px;
     &--primary {
         background: $dl-primary;
         color: white;
-        &:hover { background: darken(#4a90d9, 10%); }
+        &:hover { background: color.adjust(#4a90d9, $lightness: -10%); }
     }
     &--ghost {
         background: transparent;
