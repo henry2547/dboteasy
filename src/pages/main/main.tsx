@@ -3,6 +3,7 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useLocation, useNavigate } from 'react-router';
+import ErrorBoundary from '@/components/error-boundary/error-boundary';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import { generateOAuthURL } from '@/components/shared';
 import DesktopWrapper from '@/components/shared_ui/desktop-wrapper';
@@ -35,6 +36,8 @@ import {
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
+    LabelPairedSquareListCaptionRegularIcon,
+    LabelPairedTableLayoutCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { LegacyGuide1pxIcon } from '@deriv/quill-icons/Legacy';
 import { Localize, localize } from '@deriv-com/translations';
@@ -43,11 +46,14 @@ import RunPanel from '../../components/run-panel';
 import ChartModal from '../chart/chart-modal';
 import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
+import { DigitsLabProvider } from '../digits/digits-lab-context';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const Tutorial = lazy(() => import('../tutorials'));
+const BotsPage = lazy(() => import('../bots'));
+const StatisticsPage = lazy(() => import('../statistics'));
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();
@@ -80,7 +86,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'digits'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'digits', 'bots', 'statistics'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -378,6 +384,7 @@ const AppWrapper = observer(() => {
                 >
                     <div>
                         {!isDesktop && left_tab_shadow && <span className='tabs-shadow tabs-shadow--left' />}{' '}
+                        <DigitsLabProvider>
                         <Tabs
                             active_index={active_tab}
                             className='main__tabs'
@@ -478,10 +485,55 @@ const AppWrapper = observer(() => {
                                         <ChunkLoader message={localize('Please wait, loading the digits lab...')} />
                                     }
                                 >
-                                    <DigitsPage />
+                                    <ErrorBoundary label='Digits'>
+                                        <DigitsPage />
+                                    </ErrorBoundary>
                                 </Suspense>
                             </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedSquareListCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Bots' />
+                                    </>
+                                }
+                                id='id-bots'
+                            >
+                                <ErrorBoundary label='Bots'>
+                                    <Suspense fallback={<ChunkLoader message={localize('Please wait, loading bots...')} />}>
+                                        <BotsPage onOpenBuilder={() => handleTabChange(DBOT_TABS.BOT_BUILDER)} />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedTableLayoutCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Statistics' />
+                                    </>
+                                }
+                                id='id-statistics'
+                            >
+                                <ErrorBoundary label='Statistics'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading statistics...')} />
+                                        }
+                                    >
+                                        <StatisticsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
                         </Tabs>
+                        </DigitsLabProvider>
                         {!isDesktop && right_tab_shadow && <span className='tabs-shadow tabs-shadow--right' />}{' '}
                     </div>
                 </div>

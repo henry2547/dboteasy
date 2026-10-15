@@ -8,8 +8,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runBacktests } from './backtest';
 import { DerivPublicWebSocketClient, type DerivMessage } from './deriv-public-ws';
-import { groupMarkets, normalizeActiveSymbols, pickDefaultMarket } from './markets';
+import { filterDigitMarkets, groupMarkets, normalizeActiveSymbols, pickDefaultMarket } from './markets';
 import { UNRESOLVED_PRECISION, extractLastDigit, formatQuote, resolvePrecision } from './precision';
+import { scanDigitMarkets, type MarketScan } from './scan-markets';
 import { DEFAULT_BARRIERS, calculateBarrierStats, calculateDigitStatistics, digitSequence } from './statistics';
 import { computeAdaptiveSignals, computeRulePerformance } from './strategies';
 import type { ConnectionState, ConnectionStatus, MarketSymbol, NormalizedTick, PrecisionState } from './types';
@@ -89,6 +90,9 @@ export function useDigitsLab() {
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [precision, setPrecision] = useState<PrecisionState>(UNRESOLVED_PRECISION);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanResults, setScanResults] = useState<MarketScan[]>([]);
+    const [scanError, setScanError] = useState<string | null>(null);
 
     const clientRef = useRef<DerivPublicWebSocketClient | null>(null);
     const lastStatusRef = useRef<ConnectionStatus>('idle');
@@ -165,13 +169,34 @@ export function useDigitsLab() {
         pendingRef.current.set(reqId, { kind: 'active-symbols', generation: generationRef.current });
     }, []);
 
+    /**
+     * Scans every volatility market on a separate short-lived connection and
+     * ranks them by how orderly their digits are. Never touches the live feed.
+     */
+    const scanMarkets = useCallback(async () => {
+        setIsScanning(true);
+        setScanError(null);
+        try {
+            const results = await scanDigitMarkets();
+            setScanResults(results);
+            if (results.length === 0) setScanError('No volatility market returned usable ticks.');
+            return results;
+        } catch (error) {
+            setScanError((error as Error).message || 'The market scan failed.');
+            return [] as MarketScan[];
+        } finally {
+            setIsScanning(false);
+        }
+    }, []);
+
     const handleMessage = useCallback(
         (message: DerivMessage) => {
             const msgType = message.msg_type;
             const payload = message as Record<string, any>;
 
             if (msgType === 'active_symbols') {
-                const list = normalizeActiveSymbols(payload.active_symbols);
+                // The lab only offers the digit-friendly volatility families.
+                const list = filterDigitMarkets(normalizeActiveSymbols(payload.active_symbols));
                 setMarkets(list);
 
                 if (!autoSelectedRef.current && list.length > 0) {
@@ -371,5 +396,9 @@ export function useDigitsLab() {
         direction,
         selectMarket,
         refreshMarkets,
+        isScanning,
+        scanResults,
+        scanError,
+        scanMarkets,
     };
 }

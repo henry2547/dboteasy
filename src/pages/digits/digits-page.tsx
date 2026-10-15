@@ -2,12 +2,16 @@ import BacktestPanel from './components/backtest-panel';
 import BarrierPanel from './components/barrier-panel';
 import DigitDistribution from './components/digit-distribution';
 import DigitGrid from './components/digit-grid';
+import MarketConditionsPanel from './components/market-conditions-panel';
 import MarketSelector from './components/market-selector';
+import ScanMarketsButton from './components/scan-markets-button';
 import StrategyPanel from './components/strategy-panel';
 import TickPanel from './components/tick-panel';
+import { useDigitsLabContext } from './digits-lab-context';
 import { formatPercent } from './format';
-import { ANALYSIS_WINDOWS, useDigitsLab } from './use-digits-lab';
+import { ANALYSIS_WINDOWS } from './use-digits-lab';
 import './digits-page.scss';
+import './digits-enhancements.scss';
 
 /**
  * Digits Analysis Lab — a read-only, public-market-data view of Deriv's feed.
@@ -17,8 +21,9 @@ import './digits-page.scss';
  * It never logs in, never sends a trade and never shows an invented value.
  */
 export default function DigitsPage() {
-    const lab = useDigitsLab();
+    const lab = useDigitsLabContext();
     const { statistics } = lab;
+    const recentDigits = lab.analysisTicks.map(tick => tick.lastDigit);
 
     return (
         <div className='digits'>
@@ -121,11 +126,22 @@ export default function DigitsPage() {
                 </article>
             </section>
 
+            <MarketConditionsPanel statistics={statistics} signals={lab.signals} />
+
             <DigitGrid statistics={statistics} />
-            <DigitDistribution statistics={statistics} />
+            <DigitDistribution statistics={statistics} recentDigits={recentDigits} />
             <BarrierPanel barriers={lab.barrierStats} />
             <StrategyPanel performance={lab.rulePerformance} signals={lab.signals} />
             <BacktestPanel results={lab.backtests} />
+
+            <ScanMarketsButton
+                isScanning={lab.isScanning}
+                results={lab.scanResults}
+                error={lab.scanError}
+                selectedMarket={lab.selectedMarket}
+                onScan={lab.scanMarkets}
+                onPick={lab.selectMarket}
+            />
 
             <p className='digits-disclaimer'>
                 Unofficial, educational tool reading Deriv&apos;s public market-data feed. No login, no trading, no
