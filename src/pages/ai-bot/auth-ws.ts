@@ -285,7 +285,7 @@ export class AuthTradingWebSocket {
             this.setPartial({
                 authorized: false,
                 authPhase: 'no_token',
-                error: 'Not logged in. Click "Log in with Deriv" to authorize.',
+                error: 'Not logged in. Log in with Deriv from the header — the AI scanners use that same account.',
             });
             return;
         }

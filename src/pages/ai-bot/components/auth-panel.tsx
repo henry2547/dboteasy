@@ -1,10 +1,13 @@
 /**
- * Auth panel — OAuth login/logout, account selection, account-mode indicator,
- * the explicit real-mode confirmation gate, and connection diagnostics.
+ * Auth panel — account selection, account-mode indicator, the explicit
+ * real-mode confirmation gate, and connection diagnostics.
+ *
+ * There is no login button here on purpose: the AI Bot rides the app's own
+ * Deriv login (the header's Log in / Sign up buttons), so a logged-in header
+ * session is all the scanners and execution need.
  */
 
 import { useState } from 'react';
-import { generateOAuthURL } from '@/components/shared';
 import { useAiBotContext } from '../ai-bot-context';
 import DiagnosticsPanel from './diagnostics-panel';
 
@@ -18,7 +21,6 @@ export default function AuthPanel() {
     const bot = useAiBotContext();
     const { state, settings, updateSettings, connectAuth, disconnectAuth, selectAccount } = bot;
     const [showRealConfirm, setShowRealConfirm] = useState(false);
-    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const isAuthorized = state.auth.status === 'authorized';
     const isBusy =
@@ -27,21 +29,6 @@ export default function AuthPanel() {
         state.auth.status === 'authorizing';
     const accounts = state.auth.accounts;
     const activeAccount = accounts.find(a => a.isActive) ?? accounts[0] ?? null;
-
-    const handleLogin = async () => {
-        if (isLoggingIn) return;
-        setIsLoggingIn(true);
-        try {
-            const oauthUrl = await generateOAuthURL();
-            if (oauthUrl) {
-                window.location.replace(oauthUrl);
-            } else {
-                setIsLoggingIn(false);
-            }
-        } catch {
-            setIsLoggingIn(false);
-        }
-    };
 
     const handleConnect = () => {
         if (isBusy) return;
@@ -127,26 +114,20 @@ export default function AuthPanel() {
                 </div>
             )}
 
+            {!isAuthorized && (
+                <p className='aibot-banner aibot-banner--info'>
+                    The AI scanners use your Deriv account. Log in with the <strong>Log in</strong> button at the
+                    top-right of the header — this tab connects automatically.
+                </p>
+            )}
+
             <div className='aibot-auth__actions'>
                 {!isAuthorized ? (
-                    <>
-                        <button
-                            type='button'
-                            className='aibot-btn aibot-btn--primary'
-                            onClick={handleLogin}
-                            disabled={isLoggingIn}
-                        >
-                            {isLoggingIn ? 'Redirecting…' : 'Log in with Deriv'}
+                    state.auth.diagnostics.tradePermitted && (
+                        <button type='button' className='aibot-btn' onClick={handleConnect} disabled={isBusy}>
+                            {isBusy ? 'Connecting…' : 'Reconnect'}
                         </button>
-                        <button
-                            type='button'
-                            className='aibot-btn'
-                            onClick={handleConnect}
-                            disabled={isBusy}
-                        >
-                            {isBusy ? 'Connecting…' : 'Connect'}
-                        </button>
-                    </>
+                    )
                 ) : (
                     <>
                         <div className='aibot-auth__mode-toggle'>

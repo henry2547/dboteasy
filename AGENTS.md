@@ -249,6 +249,14 @@ bar is scrollable below desktop, so six tabs still fit a phone).
   constructor, so merely mounting the provider opens nothing. Execution is login-gated: Start Bot
   stays disabled until `state.auth.status === 'authorized'`, and real mode needs the explicit
   confirmation modal in `auth-panel.tsx` before it can be switched on.
+- **One login for the whole app.** The AI Bot has no login button of its own — it rides the header's
+  Deriv login (the same `auth_info` token `generateOAuthURL` writes), so a logged-in header session is
+  all the scanners and execution need. `use-ai-bot.ts` connects the auth socket when that session
+  exists and drops it when the session ends, keyed on `activeLoginid` from `useApiBase()` (same-tab
+  login/logout — note `client.logout()` does NOT reload the page, so the `storage` event alone would
+  miss it) plus the `storage` event for other tabs. `auth-panel.tsx` therefore renders only a pointer
+  to the top-right Log in, and a Reconnect button once a token exists. OAuth login is a full-page
+  redirect, so the mount run of that effect is what picks up a fresh login.
 - **Persistence.** Settings, strategies and scanner config are written to localStorage under
   `aibot_settings` / `aibot_strategies` / `aibot_scanner_config` (see `constants.ts`). Any UI check
   that toggles them leaves a stored list behind — remove the key afterwards to restore the defaults.

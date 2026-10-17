@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAuthInfo } from '@/external/deriv-core';
+import { useApiBase } from '@/hooks/useApiBase';
 import { BotEngine, createBotEngineState, type BotEngineState } from './bot-engine';
 import { DEFAULT_SCANNER_CONFIG, DEFAULT_SETTINGS, DEFAULT_STRATEGIES, STORAGE_KEYS } from './constants';
 import type { ScannerConfig, StrategyConfig, TradingSettings } from './types';
@@ -65,6 +66,9 @@ export function useAiBot(): UseAiBot {
     const [strategies, setStrategies] = useState<StrategyConfig[]>(loadStrategies);
     const [scannerConfig, setScannerConfig] = useState<ScannerConfig>(loadScannerConfig);
     const engineRef = useRef<BotEngine | null>(null);
+    // The app's own logged-in account id (the header session). Drives the
+    // connect/disconnect effect below.
+    const { activeLoginid } = useApiBase();
 
     // Create the engine once.
     useEffect(() => {
@@ -81,33 +85,34 @@ export function useAiBot(): UseAiBot {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Auto-connect the authenticated WebSocket when the user is already logged
-    // in (OAuth login is a full page redirect, so the token is in localStorage
-    // by the time this mounts). Also react to login/logout in other tabs via
-    // the storage event so the auth status stays in sync without a manual click.
+    // The AI Bot rides the app's own Deriv login (the header's Log in / Sign up
+    // buttons) instead of asking for a second login of its own: it connects when
+    // that session exists and drops the connection when it logs out.
+    // `activeLoginid` comes from the same store the header renders from, so a
+    // login/logout anywhere in the app re-syncs here. The OAuth login itself is
+    // a full-page redirect, which remounts this hook with the token already
+    // stored.
     useEffect(() => {
-        const syncAuth = () => {
+        const engine = engineRef.current;
+        if (!engine) return;
+        if (getAuthInfo()?.access_token) {
+            engine.connectAuth();
+        } else {
+            engine.disconnectAuth();
+        }
+    }, [activeLoginid]);
+
+    // Same session, another tab: the storage event only fires outside this tab.
+    useEffect(() => {
+        const onStorage = (e: StorageEvent) => {
+            if (e.key !== 'auth_info' && e.key !== 'active_loginid') return;
             const engine = engineRef.current;
             if (!engine) return;
-            const authInfo = getAuthInfo();
-            if (authInfo?.access_token) {
-                engine.connectAuth();
-            } else {
-                engine.disconnectAuth();
-            }
-        };
-
-        // Connect immediately if already logged in.
-        syncAuth();
-
-        const onStorage = (e: StorageEvent) => {
-            if (e.key === 'auth_info' || e.key === 'active_loginid') {
-                syncAuth();
-            }
+            if (getAuthInfo()?.access_token) engine.connectAuth();
+            else engine.disconnectAuth();
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const updateSettings = useCallback((next: TradingSettings) => {
