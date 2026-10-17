@@ -39,6 +39,7 @@ export interface AuthWsStatus {
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30_000;
+const AUTHORIZE_TIMEOUT_MS = 10_000;
 
 export class AuthTradingWebSocket {
     private socket: WebSocket | null = null;
@@ -46,6 +47,7 @@ export class AuthTradingWebSocket {
     private manualClose = false;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    private authorizeTimer: ReturnType<typeof setTimeout> | null = null;
     private reconnectAttempt = 0;
     private status: AuthWsStatus = {
         connected: false,
@@ -111,6 +113,7 @@ export class AuthTradingWebSocket {
         };
         this.socket.onclose = () => {
             this.stopHeartbeat();
+            this.clearAuthorizeTimer();
             this.socket = null;
             this.activeSubscriptions.clear();
             this.setPartial({ connected: false, authorized: false });
@@ -122,6 +125,7 @@ export class AuthTradingWebSocket {
         this.manualClose = true;
         this.clearReconnectTimer();
         this.stopHeartbeat();
+        this.clearAuthorizeTimer();
         if (this.socket) {
             try {
                 this.socket.close();
@@ -191,6 +195,23 @@ export class AuthTradingWebSocket {
 
         // Send authorize to confirm the connection is authenticated.
         this.send({ authorize: authInfo.access_token });
+
+        // Guard against a silent authorize (socket open but no response) —
+        // without this the status hangs on "connecting" indefinitely.
+        this.clearAuthorizeTimer();
+        this.authorizeTimer = setTimeout(() => {
+            if (!this.status.authorized) {
+                this.setPartial({
+                    authorized: false,
+                    error: 'Authorization timed out — click Connect to retry.',
+                });
+            }
+        }, AUTHORIZE_TIMEOUT_MS);
+    }
+
+    private clearAuthorizeTimer(): void {
+        if (this.authorizeTimer) clearTimeout(this.authorizeTimer);
+        this.authorizeTimer = null;
     }
 
     private handleMessage(event: MessageEvent): void {
@@ -205,6 +226,7 @@ export class AuthTradingWebSocket {
         const payload = parsed as Record<string, any>;
 
         if (msgType === 'authorize') {
+            this.clearAuthorizeTimer();
             if (payload.error) {
                 this.setPartial({ authorized: false, error: String(payload.error.message ?? 'Authorization failed') });
             } else {

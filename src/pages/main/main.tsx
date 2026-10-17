@@ -50,7 +50,7 @@ import { DigitsLabProvider } from '../digits/digits-lab-context';
 import './main.scss';
 
 const AiBotPage = lazy(() => import('../ai-bot'));
-const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
+const DTraderTab = lazy(() => import('../dtrader/dtrader-tab'));
 const DigitsPage = lazy(() => import('../digits'));
 const StatisticsPage = lazy(() => import('../statistics'));
 
@@ -421,7 +421,7 @@ const AppWrapper = observer(() => {
                                             width='24px'
                                             fill='var(--text-general)'
                                         />
-                                        <Localize i18n_default_text='Charts' />
+                                        <Localize i18n_default_text='DTrader' />
                                     </>
                                 }
                                 id={
@@ -431,9 +431,11 @@ const AppWrapper = observer(() => {
                                 }
                             >
                                 <Suspense
-                                    fallback={<ChunkLoader message={localize('Please wait, loading chart...')} />}
+                                    fallback={<ChunkLoader message={localize('Please wait, loading DTrader...')} />}
                                 >
-                                    <ChartWrapper show_digits_stats={false} />
+                                    <ErrorBoundary label='DTrader'>
+                                        <DTraderTab />
+                                    </ErrorBoundary>
                                 </Suspense>
                             </div>
                             <div

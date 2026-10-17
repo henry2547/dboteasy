@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getAuthInfo } from '@/external/deriv-core';
 import { BotEngine, createBotEngineState, type BotEngineState } from './bot-engine';
 import { DEFAULT_SCANNER_CONFIG, DEFAULT_SETTINGS, DEFAULT_STRATEGIES, STORAGE_KEYS } from './constants';
 import type { ScannerConfig, StrategyConfig, TradingSettings } from './types';
@@ -76,6 +77,35 @@ export function useAiBot(): UseAiBot {
             engine.destroy();
             engineRef.current = null;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Auto-connect the authenticated WebSocket when the user is already logged
+    // in (OAuth login is a full page redirect, so the token is in localStorage
+    // by the time this mounts). Also react to login/logout in other tabs via
+    // the storage event so the auth status stays in sync without a manual click.
+    useEffect(() => {
+        const syncAuth = () => {
+            const engine = engineRef.current;
+            if (!engine) return;
+            const authInfo = getAuthInfo();
+            if (authInfo?.access_token) {
+                engine.connectAuth();
+            } else {
+                engine.disconnectAuth();
+            }
+        };
+
+        // Connect immediately if already logged in.
+        syncAuth();
+
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === 'auth_info' || e.key === 'active_loginid') {
+                syncAuth();
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
