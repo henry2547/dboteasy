@@ -7,13 +7,15 @@
 import { useState } from 'react';
 import { useAiBotContext } from '../ai-bot-context';
 import type { SessionStats, TradePosition } from '../types';
+import AnalysisView from './analysis-view';
 import JournalPanel from './journal-panel';
 
-type MonitorTab = 'summary' | 'transactions' | 'journal';
+type MonitorTab = 'summary' | 'transactions' | 'analysis' | 'journal';
 
 const TAB_LABELS: Record<MonitorTab, string> = {
     summary: 'Summary',
     transactions: 'Transactions',
+    analysis: 'Analysis',
     journal: 'Journal',
 };
 
@@ -62,6 +64,7 @@ export default function TradeMonitor() {
 
             {tab === 'summary' && <SummaryView open={open} session={session} currency={auth.currency} />}
             {tab === 'transactions' && <TransactionsView positions={positions} currency={auth.currency} />}
+            {tab === 'analysis' && <AnalysisView />}
             {tab === 'journal' && <JournalPanel />}
         </section>
     );

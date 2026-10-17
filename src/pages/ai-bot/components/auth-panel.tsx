@@ -157,9 +157,9 @@ export default function AuthPanel() {
                 <p className='aibot-banner aibot-banner--error'>{state.auth.errorMessage}</p>
             )}
             {modeMismatch && (
-                <p className='aibot-banner aibot-banner--error'>
-                    The selected {settings.accountMode} mode does not match the authorized account
-                    ({activeAccount?.loginid} is {activeAccount?.accountType}). Switch account or mode.
+                <p className='aibot-banner aibot-banner--info'>
+                    The authorized account is {activeAccount?.accountType} but {settings.accountMode} mode is
+                    selected. Starting the bot or Quick Trade will auto-switch to your {settings.accountMode} account.
                 </p>
             )}
 

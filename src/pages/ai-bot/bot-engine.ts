@@ -129,6 +129,8 @@ export class BotEngine {
     private lastSignalId: string | null = null;
     private configVersion = 0;
     private offAuthStatus: (() => void) | null = null;
+    /** When true the bot stops after a single trade settles (Quick Trade). */
+    private singleTrade = false;
     /** Real-money entry held for user approval: its signal, callbacks and quote. */
     private pendingEntry: {
         signal: StrategySignal;
@@ -231,6 +233,89 @@ export class BotEngine {
         await this.connectAuth();
     }
 
+    /**
+     * Switch to the account that matches the selected execution mode (Demo or
+     * Real) when the currently authorized account is the other type. Returns
+     * true when the active account already matches (or was switched
+     * successfully); false (with an error logged) when no matching account
+     * exists in the authorized list.
+     */
+    private async ensureMatchingAccount(): Promise<boolean> {
+        const authorizedIsDemo = this.state.auth.isVirtual;
+        const wantDemo = this.settings.accountMode === 'demo';
+        if (wantDemo === authorizedIsDemo) return true;
+
+        const targetType = wantDemo ? 'demo' : 'real';
+        const target = this.state.auth.accounts.find(a => a.accountType === targetType);
+        if (!target) {
+            this.log(
+                'error',
+                'start',
+                `No ${targetType} account is available on your Deriv login. Add a ${targetType} account in Deriv first, or switch to ${authorizedIsDemo ? 'demo' : 'real'} mode.`
+            );
+            this.update({ botState: 'Error' });
+            return false;
+        }
+
+        this.log('info', 'auth', `Switching to your ${targetType} account (${target.loginid}) to match ${targetType.toUpperCase()} mode…`);
+        await this.selectAccount(target.loginid);
+        // selectAccount reconnects; verify the new session is authorized.
+        if (this.state.auth.status !== 'authorized') {
+            this.log('error', 'start', `Could not authorize the ${targetType} account. Try again or log in again.`);
+            this.update({ botState: 'Error' });
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Take a single trade on the best qualifying market right now — a manual
+     * one-shot that works whether or not the bot is running. It scans once,
+     * evaluates strategies, runs risk checks, and executes one entry (with the
+     * real-money confirmation gate when real mode is on). The bot stops after
+     * that trade settles; it never auto-restarts in this mode.
+     */
+    async quickTrade(): Promise<void> {
+        if (this.isRunning && !this.singleTrade) {
+            this.log('warning', 'trade', 'The bot is already running. Stop it first to use Quick Trade.');
+            return;
+        }
+        if (this.state.auth.status !== 'authorized') {
+            this.log('error', 'start', 'Cannot trade: account not authorized. Log in first.');
+            this.update({ botState: 'Error' });
+            return;
+        }
+        if (!(await this.ensureMatchingAccount())) return;
+
+        this.singleTrade = true;
+        this.isRunning = true;
+        this.pendingEntry = null;
+        this.configVersion = nextConfigVersion();
+        this.state.session = createSession();
+        this.update({
+            botState: 'Scanning',
+            session: this.state.session,
+            configVersion: this.configVersion,
+            lastSignal: null,
+            lastRiskCheck: null,
+            lastExecution: null,
+            lastProposal: null,
+            pendingTrade: null,
+            positions: [],
+        });
+
+        // Create the execution engine with the auth WS.
+        this.executionEngine = new ExecutionEngine(
+            (msg) => this.authWs.send(msg),
+            (msg, timeout) => this.authWs.sendAndWait(msg, timeout),
+            (handler) => this.authWs.onMessage(handler),
+            () => this.settings
+        );
+
+        this.log('info', 'trade', `Quick Trade: scanning for a single entry. Mode: ${this.settings.accountMode}.`);
+        await this.runScan();
+    }
+
     /** Start the bot — begins the scan loop. */
     async start(): Promise<void> {
         if (this.isRunning) return;
@@ -242,19 +327,10 @@ export class BotEngine {
             return;
         }
 
-        // Verify the authorized account matches the selected execution mode.
-        // Never silently fall back from Demo to Real or vice versa.
-        const authorizedIsDemo = this.state.auth.isVirtual;
-        if (this.settings.accountMode === 'demo' && !authorizedIsDemo) {
-            this.log('error', 'start', 'Cannot start in Demo mode: the authorized account is a Real account. Switch to the Demo account first.');
-            this.update({ botState: 'Error' });
-            return;
-        }
-        if (this.settings.accountMode === 'real' && authorizedIsDemo) {
-            this.log('error', 'start', 'Cannot start in Real mode: the authorized account is a Demo account. Switch to the Real account and confirm.');
-            this.update({ botState: 'Error' });
-            return;
-        }
+        // Auto-switch to the account matching the selected execution mode so
+        // both Demo and Real work without the user having to switch manually.
+        // Only error when no matching account exists in the authorized list.
+        if (!(await this.ensureMatchingAccount())) return;
 
         // Demo-first: warn if real mode.
         if (this.settings.accountMode === 'real') {
@@ -303,6 +379,7 @@ export class BotEngine {
         // A held real-money entry is dropped, never executed, on stop.
         this.cancelPendingTrade('Stopped');
         this.isRunning = false;
+        this.singleTrade = false;
         if (this.scanTimer) {
             clearInterval(this.scanTimer);
             this.scanTimer = null;
@@ -532,6 +609,16 @@ export class BotEngine {
                 const stopReason = shouldStopSession(this.state.session, this.settings);
                 if (stopReason) {
                     this.handleStop(stopReason);
+                    return;
+                }
+
+                // Quick Trade: stop after the single entry settles.
+                if (this.singleTrade) {
+                    this.singleTrade = false;
+                    this.isRunning = false;
+                    this.state.session = stopSession(this.state.session, 'manual');
+                    this.update({ botState: 'Stopped', session: this.state.session });
+                    this.log('info', 'trade', 'Quick Trade complete — bot stopped after one trade.');
                     return;
                 }
 

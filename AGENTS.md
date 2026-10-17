@@ -340,3 +340,45 @@ WebSocket connected. Root causes and fixes:
   matching the real spec, so `AuthTradingWebSocket.send()` actually sends in tests. Seven tests cover
   the balance-verify flow, the no-token case, the no-fallback-to-public-WS case, `msg_type` fallback
   matching, and subscription cleanup.
+
+## Demo/Real auto-switch, Quick Trade, Analysis tab, Deriv Chart rename
+
+### Demo & Real both work (auto-switch)
+`bot-engine.ts` `start()` used to hard-error when the authorized account type
+(demo/real) did not match `settings.accountMode` — so a user logged into a real
+account could not start in demo mode (and vice versa). It now calls
+`ensureMatchingAccount()`, which finds the matching account in
+`state.auth.accounts` and calls `selectAccount()` (disconnect + reconnect on the
+matching loginid) before proceeding. It only errors when no matching account
+exists in the authorized list. The auth-panel mode-mismatch banner is now
+informational (it tells the user the bot will auto-switch), not an error.
+- `quickTrade()` (new) reuses the same `ensureMatchingAccount()` guard, so a
+  one-shot Quick Trade also works in whichever mode is selected.
+- The `singleTrade` flag makes the bot stop after one trade settles (the
+  `onSettled` callback checks it before the auto-restart/cooldown branch).
+  `stop()` and `cancelPendingTrade()` reset it.
+
+### Quick Trade (automation tool)
+`quickTrade()` on `BotEngine` (exposed via `use-ai-bot.ts` as `quickTrade`):
+scans once, evaluates strategies, runs risk checks, and executes a single
+entry on the best qualifying market — then stops after it settles. Real mode
+still goes through the confirmation gate. It refuses to run while the bot is
+already auto-running. `components/automation-panel.tsx` renders the button
+alongside the Start/Stop auto-trading controls.
+
+### Analysis tab (analysis tool)
+`components/analysis-view.tsx` renders inside the Trade Monitor as a fourth tab
+(Summary / Transactions / **Analysis** / Journal). It reads the top-ranked
+market's `MarketAnalysis` from `state.rankings[0].analysis` and shows per-digit
+frequency bars (hot/cold/over/under coloured), even/odd and high/low split bars,
+the current streak, sample size and feed freshness. Empty state prompts to
+"Scan now" when no rankings exist.
+
+### DTrader → Deriv Chart
+The third tab (index 2, `#id-charts`) no longer embeds the DTrader iframe
+(`src/pages/dtrader/dtrader-tab.tsx` is unused but kept). It now renders the
+app's own SmartChart via `ChartWrapper` (`src/pages/chart/chart-wrapper.tsx`)
+with `show_digits_stats={false}`. The tab label, loading message and
+ErrorBoundary label all say "Deriv Chart". The `derivDtrader` service domain in
+`routes.ts` is untouched — it powers standalone links (cashier, reports, etc.),
+not the tab.

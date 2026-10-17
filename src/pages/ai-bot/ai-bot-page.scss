@@ -992,3 +992,194 @@
     &--live { color: #2e7d32; }
     &--stale { color: #e65100; }
 }
+
+// ── Automation panel ─────────────────────────────────────────────────────────
+
+.aibot-automation {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+
+    &__group {
+        padding: 12px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    &__label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-general);
+    }
+
+    &__hint {
+        font-size: 0.78rem;
+        color: var(--text-colored-disabled);
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    &__divider {
+        height: 1px;
+        background: var(--border-color, #eee);
+    }
+
+    &__mode-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    &__state {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-general);
+    }
+}
+
+.aibot-badge--info { background: #e3f2fd; color: #1565c0; }
+.aibot-badge--warning { background: #fff3e0; color: #e65100; }
+.aibot-badge--danger { background: #ffebee; color: #c62828; }
+
+// ── Analysis view ────────────────────────────────────────────────────────────
+
+.aibot-analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    &__head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    &__name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-general);
+    }
+
+    &__symbol {
+        font-size: 0.78rem;
+        color: var(--text-colored-disabled);
+        font-family: monospace;
+    }
+
+    &__meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+        color: var(--text-general);
+    }
+
+    &__subtitle {
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin: 0 0 8px;
+        color: var(--text-general);
+    }
+
+    &__freqs,
+    &__splits {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+.aibot-freqs {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.aibot-freq {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+
+    &__digit {
+        width: 18px;
+        text-align: center;
+        font-weight: 700;
+        color: var(--text-general);
+    }
+
+    &__bar-track {
+        flex: 1;
+        height: 14px;
+        background: var(--section-content-bg, #f0f0f0);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    &__bar {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    &__pct {
+        width: 48px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--text-general);
+    }
+
+    &__dev {
+        width: 44px;
+        text-align: right;
+        font-size: 0.72rem;
+        color: var(--text-colored-disabled);
+    }
+
+    &--hot .aibot-freq__bar { background: var(--brand-success, #2e7d32); }
+    &--cold .aibot-freq__bar { background: var(--status-danger, #c62828); }
+    &--over .aibot-freq__bar { background: #66bb6a; }
+    &--under .aibot-freq__bar { background: #90a4ae; }
+}
+
+.aibot-split {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+
+    &__label {
+        width: 72px;
+        color: var(--text-colored-disabled);
+    }
+
+    &__bar {
+        flex: 1;
+        height: 12px;
+        background: var(--section-content-bg, #f0f0f0);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    &__fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+
+        &--even { background: #42a5f5; }
+        &--odd { background: #ab47bc; }
+        &--low { background: #66bb6a; }
+        &--high { background: #ff7043; }
+    }
+
+    &__value {
+        width: 48px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--text-general);
+    }
+}

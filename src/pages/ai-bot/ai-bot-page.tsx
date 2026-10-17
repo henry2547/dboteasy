@@ -6,6 +6,7 @@
  */
 
 import AuthPanel from './components/auth-panel';
+import AutomationPanel from './components/automation-panel';
 import DashboardPanel from './components/dashboard-panel';
 import ScannerPanel from './components/scanner-panel';
 import SettingsPanel from './components/settings-panel';
@@ -39,6 +40,8 @@ export default function AiBotPage() {
             <AuthPanel />
 
             <DashboardPanel />
+
+            <AutomationPanel />
 
             <TradeConfirmation />
 
