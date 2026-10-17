@@ -235,6 +235,45 @@ export interface ExecutionResult {
     timestamp: number;
 }
 
+// ── Trade ledger (positions the bot opens and closes) ───────────────────────
+
+export type PositionStatus = 'open' | 'settled';
+
+/** Settlement outcome of a position: 'pending' until the contract closes. */
+export type SettlementResult = 'won' | 'lost' | 'pending';
+
+/**
+ * One ledger entry per contract the bot buys, kept in `BotEngineState.positions`.
+ * It is refreshed from every `proposal_open_contract` message and completed when
+ * the contract settles, so the contract status and the settlement result of
+ * every position stay visible after it closes.
+ */
+export interface TradePosition {
+    contractId: number;
+    /** Deriv contract_type code, e.g. DIGITMATCH. */
+    contractType: string;
+    symbol: string;
+    /** Strategy that produced the entry, when known. */
+    strategyLabel: string | null;
+    accountMode: AccountMode;
+    loginid: string | null;
+    /** Stake actually paid for the contract. */
+    stake: number;
+    payout: number;
+    /** Live profit while open, final profit/loss once settled. */
+    profit: number | null;
+    entrySpot: number | null;
+    currentSpot: number | null;
+    /** Raw contract status reported by Deriv, e.g. 'open', 'sold', 'won'. */
+    contractStatus: string | null;
+    isValidToSell: boolean;
+    isExpired: boolean;
+    status: PositionStatus;
+    settlement: SettlementResult;
+    openedAt: number;
+    settledAt: number | null;
+}
+
 // ── Session ─────────────────────────────────────────────────────────────────
 
 export type BotState =

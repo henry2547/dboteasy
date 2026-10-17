@@ -7,12 +7,11 @@
 
 import AuthPanel from './components/auth-panel';
 import DashboardPanel from './components/dashboard-panel';
-import JournalPanel from './components/journal-panel';
-import OpenContractsPanel from './components/open-contracts-panel';
 import ScannerPanel from './components/scanner-panel';
 import SettingsPanel from './components/settings-panel';
 import SignalPanel from './components/signal-panel';
 import StrategySelector from './components/strategy-selector';
+import TradeMonitor from './components/trade-monitor';
 import { useAiBotContext } from './ai-bot-context';
 import './ai-bot-page.scss';
 
@@ -44,7 +43,6 @@ export default function AiBotPage() {
                 <div className='aibot-grid__main'>
                     <ScannerPanel />
                     <SignalPanel />
-                    <OpenContractsPanel />
                 </div>
                 <div className='aibot-grid__side'>
                     <StrategySelector />
@@ -52,7 +50,7 @@ export default function AiBotPage() {
                 </div>
             </div>
 
-            <JournalPanel />
+            <TradeMonitor />
 
             <p className='aibot-disclaimer'>
                 Unofficial tool. Trading involves risk. Past observational outcomes do not guarantee future results.

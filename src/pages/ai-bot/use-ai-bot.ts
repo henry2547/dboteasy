@@ -66,9 +66,9 @@ export function useAiBot(): UseAiBot {
     const [strategies, setStrategies] = useState<StrategyConfig[]>(loadStrategies);
     const [scannerConfig, setScannerConfig] = useState<ScannerConfig>(loadScannerConfig);
     const engineRef = useRef<BotEngine | null>(null);
-    // The app's own logged-in account id (the header session). Drives the
-    // connect/disconnect effect below.
-    const { activeLoginid } = useApiBase();
+    // The app's own logged-in account id and authorization flag (the header
+    // session). Both drive the connect/disconnect effect below.
+    const { activeLoginid, isAuthorized } = useApiBase();
 
     // Create the engine once.
     useEffect(() => {
@@ -92,6 +92,9 @@ export function useAiBot(): UseAiBot {
     // login/logout anywhere in the app re-syncs here. The OAuth login itself is
     // a full-page redirect, which remounts this hook with the token already
     // stored.
+    // `isAuthorized` is watched as well as `activeLoginid`: the header can
+    // finish authorizing a moment after the account id appears, and a re-run is
+    // harmless — `connect()` reuses an already-open socket.
     useEffect(() => {
         const engine = engineRef.current;
         if (!engine) return;
@@ -100,7 +103,7 @@ export function useAiBot(): UseAiBot {
         } else {
             engine.disconnectAuth();
         }
-    }, [activeLoginid]);
+    }, [activeLoginid, isAuthorized]);
 
     // Same session, another tab: the storage event only fires outside this tab.
     useEffect(() => {

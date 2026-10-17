@@ -21,6 +21,7 @@ import { buildSignal, nextConfigVersion } from './strategy-engine';
 import { validateRisk, shouldStopSession } from './risk-manager';
 import { ExecutionEngine, type ExecutionCallbacks } from './execution-engine';
 import { createSession, recordOpen, recordSettlement, stopSession } from './session-manager';
+import { applyContractUpdate, applySettlement, createPosition, openPositions } from './trade-ledger';
 import type {
     AuthAccount,
     AuthDiagnostics,
@@ -30,7 +31,6 @@ import type {
     ExecutionResult,
     JournalEntry,
     MarketRanking,
-    OpenContractInfo,
     ProposalInfo,
     RiskCheckResult,
     ScannerConfig,
@@ -38,6 +38,7 @@ import type {
     StopReason,
     StrategyConfig,
     StrategySignal,
+    TradePosition,
     TradingSettings,
 } from './types';
 
@@ -50,7 +51,11 @@ export interface BotEngineState {
     lastRiskCheck: RiskCheckResult | null;
     lastExecution: ExecutionResult | null;
     lastProposal: ProposalInfo | null;
-    openContracts: OpenContractInfo[];
+    /**
+     * Every position the bot opened this session, newest last. Open positions
+     * carry live contract updates; settled ones keep their settlement result.
+     */
+    positions: TradePosition[];
     journal: JournalEntry[];
     isScanning: boolean;
     configVersion: number;
@@ -93,7 +98,7 @@ export function createBotEngineState(): BotEngineState {
         lastRiskCheck: null,
         lastExecution: null,
         lastProposal: null,
-        openContracts: [],
+        positions: [],
         journal: [],
         isScanning: false,
         configVersion: 0,
@@ -134,7 +139,7 @@ export class BotEngine {
     }
 
     getState(): BotEngineState {
-        return { ...this.state, openContracts: [...this.state.openContracts], journal: [...this.state.journal] };
+        return { ...this.state, positions: [...this.state.positions], journal: [...this.state.journal] };
     }
 
     updateSettings(settings: TradingSettings): void {
@@ -254,7 +259,7 @@ export class BotEngine {
             lastRiskCheck: null,
             lastExecution: null,
             lastProposal: null,
-            openContracts: [],
+            positions: [],
         });
 
         // Create the execution engine with the auth WS.
@@ -376,7 +381,7 @@ export class BotEngine {
             this.settings,
             this.state.session,
             this.state.auth,
-            this.state.openContracts.length,
+            openPositions(this.state.positions).length,
             this.lastTradeAt,
             this.lastSignalId
         );
@@ -419,32 +424,43 @@ export class BotEngine {
                     this.log('trade', 'execution', `Buy rejected: ${error}`);
                     this.update({ botState: 'Scanning' });
                 } else if (result) {
-                    this.log('trade', 'execution', `Contract purchased: #${result.contractId} — stake ${result.buyPrice}`);
+                    const position = createPosition({
+                        contractId: result.contractId,
+                        buyPrice: result.buyPrice,
+                        payout: result.payout,
+                        contractType: signal.contractType,
+                        symbol: signal.symbol,
+                        strategyLabel: signal.strategyLabel,
+                        settings: this.settings,
+                        loginid: this.state.auth.loginid,
+                        openedAt: Date.now(),
+                    });
+                    this.log(
+                        'trade',
+                        'execution',
+                        `Position opened: #${position.contractId} ${position.symbol} ${position.contractType} — stake ${position.stake} — contract status: open.`
+                    );
                     this.lastTradeAt = Date.now();
                     this.state.session = recordOpen(this.state.session, this.state.auth.balance);
                     this.update({
                         botState: 'Contract Open',
                         session: this.state.session,
+                        positions: [...this.state.positions, position],
                     });
                 }
             },
             onContractUpdate: (contract) => {
-                const existing = this.state.openContracts.findIndex(c => c.contractId === contract.contractId);
-                const openContracts = [...this.state.openContracts];
-                if (existing >= 0) {
-                    openContracts[existing] = contract;
-                } else {
-                    openContracts.push(contract);
-                }
-                this.update({ openContracts });
+                // Live contract status, spot and profit/loss for that position.
+                this.update({ positions: applyContractUpdate(this.state.positions, contract) });
             },
             onSettled: (result) => {
-                this.log('trade', 'execution', result.message);
+                const closed = this.state.positions.find(p => p.contractId === result.contractId);
+                this.log('trade', 'execution', describeSettlement(result, closed));
                 this.state.session = recordSettlement(this.state.session, result);
                 this.update({
                     lastExecution: result,
                     session: this.state.session,
-                    openContracts: this.state.openContracts.filter(c => c.contractId !== result.contractId),
+                    positions: applySettlement(this.state.positions, result),
                 });
 
                 // Check stop conditions after settlement.
@@ -509,6 +525,19 @@ export class BotEngine {
         const snapshot = this.getState();
         this.listeners.forEach(listener => listener(snapshot));
     }
+}
+
+/** Journal line for a closed position: settlement result + contract status. */
+function describeSettlement(result: ExecutionResult, position: TradePosition | undefined): string {
+    const outcome = result.status === 'won' ? 'won' : result.status === 'lost' ? 'lost' : 'settled';
+    const profit = result.profit ?? 0;
+    const parts = [
+        `Position closed: #${result.contractId}`,
+        position ? `${position.symbol} ${position.contractType}` : null,
+        `settlement: ${outcome.toUpperCase()} ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}`,
+        position?.contractStatus ? `contract status: ${position.contractStatus}` : null,
+    ];
+    return `${parts.filter(Boolean).join(' — ')}.`;
 }
 
 // ── Auth-state mapping helpers ──────────────────────────────────────────────
