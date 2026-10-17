@@ -88,3 +88,8 @@ export function applySettlement(positions: TradePosition[], result: ExecutionRes
 export function openPositions(positions: TradePosition[]): TradePosition[] {
     return positions.filter(position => position.status === 'open');
 }
+
+/** The settled positions — the history kept across sessions and accounts. */
+export function settledPositions(positions: TradePosition[]): TradePosition[] {
+    return positions.filter(position => position.status === 'settled');
+}

@@ -120,10 +120,11 @@ export const DEFAULT_SETTINGS: TradingSettings = {
 
 export const ANALYSIS_WINDOW_OPTIONS = [20, 50, 100, 200, 500];
 
-/** Storage keys for persisting settings and session across refreshes. */
+/** Storage keys for persisting settings and the trade ledger across refreshes. */
 export const STORAGE_KEYS = {
     settings: 'aibot_settings',
     strategies: 'aibot_strategies',
     scannerConfig: 'aibot_scanner_config',
-    session: 'aibot_session',
+    /** The shared Demo + Real trade ledger (Transactions + Journal). */
+    ledger: 'aibot_ledger',
 } as const;

@@ -286,6 +286,35 @@ bar is scrollable below desktop, so six tabs still fit a phone).
 - **Persistence.** Settings, strategies and scanner config are written to localStorage under
   `aibot_settings` / `aibot_strategies` / `aibot_scanner_config` (see `constants.ts`). Any UI check
   that toggles them leaves a stored list behind — remove the key afterwards to restore the defaults.
+  The trade ledger has its own key (`aibot_ledger`) — see "Trade sync" below.
+- **Trade sync (the ledger survives reloads and both accounts).** `trade-sync.ts` persists
+  `BotEngineState.positions` + `journal` to localStorage under `aibot_ledger`. Both trading accounts
+  share the one ledger, and every position (`trade-ledger.ts` `createPosition`) and journal line
+  (`BotEngine.log()`) is tagged with its `accountMode` + `loginid`, so the Transactions list and the
+  Journal keep Demo and Real apart. Wiring: `createBotEngineState()` seeds itself from
+  `loadLedger()`, and `BotEngine.update()` calls `saveLedger()` whenever the positions or journal
+  array identity changes (so contract updates persist, unrelated updates do not).
+  - **Only settled positions are restored.** An open contract's socket subscription is gone after a
+    reload, so restoring it as `status: 'open'` would leave a phantom position that counts against
+    `maxConcurrentContracts` and blocks new entries. `loadLedger()` therefore filters to
+    `status === 'settled'`, and `start()`/`quickTrade()` clear the session with
+    `settledPositions(...)` instead of `positions: []` so history is kept but stale opens are dropped.
+  - Covered by `__tests__/trade-sync.test.ts` (round-trip of both accounts, settled-only, cap, empty/
+    corrupt storage); `trade-ledger.ts` adds the `settledPositions()` helper next to `openPositions()`.
+  - `trade-monitor.tsx`'s Transactions view has an All / Demo / Real filter; `journal-panel.tsx`
+    renders a DEMO/REAL tag per line.
+- **Account switcher + the running lock.** `auth-panel.tsx` owns the "Trading account" Demo/Real
+  toggle and the authorized-account `<select>`. Both (and Disconnect) are **disabled while a session
+  is running** — `isRunning = botState !== 'Stopped' && botState !== 'Error'`, which covers Scanning,
+  Setup Detected, Risk Check, Executing, Contract Open, Cooldown, Paused and Data Interrupted. The
+  toggle only sets `settings.accountMode`; the engine swaps the authorized account on
+  `start()`/`quickTrade()` via `ensureMatchingAccount()`, which is why switching mid-session is
+  blocked rather than applied.
+- **Verifying localStorage in the Base44 preview.** Seeding `aibot_ledger` from a script and then
+  reloading does NOT work here: the platform replays the user's own pane storage on every fresh load
+  and drops the seeded key (verified — the key came back `null` after a reload). The ledger render
+  path is therefore covered by the unit tests above; drive the live path by hand with a logged-in
+  account.
 - **Strategy digit sentinel.** `StrategyConfig.digit === null` means "use the AI suggestion" (the
   hottest digit for Matches, the coldest for Differs) and `scanner.ts` resolves it with
   `strategy.digit ?? hottest?.digit`. The selector's "Auto" button must therefore write `null`, never
@@ -294,8 +323,8 @@ bar is scrollable below desktop, so six tabs still fit a phone).
 ### Verifying this tab
 - Click the `#id-ai-bot` `<li>` (the URL hash becomes `#ai_bot`). Expect the hero title, the state
   chip "Stopped", and five panel headings: Live Market Scanner, Last Signal & Execution, Strategy
-  Selection, Trading Settings and Trade Monitor. The Trade Monitor has three tabs (`.aibot-tab`:
-  Summary / Transactions / Journal) that each render an empty state while logged out
+  Selection, Trading Settings and Trade Monitor. The Trade Monitor has four tabs (`.aibot-tab`:
+  Summary / Transactions / Analysis / Journal) that each render an empty state while logged out
   (`No open positions…`, `No positions yet…`, `No events yet.`).
 - `trade-ledger.ts` is covered by `__tests__/trade-ledger.test.ts`, the confirmation gate by
   `__tests__/execution-engine.test.ts` (quote-then-buy, cancel places nothing, stale re-quote,

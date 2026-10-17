@@ -104,9 +104,20 @@
         align-items: center;
     }
 
+    &__mode-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
     &__mode-toggle {
         display: flex;
         gap: 4px;
+    }
+
+    &__mode-locked {
+        font-size: 0.72rem;
+        color: #e65100;
     }
 }
 
@@ -631,6 +642,17 @@
     &__level { font-weight: 700; min-width: 56px; font-size: 0.7rem; }
     &__category { color: var(--text-colored-disabled); min-width: 64px; }
     &__message { flex: 1; }
+
+    &__account {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0 4px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+
+        &--demo { color: #1565c0; }
+        &--real { color: #c62828; }
+    }
 }
 
 // ── Trade monitor (Summary / Transactions / Journal) ────────────────────────
@@ -655,6 +677,13 @@
 
     &:hover { color: var(--text-general); }
     &--active { color: #1565c0; border-bottom-color: #1565c0; }
+}
+
+.aibot-txn-filter {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
 }
 
 .aibot-txn {
@@ -733,6 +762,8 @@
     color: var(--text-general);
     font-size: 0.9rem;
     max-width: 260px;
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 // ── Diagnostics panel ─────────────────────────────────────────────────────────

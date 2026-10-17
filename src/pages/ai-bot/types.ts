@@ -368,6 +368,10 @@ export interface JournalEntry {
     level: JournalLevel;
     category: string;
     message: string;
+    /** Trading account this event belongs to (the ledger keeps both accounts). */
+    accountMode?: AccountMode;
+    /** Deriv login id of the account active when the event was logged. */
+    loginid?: string | null;
     details?: Record<string, unknown>;
 }
 

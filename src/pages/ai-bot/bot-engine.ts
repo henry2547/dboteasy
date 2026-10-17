@@ -21,7 +21,8 @@ import { buildSignal, describePrediction, nextConfigVersion } from './strategy-e
 import { validateRisk, shouldStopSession } from './risk-manager';
 import { ExecutionEngine, type ExecutionCallbacks } from './execution-engine';
 import { createSession, recordOpen, recordSettlement, stopSession } from './session-manager';
-import { applyContractUpdate, applySettlement, createPosition, openPositions } from './trade-ledger';
+import { applyContractUpdate, applySettlement, createPosition, openPositions, settledPositions } from './trade-ledger';
+import { loadLedger, saveLedger } from './trade-sync';
 import type {
     AuthAccount,
     AuthDiagnostics,
@@ -77,6 +78,10 @@ export type BotEngineListener = (state: BotEngineState) => void;
  * the mount effect creates it).
  */
 export function createBotEngineState(): BotEngineState {
+    // Seed with the persisted trade ledger so the Transactions and Journal views
+    // show the history of BOTH accounts straight away — both before the engine
+    // instance exists and after a reload.
+    const ledger = loadLedger();
     return {
         botState: 'Stopped',
         auth: {
@@ -106,8 +111,8 @@ export function createBotEngineState(): BotEngineState {
         lastExecution: null,
         lastProposal: null,
         pendingTrade: null,
-        positions: [],
-        journal: [],
+        positions: ledger.positions,
+        journal: ledger.journal,
         isScanning: false,
         configVersion: 0,
         scanError: null,
@@ -301,7 +306,7 @@ export class BotEngine {
             lastExecution: null,
             lastProposal: null,
             pendingTrade: null,
-            positions: [],
+            positions: settledPositions(this.state.positions),
         });
 
         // Create the execution engine with the auth WS.
@@ -352,7 +357,7 @@ export class BotEngine {
             lastExecution: null,
             lastProposal: null,
             pendingTrade: null,
-            positions: [],
+            positions: settledPositions(this.state.positions),
         });
 
         // Create the execution engine with the auth WS.
@@ -749,12 +754,22 @@ export class BotEngine {
             level,
             category,
             message,
+            // Tag every line with the account it happened on, so the journal keeps
+            // Demo and Real events apart once both share one ledger.
+            accountMode: this.settings.accountMode,
+            loginid: this.state.auth.loginid,
         };
         this.state.journal = [...this.state.journal, entry].slice(-200);
     }
 
     private update(patch: Partial<BotEngineState>): void {
-        this.state = { ...this.state, ...patch };
+        const previous = this.state;
+        this.state = { ...previous, ...patch };
+        // Persist the ledger whenever it grows or changes, so trades from both
+        // the Demo and the Real account survive reloads and account switches.
+        if (this.state.positions !== previous.positions || this.state.journal !== previous.journal) {
+            saveLedger(this.state.positions, this.state.journal);
+        }
         const snapshot = this.getState();
         this.listeners.forEach(listener => listener(snapshot));
     }

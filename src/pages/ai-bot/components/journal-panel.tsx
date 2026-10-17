@@ -33,6 +33,14 @@ export default function JournalPanel() {
                             {LEVEL_LABELS[entry.level]}
                         </span>
                         <span className='aibot-journal__category'>{entry.category}</span>
+                        {entry.accountMode && (
+                            <span
+                                className={`aibot-journal__account aibot-journal__account--${entry.accountMode}`}
+                                title={entry.loginid ? `Account ${entry.loginid}` : undefined}
+                            >
+                                {entry.accountMode === 'demo' ? 'DEMO' : 'REAL'}
+                            </span>
+                        )}
                         <span className='aibot-journal__message'>{entry.message}</span>
                     </div>
                 ))}
