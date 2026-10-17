@@ -286,6 +286,35 @@ bar is scrollable below desktop, so six tabs still fit a phone).
 - **Persistence.** Settings, strategies and scanner config are written to localStorage under
   `aibot_settings` / `aibot_strategies` / `aibot_scanner_config` (see `constants.ts`). Any UI check
   that toggles them leaves a stored list behind — remove the key afterwards to restore the defaults.
+  The trade ledger has its own key (`aibot_ledger`) — see "Trade sync" below.
+- **Trade sync (the ledger survives reloads and both accounts).** `trade-sync.ts` persists
+  `BotEngineState.positions` + `journal` to localStorage under `aibot_ledger`. Both trading accounts
+  share the one ledger, and every position (`trade-ledger.ts` `createPosition`) and journal line
+  (`BotEngine.log()`) is tagged with its `accountMode` + `loginid`, so the Transactions list and the
+  Journal keep Demo and Real apart. Wiring: `createBotEngineState()` seeds itself from
+  `loadLedger()`, and `BotEngine.update()` calls `saveLedger()` whenever the positions or journal
+  array identity changes (so contract updates persist, unrelated updates do not).
+  - **Only settled positions are restored.** An open contract's socket subscription is gone after a
+    reload, so restoring it as `status: 'open'` would leave a phantom position that counts against
+    `maxConcurrentContracts` and blocks new entries. `loadLedger()` therefore filters to
+    `status === 'settled'`, and `start()`/`quickTrade()` clear the session with
+    `settledPositions(...)` instead of `positions: []` so history is kept but stale opens are dropped.
+  - Covered by `__tests__/trade-sync.test.ts` (round-trip of both accounts, settled-only, cap, empty/
+    corrupt storage); `trade-ledger.ts` adds the `settledPositions()` helper next to `openPositions()`.
+  - `trade-monitor.tsx`'s Transactions view has an All / Demo / Real filter; `journal-panel.tsx`
+    renders a DEMO/REAL tag per line.
+- **Account switcher + the running lock.** `auth-panel.tsx` owns the "Trading account" Demo/Real
+  toggle and the authorized-account `<select>`. Both (and Disconnect) are **disabled while a session
+  is running** — `isRunning = botState !== 'Stopped' && botState !== 'Error'`, which covers Scanning,
+  Setup Detected, Risk Check, Executing, Contract Open, Cooldown, Paused and Data Interrupted. The
+  toggle only sets `settings.accountMode`; the engine swaps the authorized account on
+  `start()`/`quickTrade()` via `ensureMatchingAccount()`, which is why switching mid-session is
+  blocked rather than applied.
+- **Verifying localStorage in the Base44 preview.** Seeding `aibot_ledger` from a script and then
+  reloading does NOT work here: the platform replays the user's own pane storage on every fresh load
+  and drops the seeded key (verified — the key came back `null` after a reload). The ledger render
+  path is therefore covered by the unit tests above; drive the live path by hand with a logged-in
+  account.
 - **Strategy digit sentinel.** `StrategyConfig.digit === null` means "use the AI suggestion" (the
   hottest digit for Matches, the coldest for Differs) and `scanner.ts` resolves it with
   `strategy.digit ?? hottest?.digit`. The selector's "Auto" button must therefore write `null`, never
@@ -294,8 +323,8 @@ bar is scrollable below desktop, so six tabs still fit a phone).
 ### Verifying this tab
 - Click the `#id-ai-bot` `<li>` (the URL hash becomes `#ai_bot`). Expect the hero title, the state
   chip "Stopped", and five panel headings: Live Market Scanner, Last Signal & Execution, Strategy
-  Selection, Trading Settings and Trade Monitor. The Trade Monitor has three tabs (`.aibot-tab`:
-  Summary / Transactions / Journal) that each render an empty state while logged out
+  Selection, Trading Settings and Trade Monitor. The Trade Monitor has four tabs (`.aibot-tab`:
+  Summary / Transactions / Analysis / Journal) that each render an empty state while logged out
   (`No open positions…`, `No positions yet…`, `No events yet.`).
 - `trade-ledger.ts` is covered by `__tests__/trade-ledger.test.ts`, the confirmation gate by
   `__tests__/execution-engine.test.ts` (quote-then-buy, cancel places nothing, stale re-quote,
@@ -340,3 +369,45 @@ WebSocket connected. Root causes and fixes:
   matching the real spec, so `AuthTradingWebSocket.send()` actually sends in tests. Seven tests cover
   the balance-verify flow, the no-token case, the no-fallback-to-public-WS case, `msg_type` fallback
   matching, and subscription cleanup.
+
+## Demo/Real auto-switch, Quick Trade, Analysis tab, Deriv Chart rename
+
+### Demo & Real both work (auto-switch)
+`bot-engine.ts` `start()` used to hard-error when the authorized account type
+(demo/real) did not match `settings.accountMode` — so a user logged into a real
+account could not start in demo mode (and vice versa). It now calls
+`ensureMatchingAccount()`, which finds the matching account in
+`state.auth.accounts` and calls `selectAccount()` (disconnect + reconnect on the
+matching loginid) before proceeding. It only errors when no matching account
+exists in the authorized list. The auth-panel mode-mismatch banner is now
+informational (it tells the user the bot will auto-switch), not an error.
+- `quickTrade()` (new) reuses the same `ensureMatchingAccount()` guard, so a
+  one-shot Quick Trade also works in whichever mode is selected.
+- The `singleTrade` flag makes the bot stop after one trade settles (the
+  `onSettled` callback checks it before the auto-restart/cooldown branch).
+  `stop()` and `cancelPendingTrade()` reset it.
+
+### Quick Trade (automation tool)
+`quickTrade()` on `BotEngine` (exposed via `use-ai-bot.ts` as `quickTrade`):
+scans once, evaluates strategies, runs risk checks, and executes a single
+entry on the best qualifying market — then stops after it settles. Real mode
+still goes through the confirmation gate. It refuses to run while the bot is
+already auto-running. `components/automation-panel.tsx` renders the button
+alongside the Start/Stop auto-trading controls.
+
+### Analysis tab (analysis tool)
+`components/analysis-view.tsx` renders inside the Trade Monitor as a fourth tab
+(Summary / Transactions / **Analysis** / Journal). It reads the top-ranked
+market's `MarketAnalysis` from `state.rankings[0].analysis` and shows per-digit
+frequency bars (hot/cold/over/under coloured), even/odd and high/low split bars,
+the current streak, sample size and feed freshness. Empty state prompts to
+"Scan now" when no rankings exist.
+
+### DTrader → Deriv Chart
+The third tab (index 2, `#id-charts`) no longer embeds the DTrader iframe
+(`src/pages/dtrader/dtrader-tab.tsx` is unused but kept). It now renders the
+app's own SmartChart via `ChartWrapper` (`src/pages/chart/chart-wrapper.tsx`)
+with `show_digits_stats={false}`. The tab label, loading message and
+ErrorBoundary label all say "Deriv Chart". The `derivDtrader` service domain in
+`routes.ts` is untouched — it powers standalone links (cashier, reports, etc.),
+not the tab.

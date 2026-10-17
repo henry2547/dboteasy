@@ -35,7 +35,13 @@ export default function AuthPanel() {
         connectAuth();
     };
 
+    // A session is "running" from the moment it starts (Scanning, Setup Detected,
+    // Risk Check, Executing, Contract Open, Paused…) until it stops. The trading
+    // account cannot be switched while a session is in progress.
+    const isRunning = state.botState !== 'Stopped' && state.botState !== 'Error';
+
     const handleSwitchMode = (mode: 'demo' | 'real') => {
+        if (isRunning) return;
         if (mode === 'real' && settings.accountMode === 'demo') {
             setShowRealConfirm(true);
             return;
@@ -44,12 +50,13 @@ export default function AuthPanel() {
     };
 
     const confirmReal = () => {
+        if (isRunning) return;
         updateSettings({ ...settings, accountMode: 'real' });
         setShowRealConfirm(false);
     };
 
     const handleAccountChange = (loginid: string) => {
-        if (!isAuthorized) return;
+        if (!isAuthorized || isRunning) return;
         selectAccount(loginid);
     };
 
@@ -104,6 +111,7 @@ export default function AuthPanel() {
                         className='aibot-auth__select'
                         value={activeAccount?.loginid ?? ''}
                         onChange={e => handleAccountChange(e.target.value)}
+                        disabled={isRunning}
                     >
                         {accounts.map(a => (
                             <option key={a.loginid} value={a.loginid}>
@@ -130,23 +138,40 @@ export default function AuthPanel() {
                     )
                 ) : (
                     <>
-                        <div className='aibot-auth__mode-toggle'>
-                            <button
-                                type='button'
-                                className={`aibot-btn aibot-btn--sm ${settings.accountMode === 'demo' ? 'aibot-btn--active' : ''}`}
-                                onClick={() => handleSwitchMode('demo')}
-                            >
-                                Demo
-                            </button>
-                            <button
-                                type='button'
-                                className={`aibot-btn aibot-btn--sm ${settings.accountMode === 'real' ? 'aibot-btn--active aibot-btn--danger' : ''}`}
-                                onClick={() => handleSwitchMode('real')}
-                            >
-                                Real
-                            </button>
+                        <div className='aibot-auth__mode-group'>
+                            <span className='aibot-auth__label'>Trading account</span>
+                            <div className='aibot-auth__mode-toggle' role='group' aria-label='Trading account'>
+                                <button
+                                    type='button'
+                                    className={`aibot-btn aibot-btn--sm ${settings.accountMode === 'demo' ? 'aibot-btn--active' : ''}`}
+                                    onClick={() => handleSwitchMode('demo')}
+                                    disabled={isRunning}
+                                    aria-pressed={settings.accountMode === 'demo'}
+                                >
+                                    Demo
+                                </button>
+                                <button
+                                    type='button'
+                                    className={`aibot-btn aibot-btn--sm ${settings.accountMode === 'real' ? 'aibot-btn--active aibot-btn--danger' : ''}`}
+                                    onClick={() => handleSwitchMode('real')}
+                                    disabled={isRunning}
+                                    aria-pressed={settings.accountMode === 'real'}
+                                >
+                                    Real
+                                </button>
+                            </div>
+                            {isRunning && (
+                                <span className='aibot-auth__mode-locked'>
+                                    Locked while the bot is running — stop it to switch accounts.
+                                </span>
+                            )}
                         </div>
-                        <button type='button' className='aibot-btn aibot-btn--danger' onClick={disconnectAuth}>
+                        <button
+                            type='button'
+                            className='aibot-btn aibot-btn--danger'
+                            onClick={disconnectAuth}
+                            disabled={isRunning}
+                        >
                             Disconnect
                         </button>
                     </>
@@ -157,9 +182,9 @@ export default function AuthPanel() {
                 <p className='aibot-banner aibot-banner--error'>{state.auth.errorMessage}</p>
             )}
             {modeMismatch && (
-                <p className='aibot-banner aibot-banner--error'>
-                    The selected {settings.accountMode} mode does not match the authorized account
-                    ({activeAccount?.loginid} is {activeAccount?.accountType}). Switch account or mode.
+                <p className='aibot-banner aibot-banner--info'>
+                    The authorized account is {activeAccount?.accountType} but {settings.accountMode} mode is
+                    selected. Starting the bot or Quick Trade will auto-switch to your {settings.accountMode} account.
                 </p>
             )}
 

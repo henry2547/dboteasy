@@ -7,13 +7,15 @@
 import { useState } from 'react';
 import { useAiBotContext } from '../ai-bot-context';
 import type { SessionStats, TradePosition } from '../types';
+import AnalysisView from './analysis-view';
 import JournalPanel from './journal-panel';
 
-type MonitorTab = 'summary' | 'transactions' | 'journal';
+type MonitorTab = 'summary' | 'transactions' | 'analysis' | 'journal';
 
 const TAB_LABELS: Record<MonitorTab, string> = {
     summary: 'Summary',
     transactions: 'Transactions',
+    analysis: 'Analysis',
     journal: 'Journal',
 };
 
@@ -62,6 +64,7 @@ export default function TradeMonitor() {
 
             {tab === 'summary' && <SummaryView open={open} session={session} currency={auth.currency} />}
             {tab === 'transactions' && <TransactionsView positions={positions} currency={auth.currency} />}
+            {tab === 'analysis' && <AnalysisView />}
             {tab === 'journal' && <JournalPanel />}
         </section>
     );
@@ -130,6 +133,9 @@ function SummaryView({
 }
 
 function TransactionsView({ positions, currency }: { positions: TradePosition[]; currency: string | null }) {
+    // The ledger holds trades from both trading accounts; let the user isolate one.
+    const [accountFilter, setAccountFilter] = useState<'all' | 'demo' | 'real'>('all');
+
     if (positions.length === 0) {
         return (
             <p className='aibot-empty'>
@@ -139,10 +145,26 @@ function TransactionsView({ positions, currency }: { positions: TradePosition[];
         );
     }
 
-    const rows = [...positions].sort((a, b) => b.openedAt - a.openedAt);
+    const countOf = (mode: 'demo' | 'real') => positions.filter(p => p.accountMode === mode).length;
+    const filtered = accountFilter === 'all' ? positions : positions.filter(p => p.accountMode === accountFilter);
+    const rows = [...filtered].sort((a, b) => b.openedAt - a.openedAt);
 
     return (
-        <div className='aibot-txn'>
+        <>
+            <div className='aibot-txn-filter'>
+                {(['all', 'demo', 'real'] as const).map(id => (
+                    <button
+                        key={id}
+                        type='button'
+                        className={`aibot-btn aibot-btn--sm${accountFilter === id ? ' aibot-btn--active' : ''}`}
+                        onClick={() => setAccountFilter(id)}
+                    >
+                        {id === 'all' ? 'All' : id === 'demo' ? 'Demo' : 'Real'} (
+                        {id === 'all' ? positions.length : countOf(id)})
+                    </button>
+                ))}
+            </div>
+            <div className='aibot-txn'>
             {rows.map(position => {
                 const isOpen = position.status === 'open';
                 const outcome = position.settlement === 'pending' ? 'settled' : position.settlement;
@@ -186,7 +208,8 @@ function TransactionsView({ positions, currency }: { positions: TradePosition[];
                     </article>
                 );
             })}
-        </div>
+            </div>
+        </>
     );
 }
 

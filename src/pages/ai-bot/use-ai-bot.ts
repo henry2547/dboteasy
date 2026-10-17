@@ -56,6 +56,8 @@ export interface UseAiBot {
     pauseBot: () => void;
     resumeBot: () => void;
     runScanNow: () => void;
+    /** Take a single trade on the best qualifying market right now. */
+    quickTrade: () => void;
     /** Approve the real-money entry held in `state.pendingTrade`. */
     confirmTrade: () => void;
     /** Reject it — no order is placed. */
@@ -173,6 +175,10 @@ export function useAiBot(): UseAiBot {
         engineRef.current?.scanNow();
     }, []);
 
+    const quickTrade = useCallback(() => {
+        void engineRef.current?.quickTrade();
+    }, []);
+
     const confirmTrade = useCallback(() => {
         void engineRef.current?.confirmPendingTrade();
     }, []);
@@ -197,6 +203,7 @@ export function useAiBot(): UseAiBot {
         pauseBot,
         resumeBot,
         runScanNow,
+        quickTrade,
         confirmTrade,
         cancelTrade,
     };

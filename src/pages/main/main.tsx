@@ -50,7 +50,7 @@ import { DigitsLabProvider } from '../digits/digits-lab-context';
 import './main.scss';
 
 const AiBotPage = lazy(() => import('../ai-bot'));
-const DTraderTab = lazy(() => import('../dtrader/dtrader-tab'));
+const DerivChart = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const StatisticsPage = lazy(() => import('../statistics'));
 
@@ -421,7 +421,7 @@ const AppWrapper = observer(() => {
                                             width='24px'
                                             fill='var(--text-general)'
                                         />
-                                        <Localize i18n_default_text='DTrader' />
+                                        <Localize i18n_default_text='Deriv Chart' />
                                     </>
                                 }
                                 id={
@@ -431,10 +431,10 @@ const AppWrapper = observer(() => {
                                 }
                             >
                                 <Suspense
-                                    fallback={<ChunkLoader message={localize('Please wait, loading DTrader...')} />}
+                                    fallback={<ChunkLoader message={localize('Please wait, loading Deriv Chart...')} />}
                                 >
-                                    <ErrorBoundary label='DTrader'>
-                                        <DTraderTab />
+                                    <ErrorBoundary label='Deriv Chart'>
+                                        <DerivChart show_digits_stats={false} />
                                     </ErrorBoundary>
                                 </Suspense>
                             </div>
