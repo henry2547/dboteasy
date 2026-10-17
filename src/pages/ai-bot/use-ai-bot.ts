@@ -56,6 +56,10 @@ export interface UseAiBot {
     pauseBot: () => void;
     resumeBot: () => void;
     runScanNow: () => void;
+    /** Approve the real-money entry held in `state.pendingTrade`. */
+    confirmTrade: () => void;
+    /** Reject it — no order is placed. */
+    cancelTrade: () => void;
 }
 
 export function useAiBot(): UseAiBot {
@@ -169,6 +173,14 @@ export function useAiBot(): UseAiBot {
         engineRef.current?.scanNow();
     }, []);
 
+    const confirmTrade = useCallback(() => {
+        void engineRef.current?.confirmPendingTrade();
+    }, []);
+
+    const cancelTrade = useCallback(() => {
+        engineRef.current?.cancelPendingTrade();
+    }, []);
+
     return {
         state,
         settings,
@@ -185,5 +197,7 @@ export function useAiBot(): UseAiBot {
         pauseBot,
         resumeBot,
         runScanNow,
+        confirmTrade,
+        cancelTrade,
     };
 }

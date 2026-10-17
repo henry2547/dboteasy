@@ -17,7 +17,7 @@
 import { AuthTradingWebSocket, type AuthWsStatus } from './auth-ws';
 import { getAuthInfo, getDerivAccounts, getActiveLoginId } from '@/external/deriv-core';
 import { scanMarkets } from './scanner';
-import { buildSignal, nextConfigVersion } from './strategy-engine';
+import { buildSignal, describePrediction, nextConfigVersion } from './strategy-engine';
 import { validateRisk, shouldStopSession } from './risk-manager';
 import { ExecutionEngine, type ExecutionCallbacks } from './execution-engine';
 import { createSession, recordOpen, recordSettlement, stopSession } from './session-manager';
@@ -31,6 +31,7 @@ import type {
     ExecutionResult,
     JournalEntry,
     MarketRanking,
+    PendingTrade,
     ProposalInfo,
     RiskCheckResult,
     ScannerConfig,
@@ -38,6 +39,7 @@ import type {
     StopReason,
     StrategyConfig,
     StrategySignal,
+    TradeOrderDetails,
     TradePosition,
     TradingSettings,
 } from './types';
@@ -51,6 +53,11 @@ export interface BotEngineState {
     lastRiskCheck: RiskCheckResult | null;
     lastExecution: ExecutionResult | null;
     lastProposal: ProposalInfo | null;
+    /**
+     * A real-money entry held back until the user approves it. While this is
+     * set the engine has placed no order and is waiting for Confirm/Cancel.
+     */
+    pendingTrade: PendingTrade | null;
     /**
      * Every position the bot opened this session, newest last. Open positions
      * carry live contract updates; settled ones keep their settlement result.
@@ -98,6 +105,7 @@ export function createBotEngineState(): BotEngineState {
         lastRiskCheck: null,
         lastExecution: null,
         lastProposal: null,
+        pendingTrade: null,
         positions: [],
         journal: [],
         isScanning: false,
@@ -121,6 +129,13 @@ export class BotEngine {
     private lastSignalId: string | null = null;
     private configVersion = 0;
     private offAuthStatus: (() => void) | null = null;
+    /** Real-money entry held for user approval: its signal, callbacks and quote. */
+    private pendingEntry: {
+        signal: StrategySignal;
+        currency: string;
+        callbacks: ExecutionCallbacks;
+        quote: Promise<ProposalInfo | null>;
+    } | null = null;
 
     constructor(settings: TradingSettings, strategies: StrategyConfig[], scannerConfig: ScannerConfig) {
         this.settings = settings;
@@ -249,6 +264,7 @@ export class BotEngine {
         }
 
         this.isRunning = true;
+        this.pendingEntry = null;
         this.configVersion = nextConfigVersion();
         this.state.session = createSession();
         this.update({
@@ -259,6 +275,7 @@ export class BotEngine {
             lastRiskCheck: null,
             lastExecution: null,
             lastProposal: null,
+            pendingTrade: null,
             positions: [],
         });
 
@@ -275,7 +292,7 @@ export class BotEngine {
         // Start scanning immediately, then on interval.
         await this.runScan();
         this.scanTimer = setInterval(() => {
-            if (this.isRunning && this.state.botState !== 'Contract Open' && this.state.botState !== 'Executing') {
+            if (this.isRunning && !this.isBotBusy()) {
                 this.runScan();
             }
         }, this.scannerConfig.scanIntervalMs);
@@ -283,6 +300,8 @@ export class BotEngine {
 
     /** Stop the bot — prevents new entries immediately. Open contracts continue monitoring. */
     stop(): void {
+        // A held real-money entry is dropped, never executed, on stop.
+        this.cancelPendingTrade('Stopped');
         this.isRunning = false;
         if (this.scanTimer) {
             clearInterval(this.scanTimer);
@@ -299,8 +318,46 @@ export class BotEngine {
         await this.runScan();
     }
 
+    /**
+     * Approve the real-money entry the bot is holding: submit the order for the
+     * quote shown in the dialog (or a fresh proposal when none was quoted).
+     */
+    async confirmPendingTrade(): Promise<void> {
+        const entry = this.pendingEntry;
+        if (!entry) return;
+
+        this.pendingEntry = null;
+        this.update({ pendingTrade: null, botState: 'Executing' });
+        this.log('info', 'trade', 'Order confirmed — submitting the trade.');
+
+        const execution = this.executionEngine;
+        if (!execution) return;
+
+        // The quote requested when the dialog opened (usually already resolved).
+        const proposal = await entry.quote;
+        if (proposal) {
+            await execution.buyPrepared(entry.callbacks);
+        } else {
+            await execution.execute(entry.signal, entry.currency, entry.callbacks);
+        }
+    }
+
+    /** Reject the entry the bot is holding. Nothing is bought. */
+    cancelPendingTrade(nextState?: BotState): void {
+        if (!this.pendingEntry) return;
+
+        this.pendingEntry = null;
+        this.executionEngine?.cancelPending();
+        this.update({
+            pendingTrade: null,
+            botState: nextState ?? (this.isRunning ? 'Scanning' : 'Stopped'),
+        });
+        this.log('info', 'trade', 'Real-money trade cancelled — no order was placed.');
+    }
+
     /** Pause scanning (keeps monitoring open contracts). */
     pause(): void {
+        this.cancelPendingTrade('Paused');
         if (this.scanTimer) {
             clearInterval(this.scanTimer);
             this.scanTimer = null;
@@ -315,7 +372,7 @@ export class BotEngine {
         this.update({ botState: 'Scanning' });
         this.runScan();
         this.scanTimer = setInterval(() => {
-            if (this.isRunning && this.state.botState !== 'Contract Open' && this.state.botState !== 'Executing') {
+            if (this.isRunning && !this.isBotBusy()) {
                 this.runScan();
             }
         }, this.scannerConfig.scanIntervalMs);
@@ -338,7 +395,9 @@ export class BotEngine {
 
         try {
             const rankings = await scanMarkets(this.scannerConfig, this.strategies);
-            this.update({ rankings, botState: this.isRunning ? 'Scanning' : this.state.botState });
+            // Never clobber the state of an entry that is executing or pending.
+            if (this.isBotBusy()) this.update({ rankings });
+            else this.update({ rankings, botState: this.isRunning ? 'Scanning' : this.state.botState });
 
             if (this.isRunning) {
                 await this.processRankings(rankings);
@@ -355,6 +414,9 @@ export class BotEngine {
     }
 
     private async processRankings(rankings: MarketRanking[]): Promise<void> {
+        // One entry at a time — never queue a trade behind a pending one.
+        if (this.pendingEntry) return;
+
         // Find the best qualifying market.
         const qualifying = rankings.filter(r => r.qualifies);
 
@@ -406,7 +468,6 @@ export class BotEngine {
 
         // Execute the trade.
         this.lastSignalId = signal.id;
-        this.update({ botState: 'Awaiting Confirmation' });
 
         const currency = this.state.auth.currency ?? 'USD';
 
@@ -415,9 +476,13 @@ export class BotEngine {
                 if (error) {
                     this.log('trade', 'execution', `Proposal error: ${error}`);
                 } else if (info) {
-                    this.update({ lastProposal: info, botState: 'Awaiting Confirmation' });
+                    this.update({ lastProposal: info });
                     this.log('trade', 'execution', `Proposal received: ${info.longcode} — ask ${info.askPrice}`);
                 }
+            },
+            onQuoteRefreshed: (info) => {
+                this.update({ lastProposal: info });
+                this.log('warning', 'trade', `Quote refreshed before purchase (market moved): ask ${info.askPrice}, payout ${info.payout}.`);
             },
             onBuy: (result, error) => {
                 if (error) {
@@ -489,11 +554,83 @@ export class BotEngine {
             },
         };
 
+        // Real-money entries are held back until the user approves the order.
+        if (this.settings.accountMode === 'real') {
+            await this.openConfirmation(signal, currency, callbacks);
+            return;
+        }
+
         this.update({ botState: 'Executing' });
 
         if (this.executionEngine) {
             await this.executionEngine.execute(signal, currency, callbacks);
         }
+    }
+
+    /**
+     * Hold a real-money entry for explicit approval. A live quote is requested
+     * up front so the dialog shows the real price, payout and Deriv contract
+     * description; nothing is bought until `confirmPendingTrade` is called.
+     */
+    private async openConfirmation(
+        signal: StrategySignal,
+        currency: string,
+        callbacks: ExecutionCallbacks
+    ): Promise<void> {
+        const execution = this.executionEngine;
+        if (!execution) return;
+
+        const order: TradeOrderDetails = {
+            symbol: signal.symbol,
+            displayName: signal.analysis.displayName ?? null,
+            strategyLabel: signal.strategyLabel,
+            contractType: signal.contractType,
+            prediction: describePrediction(signal),
+            stake: this.settings.stake,
+            maxStake: this.settings.maxStake,
+            duration: this.settings.duration,
+            durationUnit: this.settings.durationUnit,
+            currency,
+            accountMode: this.settings.accountMode,
+            loginid: this.state.auth.loginid,
+            balance: this.state.auth.balance,
+        };
+
+        const pendingTrade: PendingTrade = {
+            id: signal.id,
+            order,
+            quote: null,
+            quoteError: null,
+            requestedAt: Date.now(),
+        };
+        this.update({ pendingTrade, botState: 'Awaiting Confirmation' });
+        this.log(
+            'info',
+            'trade',
+            `Real-money trade awaiting your confirmation — ${order.prediction} on ${order.symbol}, stake ${order.stake} ${currency}.`
+        );
+
+        // Quote-only callbacks: a quote failure must leave the dialog open (it is
+        // reported there), not flip the bot state, so these stay silent.
+        const quote = execution.prepare(signal, currency, {
+            ...callbacks,
+            onProposal: () => undefined,
+            onError: () => undefined,
+        });
+        this.pendingEntry = { signal, currency, callbacks, quote };
+
+        const proposal = await quote;
+        // Confirmed or cancelled while the quote was in flight — nothing to show.
+        if (!this.pendingEntry || this.state.pendingTrade?.id !== pendingTrade.id) return;
+        this.update({
+            pendingTrade: {
+                ...pendingTrade,
+                quote: proposal,
+                quoteError: proposal
+                    ? null
+                    : 'Live quote unavailable right now — a fresh proposal is requested when you confirm.',
+            },
+        });
     }
 
     private handleStop(reason: Exclude<StopReason, null>): void {
@@ -508,6 +645,15 @@ export class BotEngine {
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────
+
+    /** True while an entry is executing, open, or waiting for the user. */
+    private isBotBusy(): boolean {
+        return (
+            this.state.botState === 'Contract Open' ||
+            this.state.botState === 'Executing' ||
+            this.state.botState === 'Awaiting Confirmation'
+        );
+    }
 
     private log(level: JournalEntry['level'], category: string, message: string): void {
         const entry: JournalEntry = {

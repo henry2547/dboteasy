@@ -11,6 +11,7 @@ import ScannerPanel from './components/scanner-panel';
 import SettingsPanel from './components/settings-panel';
 import SignalPanel from './components/signal-panel';
 import StrategySelector from './components/strategy-selector';
+import TradeConfirmation from './components/trade-confirmation';
 import TradeMonitor from './components/trade-monitor';
 import { useAiBotContext } from './ai-bot-context';
 import './ai-bot-page.scss';
@@ -38,6 +39,8 @@ export default function AiBotPage() {
             <AuthPanel />
 
             <DashboardPanel />
+
+            <TradeConfirmation />
 
             <div className='aibot-grid'>
                 <div className='aibot-grid__main'>

@@ -270,6 +270,19 @@ bar is scrollable below desktop, so six tabs still fit a phone).
   totals), **Transactions** (every position with status + settlement result) and **Journal** views;
   the journal gets one line when a position opens and one when it closes (settlement + contract
   status).
+- **Real-money confirmation gate.** A real-money entry is never submitted straight from the scanner:
+  `processRankings` stops at `ExecutionEngine.prepare()`, which quotes the order on the authenticated
+  socket and holds it, and publishes `state.pendingTrade` (order details + the live Deriv quote) with
+  `botState: 'Awaiting Confirmation'`. `components/trade-confirmation.tsx` renders that as a modal
+  dialog (market, contract, prediction, stake, duration, account, price, payout and Deriv's own
+  contract description) and nothing is bought until `confirmPendingTrade()` runs — `buyPrepared()` —
+  which re-quotes the exact same contract when the approved quote went stale (`onQuoteRefreshed` logs
+  it in the journal). `cancelPendingTrade()` (the dialog's Cancel, plus Stop Bot and Pause) forgets
+  the proposal, places no order and logs it; the scan loop refuses a second entry while one is
+  pending (`pendingEntry` guard, and `isBotBusy()` keeps the scan tick from clobbering the state).
+  Demo-mode entries still execute in one step — `execute()` is now just `prepare()` + `buyPrepared()`.
+  The dialog needs a real authorized account, so its live path is verified by hand; the gate itself
+  (quote-then-buy, cancel places nothing, stale re-quote, over-stake rejection) is unit-tested.
 - **Persistence.** Settings, strategies and scanner config are written to localStorage under
   `aibot_settings` / `aibot_strategies` / `aibot_scanner_config` (see `constants.ts`). Any UI check
   that toggles them leaves a stored list behind — remove the key afterwards to restore the defaults.
@@ -284,9 +297,12 @@ bar is scrollable below desktop, so six tabs still fit a phone).
   Selection, Trading Settings and Trade Monitor. The Trade Monitor has three tabs (`.aibot-tab`:
   Summary / Transactions / Journal) that each render an empty state while logged out
   (`No open positions…`, `No positions yet…`, `No events yet.`).
-- `trade-ledger.ts` is covered by `__tests__/trade-ledger.test.ts`:
-  `docker compose exec web npx jest src/pages/ai-bot/__tests__/trade-ledger.test.ts`. The live
-  position rows and their settlement results need a real account and are verified by hand.
+- `trade-ledger.ts` is covered by `__tests__/trade-ledger.test.ts`, the confirmation gate by
+  `__tests__/execution-engine.test.ts` (quote-then-buy, cancel places nothing, stale re-quote,
+  over-stake rejection — a fake message bus, no network) and the dialog's contents and buttons by
+  `__tests__/trade-confirmation.test.tsx`: `docker compose exec web npx jest src/pages/ai-bot`. The
+  live position rows, their settlement results and the real-money dialog (it renders only for a real
+  authorized account) are verified by hand.
 - "Scan now" is the anonymous-safe check: within a few seconds ~13 ranked rows appear, each with a
   score, a Passed/Failed condition list and (for a qualifying setup) a `Strategy: …` line. No
   sideways scroll at 431px; the two-column grid collapses to one at ≤768px.

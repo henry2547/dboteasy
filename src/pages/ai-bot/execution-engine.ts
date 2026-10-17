@@ -5,7 +5,9 @@
  * Workflow:
  * 1. Obtain a valid price proposal (proposal request).
  * 2. Verify the returned quote and contract parameters.
- * 3. Submit a purchase only when all conditions and risk checks pass.
+ * 3. Submit a purchase only when all conditions and risk checks pass — and for
+ *    a real-money entry, only after the user approves the order (`prepare`
+ *    quotes it, `buyPrepared` buys it, `cancelPending` drops it unplaced).
  * 4. Monitor the open contract via proposal_open_contract until settled.
  *
  * This service never fabricates proposal identifiers, contract IDs, quotes, or
@@ -23,6 +25,11 @@ export interface ExecutionCallbacks {
     onContractUpdate: (contract: OpenContractInfo) => void;
     onSettled: (result: ExecutionResult) => void;
     onError: (message: string) => void;
+    /**
+     * Fired when a quote the user approved went stale and was replaced by a
+     * fresh one for the same contract at purchase time.
+     */
+    onQuoteRefreshed?: (info: ProposalInfo) => void;
 }
 
 const PROPOSAL_TIMEOUT_MS = 10000;
@@ -33,6 +40,12 @@ export class ExecutionEngine {
     private activeProposalId: string | null = null;
     private activeContractId: number | null = null;
     private openContractSubscriptionId: string | null = null;
+    /** A verified quote held back until the user approves the order. */
+    private pendingProposal: ProposalInfo | null = null;
+    /** The proposal request that produced `pendingProposal`, for a re-quote. */
+    private pendingParams: Record<string, unknown> | null = null;
+    /** Invalidates a quote request that is still in flight when it is dropped. */
+    private requestSeq = 0;
     private isExecuting = false;
     private offMessage: (() => void) | null = null;
     private callbacks: ExecutionCallbacks | null = null;
@@ -47,7 +60,7 @@ export class ExecutionEngine {
     }
 
     destroy(): void {
-        this.cancelProposal();
+        this.cancelPending();
         if (this.openContractSubscriptionId) {
             this.sendFn({ forget: this.openContractSubscriptionId });
             this.openContractSubscriptionId = null;
@@ -65,39 +78,97 @@ export class ExecutionEngine {
     }
 
     /**
-     * Execute the full workflow: proposal → verify → buy → monitor.
+     * Execute the full workflow in one step: proposal → verify → buy → monitor.
      * The contract is monitored via the message handler; onSettled fires
      * when proposal_open_contract reports is_sold.
      */
     async execute(signal: StrategySignal, currency: string, callbacks: ExecutionCallbacks): Promise<void> {
+        const proposal = await this.prepare(signal, currency, callbacks);
+        if (!proposal) return;
+        await this.buyPrepared(callbacks);
+    }
+
+    /**
+     * Step 1 of a user-approved entry: obtain and verify a price proposal and
+     * hold it — nothing is bought. `buyPrepared` buys that quote once the user
+     * approves it; `cancelPending` drops it. Returns null (and releases the
+     * engine, holding nothing) when no valid proposal was obtained.
+     */
+    async prepare(signal: StrategySignal, currency: string, callbacks: ExecutionCallbacks): Promise<ProposalInfo | null> {
         if (this.isExecuting) {
             callbacks.onError('Another trade is already in progress');
-            return;
+            return null;
         }
 
+        const seq = ++this.requestSeq;
         this.callbacks = callbacks;
         this.isExecuting = true;
-        const settings = this.settingsRef();
+
+        const params = proposalParamsFromSignal(signal, this.settingsRef(), currency);
+        const proposal = await this.requestProposal(params, callbacks);
+
+        // Dropped (cancelled or replaced) while the quote was in flight.
+        if (seq !== this.requestSeq) {
+            if (proposal) this.cancelProposal();
+            return null;
+        }
+        if (!proposal) {
+            this.release();
+            return null;
+        }
+        // Verify the returned quote and contract parameters.
+        if (!this.verifyProposal(proposal, this.settingsRef(), callbacks)) {
+            this.cancelProposal();
+            this.release();
+            return null;
+        }
+
+        this.pendingProposal = proposal;
+        this.pendingParams = params;
+        return proposal;
+    }
+
+    /** True while a prepared quote is waiting to be bought. */
+    get hasPreparedProposal(): boolean {
+        return this.pendingProposal !== null;
+    }
+
+    /**
+     * Step 2 of a user-approved entry: submit the purchase for the quote the
+     * user approved. A quote that went stale while the user was deciding is
+     * replaced by a fresh one for the exact same contract before buying.
+     */
+    async buyPrepared(callbacks?: ExecutionCallbacks): Promise<void> {
+        const cb = callbacks ?? this.callbacks;
+        let proposal = this.pendingProposal;
+        const params = this.pendingParams;
+        this.pendingProposal = null;
+        this.pendingParams = null;
+
+        if (!cb) {
+            this.release();
+            return;
+        }
+        this.callbacks = cb;
 
         try {
-            // 1. Obtain a price proposal.
-            const proposal = await this.requestProposal(signal, currency, callbacks);
+            if (proposal && params && !this.isQuoteFresh(proposal)) {
+                proposal = await this.requestProposal(params, cb);
+                if (proposal && !this.verifyProposal(proposal, this.settingsRef(), cb)) proposal = null;
+                if (proposal) cb.onQuoteRefreshed?.(proposal);
+            }
             if (!proposal) return;
 
-            // 2. Verify the quote is fresh and valid.
-            if (!this.verifyProposal(proposal, settings, callbacks)) return;
-
-            // 3. Submit the purchase.
-            const buyResult = await this.buyContract(proposal, callbacks);
+            const buyResult = await this.buyContract(proposal, cb);
             if (!buyResult) return;
 
-            // 4. Subscribe to contract updates and monitor until settled.
+            // Subscribe to contract updates and monitor until settled.
             this.activeContractId = buyResult.contractId;
             this.subscribeOpenContract(buyResult.contractId);
         } catch (error) {
-            callbacks.onError(`Execution error: ${(error as Error).message}`);
+            cb.onError(`Execution error: ${(error as Error).message}`);
         } finally {
-            this.isExecuting = false;
+            this.release();
         }
     }
 
@@ -109,6 +180,15 @@ export class ExecutionEngine {
         }
     }
 
+    /** Drop a prepared or in-flight entry without buying anything. */
+    cancelPending(): void {
+        this.requestSeq += 1; // invalidate a quote request still in flight
+        this.cancelProposal();
+        this.pendingProposal = null;
+        this.pendingParams = null;
+        this.release();
+    }
+
     /** Subscribe to proposal_open_contract updates for the purchased contract. */
     private subscribeOpenContract(contractId: number): void {
         this.sendFn({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 });
@@ -117,12 +197,11 @@ export class ExecutionEngine {
     // ── Private ──────────────────────────────────────────────────────────────
 
     private async requestProposal(
-        signal: StrategySignal,
-        currency: string,
+        params: Record<string, unknown>,
         callbacks: ExecutionCallbacks
     ): Promise<ProposalInfo | null> {
-        const settings = this.settingsRef();
-        const params = proposalParamsFromSignal(signal, settings, currency);
+        // A new proposal replaces the previous one, so its subscription goes.
+        this.cancelProposal();
         try {
             const response = await this.sendAndWaitFn(params, PROPOSAL_TIMEOUT_MS);
             const payload = response as Record<string, any>;
@@ -166,12 +245,9 @@ export class ExecutionEngine {
 
     private verifyProposal(proposal: ProposalInfo, settings: TradingSettings, callbacks: ExecutionCallbacks): boolean {
         // Check quote freshness.
-        if (proposal.spotTime > 0) {
-            const quoteAgeS = Date.now() / 1000 - proposal.spotTime;
-            if (quoteAgeS > MAX_QUOTE_AGE_S) {
-                callbacks.onError(`Stale quote (${Math.round(quoteAgeS)}s old)`);
-                return false;
-            }
+        if (!this.isQuoteFresh(proposal)) {
+            callbacks.onError(`Stale quote (${Math.round(Date.now() / 1000 - proposal.spotTime)}s old)`);
+            return false;
         }
 
         // Check ask price is within limits.
@@ -223,6 +299,17 @@ export class ExecutionEngine {
             callbacks.onError(`Purchase failed: ${msg}`);
             return null;
         }
+    }
+
+    /** Release the engine so the next entry can start. */
+    private release(): void {
+        this.isExecuting = false;
+    }
+
+    /** A quote is usable while its spot is recent (Deriv may omit spot_time). */
+    private isQuoteFresh(proposal: ProposalInfo): boolean {
+        if (proposal.spotTime <= 0) return true;
+        return Date.now() / 1000 - proposal.spotTime <= MAX_QUOTE_AGE_S;
     }
 
     private handleMessage(message: AuthMessage): void {

@@ -916,4 +916,79 @@
     &__list li { margin: 2px 0; }
     &__warn { font-size: 0.8rem; color: #c62828; margin: 0 0 16px; line-height: 1.5; }
     &__actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    // The order dialog carries more detail than the settings modals and must
+    // stay readable (and scrollable) on a phone.
+    &--order {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    &__lead {
+        font-size: 0.85rem;
+        color: var(--text-colored-disabled);
+        margin: 0 0 12px;
+        line-height: 1.5;
+    }
+}
+
+// ── Order details (real-money confirmation) ─────────────────────────────────
+
+.aibot-order {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 8px;
+    background: var(--section-content-bg, #fafafa);
+
+    &--quote { border-left: 3px solid #1565c0; }
+
+    &__row {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        justify-content: space-between;
+        font-size: 0.82rem;
+    }
+
+    &__row--wide {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+
+        .aibot-order__value { text-align: left; font-weight: 500; }
+    }
+
+    &__label {
+        flex-shrink: 0;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: var(--text-colored-disabled);
+    }
+
+    &__value {
+        font-weight: 600;
+        text-align: right;
+        overflow-wrap: anywhere;
+
+        &--danger { color: #c62828; }
+        &--positive { color: #2e7d32; }
+    }
+
+    &__hint {
+        font-weight: 400;
+        color: var(--text-colored-disabled);
+    }
+}
+
+.aibot-quote-note {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+
+    &--live { color: #2e7d32; }
+    &--stale { color: #e65100; }
 }

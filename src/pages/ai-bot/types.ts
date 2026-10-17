@@ -235,6 +235,44 @@ export interface ExecutionResult {
     timestamp: number;
 }
 
+// ── Trade confirmation (the real-money gate) ────────────────────────────────
+
+/** The order details shown in the confirmation dialog before a real purchase. */
+export interface TradeOrderDetails {
+    symbol: string;
+    /** Human-readable market name, when the scan provided one. */
+    displayName: string | null;
+    strategyLabel: string;
+    /** Deriv contract_type code, e.g. DIGITMATCH. */
+    contractType: string;
+    /** Human-readable prediction, e.g. "Last digit matches 3". */
+    prediction: string;
+    /** Stake about to be committed, in the account currency. */
+    stake: number;
+    maxStake: number;
+    duration: number;
+    durationUnit: string;
+    currency: string;
+    accountMode: AccountMode;
+    loginid: string | null;
+    balance: number | null;
+}
+
+/**
+ * A real-money entry the engine holds back until the user approves it.
+ * `quote` is the live Deriv proposal for the order (null while it is loading or
+ * when the quote request failed — see `quoteError`). Nothing is bought while a
+ * pending trade exists.
+ */
+export interface PendingTrade {
+    /** Signal id of the entry awaiting confirmation. */
+    id: string;
+    order: TradeOrderDetails;
+    quote: ProposalInfo | null;
+    quoteError: string | null;
+    requestedAt: number;
+}
+
 // ── Trade ledger (positions the bot opens and closes) ───────────────────────
 
 export type PositionStatus = 'open' | 'settled';
