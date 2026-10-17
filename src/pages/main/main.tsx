@@ -47,6 +47,7 @@ import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
+const ScannerPage = lazy(() => import('../scanner'));
 const Tutorial = lazy(() => import('../tutorials'));
 
 const AppWrapper = observer(() => {
@@ -80,7 +81,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'digits'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'digits', 'scanner'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -479,6 +480,27 @@ const AppWrapper = observer(() => {
                                     }
                                 >
                                     <DigitsPage />
+                                </Suspense>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedPercentCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='AI Scanner' />
+                                    </>
+                                }
+                                id='id-ai-scanner'
+                            >
+                                <Suspense
+                                    fallback={
+                                        <ChunkLoader message={localize('Please wait, loading the AI scanner...')} />
+                                    }
+                                >
+                                    <ScannerPage />
                                 </Suspense>
                             </div>
                         </Tabs>
