@@ -68,6 +68,26 @@ export function contractTypeForStrategy(strategyId: string): string {
     }
 }
 
+/** Human-readable description of what a signal's contract predicts. */
+export function describePrediction(signal: Pick<StrategySignal, 'strategyId' | 'digit' | 'barrier'>): string {
+    switch (signal.strategyId) {
+        case 'matches':
+            return `Last digit matches ${signal.digit ?? signal.barrier ?? '—'}`;
+        case 'differs':
+            return `Last digit differs from ${signal.digit ?? signal.barrier ?? '—'}`;
+        case 'over1':
+            return `Last digit is over ${signal.barrier ?? '1'}`;
+        case 'under8':
+            return `Last digit is under ${signal.barrier ?? '8'}`;
+        case 'even':
+            return 'Last digit is even';
+        case 'odd':
+            return 'Last digit is odd';
+        default:
+            return 'Custom contract';
+    }
+}
+
 /**
  * Build the Deriv proposal request parameters from a signal and settings.
  */

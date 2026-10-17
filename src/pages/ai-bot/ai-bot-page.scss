@@ -91,6 +91,9 @@
         &--authorized { color: #2e7d32; }
         &--disconnected { color: var(--text-colored-disabled); }
         &--connecting { color: #e65100; }
+        &--authorizing { color: #e65100; }
+        &--authorization_required { color: #1565c0; }
+        &--reconnecting { color: #e65100; }
         &--error { color: #c62828; }
     }
 
@@ -393,6 +396,7 @@
     text-transform: uppercase;
 
     &--success { background: #c8e6c9; color: #2e7d32; }
+    &--danger { background: #ffcdd2; color: #c62828; }
     &--muted { background: var(--section-content-bg, #e0e0e0); color: var(--text-colored-disabled); }
 }
 
@@ -629,6 +633,65 @@
     &__message { flex: 1; }
 }
 
+// ── Trade monitor (Summary / Transactions / Journal) ────────────────────────
+
+.aibot-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-color, #eee);
+    margin-bottom: 12px;
+}
+
+.aibot-tab {
+    padding: 6px 12px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--text-colored-disabled);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { color: var(--text-general); }
+    &--active { color: #1565c0; border-bottom-color: #1565c0; }
+}
+
+.aibot-txn {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 420px;
+    overflow-y: auto;
+
+    &__row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--border-color, #eee);
+        border-left: 3px solid var(--border-color, #ddd);
+        border-radius: 6px;
+        background: var(--section-content-bg, #fafafa);
+        font-size: 0.78rem;
+
+        &--open { border-left-color: #1565c0; }
+        &--won { border-left-color: #2e7d32; }
+        &--lost { border-left-color: #c62828; }
+    }
+
+    &__id { font-weight: 700; }
+    &__meta { color: var(--text-colored-disabled); }
+    &__status { display: flex; gap: 4px; margin-left: auto; }
+    &__pnl { font-weight: 700; min-width: 84px; text-align: right; }
+
+    @media (max-width: 768px) {
+        &__status { margin-left: 0; }
+        &__pnl { margin-left: auto; }
+    }
+}
+
 // ── Shared ──────────────────────────────────────────────────────────────────
 
 .aibot-empty {
@@ -652,6 +715,74 @@
 
 .aibot-positive { color: #2e7d32; font-weight: 600; }
 .aibot-negative { color: #c62828; font-weight: 600; }
+
+// ── Account selector ─────────────────────────────────────────────────────────
+
+.aibot-auth__account-select {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.aibot-auth__select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--text-colored-disabled, #ccc);
+    background: var(--content-bg, #fff);
+    color: var(--text-general);
+    font-size: 0.9rem;
+    max-width: 260px;
+}
+
+// ── Diagnostics panel ─────────────────────────────────────────────────────────
+
+.aibot-diag {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--text-disabled, #eee);
+
+    &__title {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: var(--text-colored-disabled);
+        margin-bottom: 8px;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 6px 12px;
+    }
+
+    &__row {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    &__label {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        color: var(--text-colored-disabled);
+    }
+
+    &__value {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-general);
+
+        &--ok { color: #2e7d32; }
+        &--warn { color: #e65100; }
+        &--err { color: #c62828; }
+    }
+
+    &__error {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: #c62828;
+    }
+}
 
 .aibot-disclaimer {
     font-size: 0.75rem;
@@ -785,4 +916,79 @@
     &__list li { margin: 2px 0; }
     &__warn { font-size: 0.8rem; color: #c62828; margin: 0 0 16px; line-height: 1.5; }
     &__actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    // The order dialog carries more detail than the settings modals and must
+    // stay readable (and scrollable) on a phone.
+    &--order {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    &__lead {
+        font-size: 0.85rem;
+        color: var(--text-colored-disabled);
+        margin: 0 0 12px;
+        line-height: 1.5;
+    }
+}
+
+// ── Order details (real-money confirmation) ─────────────────────────────────
+
+.aibot-order {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 8px;
+    background: var(--section-content-bg, #fafafa);
+
+    &--quote { border-left: 3px solid #1565c0; }
+
+    &__row {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        justify-content: space-between;
+        font-size: 0.82rem;
+    }
+
+    &__row--wide {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+
+        .aibot-order__value { text-align: left; font-weight: 500; }
+    }
+
+    &__label {
+        flex-shrink: 0;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: var(--text-colored-disabled);
+    }
+
+    &__value {
+        font-weight: 600;
+        text-align: right;
+        overflow-wrap: anywhere;
+
+        &--danger { color: #c62828; }
+        &--positive { color: #2e7d32; }
+    }
+
+    &__hint {
+        font-weight: 400;
+        color: var(--text-colored-disabled);
+    }
+}
+
+.aibot-quote-note {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+
+    &--live { color: #2e7d32; }
+    &--stale { color: #e65100; }
 }

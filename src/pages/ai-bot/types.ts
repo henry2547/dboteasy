@@ -9,7 +9,48 @@
 
 // ── Connection ──────────────────────────────────────────────────────────────
 
-export type AuthStatus = 'disconnected' | 'connecting' | 'authorizing' | 'authorized' | 'error';
+export type AuthStatus =
+    | 'disconnected'
+    | 'connecting'
+    | 'authorizing'
+    | 'authorized'
+    | 'authorization_required'
+    | 'error'
+    | 'reconnecting';
+
+export interface AuthAccount {
+    /** Deriv account id, e.g. VRT123456 or CR1234567. */
+    loginid: string;
+    /** 'demo' or 'real'. */
+    accountType: 'demo' | 'real';
+    currency: string;
+    balance: number;
+    /** Account status from the accounts list, when available. */
+    status: string | null;
+    /** Whether this is the currently authorized/active account. */
+    isActive: boolean;
+}
+
+export interface AuthDiagnostics {
+    /** Raw WebSocket connection state. */
+    wsState: string;
+    /** Authorization phase reported by the auth socket. */
+    authPhase: string;
+    /** Whether the selected account is authorized for execution. */
+    accountAuthorized: boolean;
+    /** Whether the user's token grants trading (the `trade` scope). */
+    tradePermitted: boolean;
+    /** Public market-data connection state (owned by the scanner). */
+    marketDataState: string;
+    /** Epoch ms of the last successful authorization, or null. */
+    lastAuthAt: number | null;
+    /** Last error message (safe, no credentials). */
+    lastError: string | null;
+    /** Current reconnect attempt counter. */
+    reconnectAttempt: number;
+    /** Whether a retry/reconnect is in progress. */
+    retrying: boolean;
+}
 
 export interface AuthState {
     status: AuthStatus;
@@ -18,6 +59,10 @@ export interface AuthState {
     balance: number | null;
     currency: string | null;
     errorMessage: string | null;
+    /** Accounts available to the authorized user (from the accounts list). */
+    accounts: AuthAccount[];
+    /** Diagnostics for the connection panel. */
+    diagnostics: AuthDiagnostics;
 }
 
 export type FeedStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
@@ -188,6 +233,83 @@ export interface ExecutionResult {
     status: 'won' | 'lost' | 'open' | 'rejected' | 'error' | null;
     message: string;
     timestamp: number;
+}
+
+// ── Trade confirmation (the real-money gate) ────────────────────────────────
+
+/** The order details shown in the confirmation dialog before a real purchase. */
+export interface TradeOrderDetails {
+    symbol: string;
+    /** Human-readable market name, when the scan provided one. */
+    displayName: string | null;
+    strategyLabel: string;
+    /** Deriv contract_type code, e.g. DIGITMATCH. */
+    contractType: string;
+    /** Human-readable prediction, e.g. "Last digit matches 3". */
+    prediction: string;
+    /** Stake about to be committed, in the account currency. */
+    stake: number;
+    maxStake: number;
+    duration: number;
+    durationUnit: string;
+    currency: string;
+    accountMode: AccountMode;
+    loginid: string | null;
+    balance: number | null;
+}
+
+/**
+ * A real-money entry the engine holds back until the user approves it.
+ * `quote` is the live Deriv proposal for the order (null while it is loading or
+ * when the quote request failed — see `quoteError`). Nothing is bought while a
+ * pending trade exists.
+ */
+export interface PendingTrade {
+    /** Signal id of the entry awaiting confirmation. */
+    id: string;
+    order: TradeOrderDetails;
+    quote: ProposalInfo | null;
+    quoteError: string | null;
+    requestedAt: number;
+}
+
+// ── Trade ledger (positions the bot opens and closes) ───────────────────────
+
+export type PositionStatus = 'open' | 'settled';
+
+/** Settlement outcome of a position: 'pending' until the contract closes. */
+export type SettlementResult = 'won' | 'lost' | 'pending';
+
+/**
+ * One ledger entry per contract the bot buys, kept in `BotEngineState.positions`.
+ * It is refreshed from every `proposal_open_contract` message and completed when
+ * the contract settles, so the contract status and the settlement result of
+ * every position stay visible after it closes.
+ */
+export interface TradePosition {
+    contractId: number;
+    /** Deriv contract_type code, e.g. DIGITMATCH. */
+    contractType: string;
+    symbol: string;
+    /** Strategy that produced the entry, when known. */
+    strategyLabel: string | null;
+    accountMode: AccountMode;
+    loginid: string | null;
+    /** Stake actually paid for the contract. */
+    stake: number;
+    payout: number;
+    /** Live profit while open, final profit/loss once settled. */
+    profit: number | null;
+    entrySpot: number | null;
+    currentSpot: number | null;
+    /** Raw contract status reported by Deriv, e.g. 'open', 'sold', 'won'. */
+    contractStatus: string | null;
+    isValidToSell: boolean;
+    isExpired: boolean;
+    status: PositionStatus;
+    settlement: SettlementResult;
+    openedAt: number;
+    settledAt: number | null;
 }
 
 // ── Session ─────────────────────────────────────────────────────────────────
