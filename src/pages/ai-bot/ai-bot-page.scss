@@ -1,0 +1,650 @@
+// AI Bot page styles — follows the digits-page.scss conventions (CSS custom
+// properties per theme, viewport-based height, own scrolling).
+
+.aibot {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+
+    &-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        &__title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text-general);
+        }
+
+        &__subtitle {
+            font-size: 0.85rem;
+            color: var(--text-colored-disabled);
+            margin: 4px 0 0;
+        }
+    }
+
+    &-state {
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: var(--section-content-bg, #f0f0f0);
+        color: var(--text-general);
+
+        &--scanning { background: #e3f2fd; color: #1565c0; }
+        &--setup-detected { background: #e8f5e9; color: #2e7d32; }
+        &--risk-check { background: #fff3e0; color: #e65100; }
+        &--awaiting-confirmation { background: #fff3e0; color: #e65100; }
+        &--executing { background: #fce4ec; color: #c62828; }
+        &--contract-open { background: #e8f5e9; color: #2e7d32; }
+        &--cooldown { background: #f3e5f5; color: #6a1b9a; }
+        &--paused { background: #fffde7; color: #f57f17; }
+        &--data-interrupted { background: #ffebee; color: #c62828; }
+        &--error { background: #ffebee; color: #c62828; }
+        &--stopped { background: var(--section-content-bg, #f0f0f0); color: var(--text-colored-disabled); }
+    }
+}
+
+// ── Auth panel ───────────────────────────────────────────────────────────────
+
+.aibot-auth {
+    background: var(--content-bg, #fff);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    &__info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    &__row {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__label {
+        font-size: 0.75rem;
+        color: var(--text-colored-disabled);
+        text-transform: uppercase;
+    }
+
+    &__value {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-general);
+
+        &--demo { color: #1565c0; }
+        &--real { color: #c62828; }
+        &--authorized { color: #2e7d32; }
+        &--disconnected { color: var(--text-colored-disabled); }
+        &--connecting { color: #e65100; }
+        &--error { color: #c62828; }
+    }
+
+    &__actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    &__mode-toggle {
+        display: flex;
+        gap: 4px;
+    }
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+
+.aibot-dashboard {
+    background: var(--content-bg, #fff);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    &__controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    &__stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 8px;
+    }
+}
+
+.aibot-stat {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--section-content-bg, #f5f5f5);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    &__label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--text-colored-disabled);
+    }
+
+    &__value {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-general);
+    }
+
+    &--positive &__value { color: #2e7d32; }
+    &--negative &__value { color: #c62828; }
+}
+
+// ── Grid layout ──────────────────────────────────────────────────────────────
+
+.aibot-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 16px;
+    margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+
+    &__main {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    &__side {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+
+// ── Panel ────────────────────────────────────────────────────────────────────
+
+.aibot-panel {
+    background: var(--content-bg, #fff);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    &__title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0 0 12px;
+        color: var(--text-general);
+    }
+
+    &__hint {
+        font-size: 0.8rem;
+        color: var(--text-colored-disabled);
+        margin: 0 0 12px;
+    }
+}
+
+// ── Buttons ──────────────────────────────────────────────────────────────────
+
+.aibot-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 6px;
+    background: var(--content-bg, #fff);
+    color: var(--text-general);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover { background: var(--section-content-bg, #f0f0f0); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &--primary { background: #1565c0; color: #fff; border-color: #1565c0; }
+    &--primary:hover { background: #0d47a1; }
+    &--danger { background: #c62828; color: #fff; border-color: #c62828; }
+    &--danger:hover { background: #b71c1c; }
+    &--sm { padding: 4px 10px; font-size: 0.8rem; }
+    &--lg { padding: 12px 24px; font-size: 1rem; }
+    &--active { background: #1565c0; color: #fff; border-color: #1565c0; }
+}
+
+// ── Scanner ─────────────────────────────────────────────────────────────────
+
+.aibot-scanner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aibot-scan-row {
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: var(--section-content-bg, #fafafa);
+
+    &--qualifies {
+        border-color: #2e7d32;
+        background: #e8f5e9;
+    }
+
+    &__head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    &__rank {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--text-colored-disabled);
+        min-width: 28px;
+    }
+
+    &__name {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    &__category {
+        font-size: 0.75rem;
+        color: var(--text-colored-disabled);
+    }
+
+    &__score {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: auto;
+    }
+
+    &__detail {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    &__strategy {
+        font-size: 0.85rem;
+    }
+
+    &__reason {
+        font-size: 0.8rem;
+        color: var(--text-colored-disabled);
+    }
+
+    &__conditions {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    &__conditions-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__conditions-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-colored-disabled);
+    }
+
+    &__freq {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    &__sample {
+        font-size: 0.75rem;
+        color: var(--text-colored-disabled);
+        margin-left: 8px;
+    }
+}
+
+.aibot-freq {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--section-content-bg, #e0e0e0);
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    &--hot { background: #ffcdd2; color: #c62828; }
+    &--cold { background: #bbdefb; color: #1565c0; }
+}
+
+.aibot-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--success { background: #c8e6c9; color: #2e7d32; }
+    &--muted { background: var(--section-content-bg, #e0e0e0); color: var(--text-colored-disabled); }
+}
+
+.aibot-condition {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+
+    &--pass { background: #e8f5e9; color: #2e7d32; }
+    &--fail { background: #ffebee; color: #c62828; }
+    &--muted { color: var(--text-colored-disabled); }
+}
+
+// ── Signal ───────────────────────────────────────────────────────────────────
+
+.aibot-signal {
+    border-left: 3px solid #1565c0;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    background: var(--section-content-bg, #f5f5f5);
+    border-radius: 0 6px 6px 0;
+
+    &__head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    &__strategy { font-weight: 700; }
+    &__symbol { font-size: 0.85rem; color: var(--text-colored-disabled); }
+    &__digit { font-size: 0.8rem; }
+    &__time { font-size: 0.75rem; color: var(--text-colored-disabled); margin-left: auto; }
+    &__reason { font-size: 0.85rem; margin: 6px 0; }
+    &__conditions { font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; }
+}
+
+.aibot-risk {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+
+    &--pass { background: #e8f5e9; border-left: 3px solid #2e7d32; }
+    &--fail { background: #ffebee; border-left: 3px solid #c62828; }
+
+    &__title { font-size: 0.9rem; margin: 0 0 4px; }
+    &__reason { font-size: 0.8rem; margin: 0 0 6px; }
+    &__checks { display: flex; gap: 4px; flex-wrap: wrap; }
+}
+
+.aibot-proposal, .aibot-execution {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    background: var(--section-content-bg, #f5f5f5);
+
+    &__title { font-size: 0.9rem; margin: 0 0 4px; }
+    &__longcode { font-size: 0.8rem; margin: 0 0 4px; }
+    &__price, &__msg, &__id, &__profit { font-size: 0.8rem; margin: 2px 0; }
+}
+
+.aibot-execution {
+    &--won { background: #e8f5e9; }
+    &--lost { background: #ffebee; }
+    &--rejected, &--error { background: #fff3e0; }
+}
+
+// ── Contracts ────────────────────────────────────────────────────────────────
+
+.aibot-contracts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aibot-contract {
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 6px;
+    padding: 10px;
+    background: var(--section-content-bg, #fafafa);
+
+    &__head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    &__id { font-weight: 700; font-size: 0.85rem; }
+    &__type { font-size: 0.8rem; color: #1565c0; }
+    &__symbol { font-size: 0.8rem; color: var(--text-colored-disabled); }
+    &__body {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+        font-size: 0.8rem;
+    }
+}
+
+// ── Strategy selector ────────────────────────────────────────────────────────
+
+.aibot-strategies {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aibot-strategy {
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 6px;
+    padding: 10px;
+    background: var(--section-content-bg, #fafafa);
+
+    &--on { border-color: #2e7d32; background: #e8f5e9; }
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    &__label { font-weight: 600; font-size: 0.9rem; }
+    &__desc { font-size: 0.75rem; color: var(--text-colored-disabled); margin: 4px 0 0; }
+
+    &__digit {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+    }
+
+    &__digits {
+        display: flex;
+        gap: 2px;
+    }
+}
+
+.aibot-digit-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    background: var(--content-bg, #fff);
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &--active { background: #1565c0; color: #fff; border-color: #1565c0; }
+}
+
+// ── Settings ────────────────────────────────────────────────────────────────
+
+.aibot-settings-group {
+    margin-bottom: 16px;
+
+    &__title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-colored-disabled);
+        margin: 0 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--border-color, #eee);
+    }
+}
+
+.aibot-settings-note {
+    font-size: 0.75rem;
+    color: var(--text-colored-disabled);
+    margin: 8px 0 0;
+    line-height: 1.5;
+}
+
+.aibot-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+
+    &__label {
+        font-size: 0.78rem;
+        color: var(--text-colored-disabled);
+    }
+
+    &__input, &__select {
+        padding: 6px 8px;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        font-size: 0.85rem;
+        background: var(--content-bg, #fff);
+        color: var(--text-general);
+    }
+
+    &--check {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        cursor: pointer;
+    }
+}
+
+// ── Journal ──────────────────────────────────────────────────────────────────
+
+.aibot-journal {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    &__entry {
+        display: flex;
+        gap: 8px;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 0.78rem;
+        align-items: baseline;
+
+        &--error { background: #ffebee; }
+        &--warning { background: #fff3e0; }
+        &--signal { background: #e3f2fd; }
+        &--trade { background: #e8f5e9; }
+        &--risk { background: #f3e5f5; }
+    }
+
+    &__time { color: var(--text-colored-disabled); min-width: 64px; }
+    &__level { font-weight: 700; min-width: 56px; font-size: 0.7rem; }
+    &__category { color: var(--text-colored-disabled); min-width: 64px; }
+    &__message { flex: 1; }
+}
+
+// ── Shared ──────────────────────────────────────────────────────────────────
+
+.aibot-empty {
+    color: var(--text-colored-disabled);
+    font-size: 0.85rem;
+    padding: 12px 0;
+
+    &--warning { color: #e65100; }
+}
+
+.aibot-banner {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    margin: 8px 0;
+
+    &--error { background: #ffebee; color: #c62828; }
+    &--warning { background: #fff3e0; color: #e65100; }
+    &--info { background: #e3f2fd; color: #1565c0; }
+}
+
+.aibot-positive { color: #2e7d32; font-weight: 600; }
+.aibot-negative { color: #c62828; font-weight: 600; }
+
+.aibot-disclaimer {
+    font-size: 0.75rem;
+    color: var(--text-colored-disabled);
+    text-align: center;
+    padding: 16px 0;
+    line-height: 1.5;
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+
+.aibot-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+
+.aibot-modal {
+    background: var(--content-bg, #fff);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+    &__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 12px; }
+    &__body { font-size: 0.85rem; margin: 0 0 12px; line-height: 1.5; }
+    &__list { font-size: 0.82rem; padding-left: 20px; margin: 0 0 12px; }
+    &__list li { margin: 2px 0; }
+    &__warn { font-size: 0.8rem; color: #c62828; margin: 0 0 16px; line-height: 1.5; }
+    &__actions { display: flex; gap: 8px; justify-content: flex-end; }
+}
