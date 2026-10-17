@@ -3,6 +3,7 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useLocation, useNavigate } from 'react-router';
+import ErrorBoundary from '@/components/error-boundary/error-boundary';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import { generateOAuthURL } from '@/components/shared';
 import DesktopWrapper from '@/components/shared_ui/desktop-wrapper';
@@ -35,20 +36,21 @@ import {
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
+    LabelPairedTableLayoutCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
-import { LegacyGuide1pxIcon } from '@deriv/quill-icons/Legacy';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import RunPanel from '../../components/run-panel';
 import ChartModal from '../chart/chart-modal';
 import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
+import { DigitsLabProvider } from '../digits/digits-lab-context';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const ScannerPage = lazy(() => import('../scanner'));
-const Tutorial = lazy(() => import('../tutorials'));
+const StatisticsPage = lazy(() => import('../statistics'));
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();
@@ -81,7 +83,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'digits', 'scanner'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics', 'scanner'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -147,7 +149,7 @@ const AppWrapper = observer(() => {
 
     React.useEffect(() => {
         const el_dashboard = document.getElementById('id-dbot-dashboard');
-        const el_tutorial = document.getElementById('id-tutorials');
+        const el_last_tab = document.getElementById('id-ai-scanner');
 
         const observer_dashboard = new window.IntersectionObserver(
             ([entry]) => {
@@ -163,7 +165,7 @@ const AppWrapper = observer(() => {
             }
         );
 
-        const observer_tutorial = new window.IntersectionObserver(
+        const observer_last_tab = new window.IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
                     setRightTabShadow(false);
@@ -177,7 +179,7 @@ const AppWrapper = observer(() => {
             }
         );
         observer_dashboard.observe(el_dashboard);
-        observer_tutorial.observe(el_tutorial);
+        observer_last_tab.observe(el_last_tab);
     });
 
     React.useEffect(() => {
@@ -294,18 +296,11 @@ const AppWrapper = observer(() => {
             setActiveTour('');
         }
 
-        // Prevent scrolling when tutorial tab is active (only on mobile)
+        // Every tab owns its own scrolling, so the container never locks the page.
         const mainElement = document.querySelector('.main__container');
-        if (active_tab === DBOT_TABS.TUTORIAL && !isDesktop) {
-            document.body.style.overflow = 'hidden';
-            if (mainElement instanceof HTMLElement) {
-                mainElement.classList.add('no-scroll');
-            }
-        } else {
-            document.body.style.overflow = '';
-            if (mainElement instanceof HTMLElement) {
-                mainElement.classList.remove('no-scroll');
-            }
+        document.body.style.overflow = '';
+        if (mainElement instanceof HTMLElement) {
+            mainElement.classList.remove('no-scroll');
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [active_tab]);
@@ -379,6 +374,7 @@ const AppWrapper = observer(() => {
                 >
                     <div>
                         {!isDesktop && left_tab_shadow && <span className='tabs-shadow tabs-shadow--left' />}{' '}
+                        <DigitsLabProvider>
                         <Tabs
                             active_index={active_tab}
                             className='main__tabs'
@@ -440,30 +436,6 @@ const AppWrapper = observer(() => {
                             <div
                                 label={
                                     <>
-                                        <LegacyGuide1pxIcon
-                                            height='16px'
-                                            width='16px'
-                                            fill='var(--text-general)'
-                                            className='icon-general-fill-g-path'
-                                        />
-                                        <Localize i18n_default_text='Tutorials' />
-                                    </>
-                                }
-                                id='id-tutorials'
-                            >
-                                <div className='tutorials-wrapper'>
-                                    <Suspense
-                                        fallback={
-                                            <ChunkLoader message={localize('Please wait, loading tutorials...')} />
-                                        }
-                                    >
-                                        <Tutorial handleTabChange={handleTabChange} />
-                                    </Suspense>
-                                </div>
-                            </div>
-                            <div
-                                label={
-                                    <>
                                         <LabelPairedPercentCaptionRegularIcon
                                             height='24px'
                                             width='24px'
@@ -479,8 +451,33 @@ const AppWrapper = observer(() => {
                                         <ChunkLoader message={localize('Please wait, loading the digits lab...')} />
                                     }
                                 >
-                                    <DigitsPage />
+                                    <ErrorBoundary label='Digits'>
+                                        <DigitsPage />
+                                    </ErrorBoundary>
                                 </Suspense>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedTableLayoutCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Statistics' />
+                                    </>
+                                }
+                                id='id-statistics'
+                            >
+                                <ErrorBoundary label='Statistics'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading statistics...')} />
+                                        }
+                                    >
+                                        <StatisticsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
                             </div>
                             <div
                                 label={
@@ -495,15 +492,18 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-ai-scanner'
                             >
-                                <Suspense
-                                    fallback={
-                                        <ChunkLoader message={localize('Please wait, loading the AI scanner...')} />
-                                    }
-                                >
-                                    <ScannerPage />
-                                </Suspense>
+                                <ErrorBoundary label='AI Scanner'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading the AI scanner...')} />
+                                        }
+                                    >
+                                        <ScannerPage />
+                                    </Suspense>
+                                </ErrorBoundary>
                             </div>
                         </Tabs>
+                        </DigitsLabProvider>
                         {!isDesktop && right_tab_shadow && <span className='tabs-shadow tabs-shadow--right' />}{' '}
                     </div>
                 </div>

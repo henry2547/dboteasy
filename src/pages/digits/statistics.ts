@@ -41,7 +41,14 @@ function computeStreaks(digits: number[]): { current: DigitStreak | null; longes
 }
 
 export function calculateDigitStatistics(ticks: NormalizedTick[]): DigitStatistics {
-    const digits = digitSequence(ticks);
+    return calculateStatisticsFromDigits(digitSequence(ticks));
+}
+
+/**
+ * The same statistics, computed straight from a digit sequence. The market
+ * scanner uses this so it can rank many markets without building tick objects.
+ */
+export function calculateStatisticsFromDigits(digits: number[]): DigitStatistics {
     const sampleSize = digits.length;
 
     const counts = DIGITS.map(() => 0);

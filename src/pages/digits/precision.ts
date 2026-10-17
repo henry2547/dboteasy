@@ -62,7 +62,7 @@ export function formatQuote(quote: number | string, decimalPlaces: number): stri
 
 export function extractLastDigit(formattedQuote: string): number {
     const digits = formattedQuote.replace(/\D/g, '');
-    const finalCharacter = digits.at(-1);
+    const finalCharacter = digits[digits.length - 1];
 
     if (finalCharacter === undefined) {
         throw new Error('No digit found');

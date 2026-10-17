@@ -40,8 +40,8 @@ export const updateXmlValues = blockly_options => {
     };
 };
 
-export const getSelectedTradeType = (workspace = window.Blockly.derivWorkspace) => {
-    const trade_type_block = workspace.getAllBlocks(true).find(block => block.type === 'trade_definition_tradetype');
+export const getSelectedTradeType = (workspace = window.Blockly?.derivWorkspace) => {
+    const trade_type_block = workspace?.getAllBlocks(true).find(block => block.type === 'trade_definition_tradetype');
     const selected_trade_type = trade_type_block?.getFieldValue('TRADETYPE_LIST');
     let mandatory_tradeoptions_block = 'trade_definition_tradeoptions';
     if (selected_trade_type === 'multiplier') mandatory_tradeoptions_block = 'trade_definition_multiplier';
@@ -50,6 +50,7 @@ export const getSelectedTradeType = (workspace = window.Blockly.derivWorkspace) 
 };
 
 export const matchTranslateAttribute = translateString => {
+    if (typeof translateString !== 'string') return null;
     const match = translateString.match(/translate\((-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)/);
     if (match && match.length > 2) {
         const x = parseFloat(match[1]);
@@ -59,13 +60,15 @@ export const matchTranslateAttribute = translateString => {
     return null; // Invalid or no match
 };
 
+/**
+ * The trashcan is absent on mobile and can be unpositioned (no transform) while
+ * the workspace is still settling, so this returns null rather than throwing.
+ */
 export const extractTranslateValues = () => {
-    const transform_value = window.Blockly?.derivWorkspace?.trashcan?.svgGroup.getAttribute('transform');
+    const transform_value = window.Blockly?.derivWorkspace?.trashcan?.svgGroup?.getAttribute('transform');
     const translate_xy = matchTranslateAttribute(transform_value);
 
-    if (!translate_xy) {
-        globalObserver.emit('Error', 'Invalid String');
-    }
+    if (!translate_xy) return null;
 
     return {
         translate_X: translate_xy.x,
@@ -74,9 +77,14 @@ export const extractTranslateValues = () => {
 };
 
 export const validateErrorOnBlockDelete = () => {
+    // A delete event can arrive after the block being deleted is already disposed,
+    // so neither the trashcan geometry nor the selected block's SVG may exist.
+    const translate_values = extractTranslateValues();
+    if (!translate_values) return;
+
     // Get the bounding rectangle of the selected block
-    const { translate_X, translate_Y } = extractTranslateValues();
-    const blockRect = window.Blockly.getSelected()?.getSvgRoot().getBoundingClientRect();
+    const { translate_X, translate_Y } = translate_values;
+    const blockRect = window.Blockly.getSelected()?.getSvgRoot()?.getBoundingClientRect();
     const translate_offset = 200;
     // Extract coordinates from the bounding rectangles
     const blockX = blockRect?.left || 0;

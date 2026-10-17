@@ -1,11 +1,11 @@
 import { ComponentProps, ReactNode, useMemo } from 'react';
 import useThemeSwitcher from '@/hooks/useThemeSwitcher';
 import RootStore from '@/stores/root-store';
-import { LegacyLogout1pxIcon, LegacyTheme1pxIcon } from '@deriv/quill-icons/Legacy';
+import { LegacyGuide1pxIcon, LegacyInfo1pxIcon, LegacyLogout1pxIcon, LegacyTheme1pxIcon } from '@deriv/quill-icons/Legacy';
 import { useTranslations } from '@deriv-com/translations';
 import { ToggleSwitch } from '@deriv-com/ui';
 
-export type TSubmenuSection = 'accountSettings' | 'cashier' | 'reports';
+export type TSubmenuSection = 'accountSettings' | 'cashier' | 'reports' | 'help' | 'blocks';
 
 //IconTypes
 type TMenuConfig = {
@@ -50,6 +50,20 @@ const useMobileMenuConfig = (
                 // For desktop menu items, see:
                 // src/components/layout/header/header-config.tsx
 
+                // Help guide for the Digits / Statistics tabs
+                {
+                    as: 'button',
+                    label: localize('Digits help'),
+                    LeftComponent: LegacyGuide1pxIcon,
+                    submenu: 'help',
+                },
+                // Help guide for the blocks in the Bot Builder Blocks menu
+                {
+                    as: 'button',
+                    label: localize('Blocks help'),
+                    LeftComponent: LegacyInfo1pxIcon,
+                    submenu: 'blocks',
+                },
                 // Conditionally include theme toggle based on brand config
                 enableThemeToggle && {
                     as: 'button',

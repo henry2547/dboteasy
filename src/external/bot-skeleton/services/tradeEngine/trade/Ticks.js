@@ -5,6 +5,7 @@ import { localize } from '@deriv-com/translations';
 import { getLast } from '../../../utils/binary-utils';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { observerRuntime } from '../../observer';
 import { getDirection, getLastDigit } from '../utils/helpers';
 import { expectPositiveInteger } from '../utils/sanitize';
 import * as constants from './state/constants';
@@ -28,6 +29,13 @@ export default Engine =>
                     }
                     const lastTick = ticks.slice(-1)[0];
                     const { epoch } = lastTick;
+                    // Observer blocks observe this same genuine tick stream — no separate feed.
+                    observerRuntime.feedTick({
+                        symbol,
+                        price: lastTick.quote,
+                        epoch,
+                        pip_size: this.getPipSize(),
+                    });
                     this.store.dispatch({ type: constants.NEW_TICK, payload: epoch });
                 };
 
@@ -90,6 +98,97 @@ export default Engine =>
         getLastDigitList() {
             return new Promise(resolve => this.getTicks().then(ticks => resolve(this.getLastDigitsFromList(ticks))));
         }
+
+        isLastDigitOver(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit > Number(digit)))
+            );
+        }
+
+        isLastDigitUnder(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit < Number(digit)))
+            );
+        }
+
+        isLastDigitParity(parity) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit =>
+                    resolve(parity === 'odd' ? last_digit % 2 === 1 : last_digit % 2 === 0)
+                )
+            );
+        }
+
+        isLastDigitMatches(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit === Number(digit)))
+            );
+        }
+
+        isLastDigitDiffers(digit) {
+            return new Promise(resolve =>
+                this.getLastDigit().then(last_digit => resolve(last_digit !== Number(digit)))
+            );
+        }
+
+        getDigitFrequency(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    const recent_digits = digits.slice(-size);
+                    const hits = recent_digits.filter(value => Number(value) === Number(digit)).length;
+                    resolve(recent_digits.length ? (hits / recent_digits.length) * 100 : 0);
+                })
+            );
+        }
+        getDigitCount(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    const recent_digits = digits.slice(-size);
+                    resolve(recent_digits.filter(value => Number(value) === Number(digit)).length);
+                })
+            );
+        }
+
+        getHotColdDigit(mode, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    const counts = new Array(10).fill(0);
+                    digits.slice(-size).forEach(value => {
+                        const digit = Number(value);
+                        if (digit >= 0 && digit <= 9) counts[digit] += 1;
+                    });
+                    const wants_coldest = mode === 'coldest';
+                    const best_digit = counts.reduce(
+                        (best, count, digit) =>
+                            wants_coldest ? (count < counts[best] ? digit : best) : count > counts[best] ? digit : best,
+                        0
+                    );
+                    resolve(best_digit);
+                })
+            );
+        }
+
+        getDigitStreak() {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    if (!digits.length) {
+                        resolve(0);
+                        return;
+                    }
+                    const latest_digit = Number(digits[digits.length - 1]);
+                    let streak = 0;
+                    for (let index = digits.length - 1; index >= 0; index -= 1) {
+                        if (Number(digits[index]) !== latest_digit) break;
+                        streak += 1;
+                    }
+                    resolve(streak);
+                })
+            );
+        }
+
         getLastDigitsFromList(ticks) {
             const digits = ticks.map(tick => {
                 return getLastDigit(tick.toFixed(this.getPipSize()));
