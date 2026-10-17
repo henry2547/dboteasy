@@ -10,22 +10,24 @@
  * - A REST call to `options/accounts/{accountId}/otp` returns a WebSocket URL
  *   that is ALREADY authenticated (the OTP in the query string carries the
  *   authorization). See https://developers.deriv.com/docs/workflows/
- * - Therefore this client does NOT send an `authorize` message. It verifies
- *   the connection is authorized by requesting `balance` — a successful
- *   balance response confirms the account is authenticated and readable.
- *   Sending `authorize` on the pre-authenticated OTP connection is wrong: it
- *   is either rejected or ignored, which is exactly what left the UI stuck on
- *   "connecting" indefinitely.
+ * - Therefore this client does NOT send an `authorize` message. The WebSocket
+ *   `open` event itself confirms the OTP was accepted — that is the
+ *   "authenticated" state. A subsequent `balance` request loads the account
+ *   balance and moves the state to "ready". Sending `authorize` on the
+ *   pre-authenticated OTP connection is wrong: it is either rejected or
+ *   ignored, which is exactly what left the UI stuck on "connecting".
  *
  * State machine:
- *   disconnected → connecting → connected → authorized → (ready, owned by the engine)
- *   plus: authorization_required (no token), error (auth failed), reconnecting.
+ *   disconnected → connecting → connected → authenticated → loading_balance → ready
+ *   plus: no_token (no OAuth token), balance_error (auth OK, balance failed),
+ *   error (auth failed), reconnecting (socket dropped, retrying).
  *
  * Security:
  * - Never requests or stores the user's Deriv password.
  * - The OAuth access token is read from the vendored deriv-core auth storage
  *   (localStorage) and sent only over HTTPS REST to obtain the OTP URL — never
  *   over the WebSocket, never logged, never written to source or configs.
+ * - No OTP URL, token, or secret appears in diagnostics or error messages.
  */
 
 import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
@@ -36,7 +38,15 @@ type MessageHandler = (message: AuthMessage) => void;
 type StatusHandler = (status: AuthWsStatus) => void;
 
 export type WsState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
-export type AuthPhase = 'none' | 'verifying' | 'authorized' | 'failed' | 'no_token';
+export type AuthPhase =
+    | 'none'
+    | 'connecting'
+    | 'authenticated'
+    | 'loading_balance'
+    | 'ready'
+    | 'balance_error'
+    | 'failed'
+    | 'no_token';
 
 export interface AuthWsStatus {
     connected: boolean;
@@ -53,6 +63,14 @@ export interface AuthWsStatus {
     lastError: string | null;
     reconnectAttempt: number;
     hasToken: boolean;
+}
+
+interface PendingRequest {
+    resolve: (msg: AuthMessage) => void;
+    reject: (err: Error) => void;
+    msgType: string;
+    timer: ReturnType<typeof setTimeout>;
+    connectionId: number;
 }
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -85,8 +103,11 @@ export class AuthTradingWebSocket {
     private manualClose = false;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-    private authTimer: ReturnType<typeof setTimeout> | null = null;
     private reconnectAttempt = 0;
+    /** Monotonically increasing connection epoch. Responses from a previous
+     * connection carry a stale `connectionId` and are discarded so they can
+     * never resolve a newer connection's pending request. */
+    private connectionId = 0;
     private status: AuthWsStatus = {
         connected: false,
         authorized: false,
@@ -104,6 +125,7 @@ export class AuthTradingWebSocket {
     };
     private readonly messageHandlers = new Set<MessageHandler>();
     private readonly statusHandlers = new Set<StatusHandler>();
+    private readonly pendingRequests = new Map<number, PendingRequest>();
     private activeSubscriptions = new Set<string>();
 
     onMessage(handler: MessageHandler): () => void {
@@ -127,24 +149,28 @@ export class AuthTradingWebSocket {
 
     /**
      * Connect to the authenticated (OTP) WebSocket URL and verify authorization.
-     * Resolves once authorization has been verified or has definitively failed.
+     * Resolves once the connection is open and the balance has been loaded
+     * (state "ready"), or once a definitive failure has been reported.
      */
     async connect(): Promise<void> {
         // Prevent duplicate connections: an OPEN or CONNECTING socket is reused.
         if (this.socket && this.socket.readyState <= WebSocket.OPEN) return;
 
         this.manualClose = false;
+        this.connectionId += 1;
+        const myConnectionId = this.connectionId;
         const hasToken = Boolean(getAuthInfo()?.access_token);
 
         let wsUrl: string;
         try {
             wsUrl = await this.resolveWsUrl();
         } catch (error) {
+            const msg = `Could not obtain an authenticated connection URL: ${(error as Error).message}`;
             this.setPartial({
                 wsState: 'disconnected',
                 authPhase: 'failed',
-                error: `Could not obtain a connection URL: ${(error as Error).message}`,
-                lastError: `Could not obtain a connection URL: ${(error as Error).message}`,
+                error: msg,
+                lastError: msg,
                 hasToken,
             });
             this.scheduleReconnect();
@@ -156,28 +182,43 @@ export class AuthTradingWebSocket {
             authorized: false,
             error: null,
             wsState: 'connecting',
-            authPhase: hasToken ? 'verifying' : 'no_token',
+            authPhase: 'connecting',
             hasToken,
         });
 
         try {
             this.socket = new WebSocket(wsUrl);
         } catch (error) {
+            const msg = (error as Error).message;
             this.setPartial({
                 wsState: 'disconnected',
                 authPhase: 'failed',
-                error: (error as Error).message,
-                lastError: (error as Error).message,
+                error: msg,
+                lastError: msg,
             });
             this.scheduleReconnect();
             return;
         }
 
         this.socket.onopen = () => {
+            // Discard if a newer connection has superseded this one.
+            if (myConnectionId !== this.connectionId) {
+                try { this.socket?.close(); } catch { /* ignore */ }
+                return;
+            }
             this.reconnectAttempt = 0;
-            this.setPartial({ connected: true, wsState: 'connected', error: null, reconnectAttempt: 0 });
+            // The OTP URL is pre-authenticated: `onopen` means the server
+            // accepted the OTP, so the connection IS authenticated. Balance
+            // is loaded next as a separate step.
+            this.setPartial({
+                connected: true,
+                wsState: 'connected',
+                authPhase: 'authenticated',
+                error: null,
+                reconnectAttempt: 0,
+            });
             this.startHeartbeat();
-            void this.verifyAuth();
+            void this.loadBalance();
         };
 
         this.socket.onmessage = (event: MessageEvent) => this.handleMessage(event);
@@ -187,15 +228,17 @@ export class AuthTradingWebSocket {
         };
         this.socket.onclose = () => {
             this.stopHeartbeat();
-            this.clearAuthTimer();
+            this.rejectAllPending('WebSocket connection closed', myConnectionId);
             this.socket = null;
             this.activeSubscriptions.clear();
+            // If a newer connection already replaced this one, don't clobber it.
+            if (myConnectionId !== this.connectionId) return;
             const reconnecting = !this.manualClose;
             this.setPartial({
                 connected: false,
                 authorized: false,
                 wsState: reconnecting ? 'reconnecting' : 'disconnected',
-                authPhase: reconnecting ? 'verifying' : 'none',
+                authPhase: reconnecting ? 'connecting' : 'none',
             });
             if (reconnecting) this.scheduleReconnect();
         };
@@ -205,7 +248,7 @@ export class AuthTradingWebSocket {
         this.manualClose = true;
         this.clearReconnectTimer();
         this.stopHeartbeat();
-        this.clearAuthTimer();
+        this.rejectAllPending('Disconnected by user');
         this.forgetAllSubscriptions();
         if (this.socket) {
             try {
@@ -233,53 +276,74 @@ export class AuthTradingWebSocket {
         return reqId;
     }
 
-    /** Send a request and wait for the matching response by req_id. */
+    /**
+     * Send a request and wait for the matching response.
+     *
+     * Matching strategy (matches the working DerivAPIBasic library behaviour):
+     * 1. If the response carries `req_id`, match by it (the precise case).
+     * 2. If the response omits `req_id`, fall back to matching by `msg_type`
+     *    so a response that doesn't echo `req_id` still resolves the right
+     *    pending request instead of timing out.
+     *
+     * Stale responses from a previous connection are rejected via
+     * `connectionId`. All pending requests are rejected on close.
+     */
     sendAndWait(message: Record<string, unknown>, timeoutMs = 15000): Promise<AuthMessage> {
-        return new Promise((resolve, reject) => {
-            const reqId = this.send(message);
-            let settled = false;
+        const expectedType = Object.keys(message)[0];
+
+        if (!this.isOpen()) {
+            return Promise.reject(new Error(`WebSocket is not connected (${expectedType})`));
+        }
+
+        const reqId = this.send(message);
+        const myConnectionId = this.connectionId;
+
+        return new Promise<AuthMessage>((resolve, reject) => {
             const timer = setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                off();
-                reject(new Error(`Request timed out: ${Object.keys(message)[0]}`));
+                this.pendingRequests.delete(reqId);
+                reject(new Error(`Request timed out: ${expectedType}`));
             }, timeoutMs);
 
-            const off = this.onMessage(msg => {
-                if (msg.req_id !== reqId) return;
-                if (settled) return;
-                settled = true;
-                clearTimeout(timer);
-                off();
-                const error = (msg as Record<string, any>).error;
-                if (error) reject(new Error(String(error.message ?? 'Request failed')));
-                else resolve(msg);
+            this.pendingRequests.set(reqId, {
+                resolve,
+                reject,
+                msgType: expectedType,
+                timer,
+                connectionId: myConnectionId,
             });
         });
     }
 
     // ── Private ──────────────────────────────────────────────────────────────
 
+    /**
+     * Resolve the authenticated WebSocket URL via the OTP flow.
+     *
+     * Unlike the previous implementation, this does NOT silently fall back to
+     * the public market-data WebSocket when the OTP fetch fails. The public WS
+     * cannot handle `balance` or any authenticated request — falling back to it
+     * caused the "Request timed out: balance" error because the public WS
+     * simply ignores `balance` messages. Instead, the error is thrown so the
+     * caller can report a clear authentication failure.
+     */
     private async resolveWsUrl(): Promise<string> {
         const authInfo = getAuthInfo();
-        if (authInfo?.access_token) {
-            try {
-                return await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
-            } catch {
-                // Fall back to the public WS; verifyAuth() will then report that
-                // the account is not authorized (balance returns an auth error),
-                // rather than silently claiming success.
-            }
+        if (!authInfo?.access_token) {
+            throw new Error('Not logged in — no OAuth access token.');
         }
-        return getPublicWsUrl();
+        // getAuthenticatedWebSocketURL fetches the accounts list (if not cached)
+        // and then the OTP URL for the active account. Both REST calls now
+        // include the Deriv-App-ID header (see derivws-accounts.service.ts).
+        return await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
     }
 
     /**
-     * Verify the connection is authorized. The OTP URL is pre-authenticated, so
-     * we confirm by requesting the account balance — a successful `balance`
-     * response is proof of authorization. We never send `authorize` here.
+     * Load the account balance. The OTP connection is already authenticated
+     * (the `open` event confirmed it), so this is a balance-retrieval step,
+     * NOT an authorization step. If the balance fails, we report a balance
+     * error separately — the connection itself remains authenticated.
      */
-    private async verifyAuth(): Promise<void> {
+    private async loadBalance(): Promise<void> {
         const authInfo = getAuthInfo();
         if (!authInfo?.access_token) {
             this.setPartial({
@@ -290,39 +354,32 @@ export class AuthTradingWebSocket {
             return;
         }
 
-        this.setPartial({ authPhase: 'verifying', error: null });
-
-        this.clearAuthTimer();
-        this.authTimer = setTimeout(() => {
-            if (!this.status.authorized) {
-                this.setPartial({
-                    authorized: false,
-                    authPhase: 'failed',
-                    error: 'Authorization timed out — the account did not respond. Click Connect to retry.',
-                    lastError: 'Authorization timed out',
-                });
-            }
-        }, AUTH_VERIFY_TIMEOUT_MS);
+        this.setPartial({ authPhase: 'loading_balance', error: null });
 
         try {
             const response = await this.sendAndWait({ balance: 1, subscribe: 1 }, AUTH_VERIFY_TIMEOUT_MS);
             const payload = response as Record<string, any>;
             if (payload.error) {
-                this.clearAuthTimer();
                 const msg = describeAuthError(payload.error);
-                this.setPartial({ authorized: false, authPhase: 'failed', error: msg, lastError: msg });
+                this.setPartial({
+                    authorized: false,
+                    authPhase: 'balance_error',
+                    error: `Balance retrieval failed: ${msg}`,
+                    lastError: `Balance retrieval failed: ${msg}`,
+                });
             }
             // Success is applied by the `balance` branch of handleMessage.
         } catch (error) {
-            this.clearAuthTimer();
             const msg = (error as Error).message;
-            this.setPartial({ authorized: false, authPhase: 'failed', error: msg, lastError: msg });
+            // Distinguish a balance timeout from an auth failure: the connection
+            // is authenticated (onopen fired), only the balance request failed.
+            this.setPartial({
+                authorized: false,
+                authPhase: 'balance_error',
+                error: `Balance retrieval failed: ${msg}`,
+                lastError: `Balance retrieval failed: ${msg}`,
+            });
         }
-    }
-
-    private clearAuthTimer(): void {
-        if (this.authTimer) clearTimeout(this.authTimer);
-        this.authTimer = null;
     }
 
     private handleMessage(event: MessageEvent): void {
@@ -339,21 +396,25 @@ export class AuthTradingWebSocket {
         if (msgType === 'balance') {
             const balance = payload.balance;
             if (payload.error) {
-                this.clearAuthTimer();
                 const msg = describeAuthError(payload.error);
-                this.setPartial({ authorized: false, authPhase: 'failed', error: msg, lastError: msg });
+                this.setPartial({
+                    authorized: false,
+                    authPhase: 'balance_error',
+                    error: `Balance retrieval failed: ${msg}`,
+                    lastError: `Balance retrieval failed: ${msg}`,
+                });
             } else if (balance) {
-                this.clearAuthTimer();
                 const subId = payload.subscription?.id;
                 if (subId) this.activeSubscriptions.add(String(subId));
                 this.setPartial({
                     authorized: true,
-                    authPhase: 'authorized',
+                    authPhase: 'ready',
                     loginid: balance.loginid ?? this.status.loginid,
                     balance: Number(balance.balance),
                     currency: balance.currency,
                     isVirtual: Boolean(balance.is_virtual),
                     error: null,
+                    lastError: null,
                     lastAuthAt: Date.now(),
                 });
             }
@@ -363,7 +424,63 @@ export class AuthTradingWebSocket {
             // heartbeat response
         }
 
+        // Resolve any pending sendAndWait request matching this response.
+        this.resolvePending(parsed);
+
         this.messageHandlers.forEach(handler => handler(parsed));
+    }
+
+    /**
+     * Resolve a pending `sendAndWait` request. Matches by `req_id` when the
+     * response carries one; falls back to `msg_type` when it doesn't (matching
+     * the DerivAPIBasic library's behaviour). Stale responses from a previous
+     * connection are discarded.
+     */
+    private resolvePending(parsed: AuthMessage): void {
+        const reqId = parsed.req_id;
+        const msgType = parsed.msg_type;
+
+        let pending: PendingRequest | undefined;
+
+        // 1. Match by req_id when present.
+        if (reqId !== undefined && reqId !== null) {
+            pending = this.pendingRequests.get(reqId);
+            if (pending) this.pendingRequests.delete(reqId);
+        }
+
+        // 2. Fallback: match by msg_type when req_id is absent or didn't match.
+        if (!pending && msgType) {
+            for (const [id, p] of this.pendingRequests) {
+                if (p.msgType === msgType) {
+                    pending = p;
+                    this.pendingRequests.delete(id);
+                    break;
+                }
+            }
+        }
+
+        if (!pending) return;
+
+        // Discard stale responses from a previous connection.
+        if (pending.connectionId !== this.connectionId) return;
+
+        clearTimeout(pending.timer);
+        const error = (parsed as Record<string, any>).error;
+        if (error) {
+            pending.reject(new Error(String(error.message ?? 'Request failed')));
+        } else {
+            pending.resolve(parsed);
+        }
+    }
+
+    /** Reject all pending requests (called on disconnect/close). */
+    private rejectAllPending(reason: string, connectionId?: number): void {
+        for (const [id, p] of this.pendingRequests) {
+            if (connectionId !== undefined && p.connectionId !== connectionId) continue;
+            clearTimeout(p.timer);
+            this.pendingRequests.delete(id);
+            p.reject(new Error(reason));
+        }
     }
 
     private startHeartbeat(): void {

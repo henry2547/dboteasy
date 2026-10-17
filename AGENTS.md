@@ -311,3 +311,32 @@ bar is scrollable below desktop, so six tabs still fit a phone).
   `eslint-plugin-react` is missing from the installed tree — so don't read its failure as a lint error.
 - Run/Pause/Stop, the proposal → buy → settle path and the login redirect are all login-gated, so
   they are verified by hand against a real Deriv account, not in the preview.
+
+### Auth WebSocket fix ("Request timed out: balance")
+The `AuthTradingWebSocket` in `auth-ws.ts` was timing out on the `balance` request after the OTP
+WebSocket connected. Root causes and fixes:
+- **Missing `Deriv-App-ID` header**: `DerivWSAccountsService` (the service that fetches the accounts
+  list and the OTP URL) omitted the `Deriv-App-ID` header that the vendored `deriv-core/auth/accounts.ts`
+  reference includes on every authenticated REST call. Without it the OTP fetch can fail silently. Both
+  `fetchAccountsList` and `fetchOTPWebSocketURL` now send the header from `process.env.NEXT_PUBLIC_DERIV_APP_ID`.
+- **Silent fallback to the public WS**: `resolveWsUrl` used to catch OTP-fetch failures and fall back
+  to `getPublicWsUrl()`. The public market-data WebSocket ignores `balance` (it's for public data only),
+  so the request timed out instead of reporting a clear auth error. The fallback is removed — the error
+  is thrown and surfaced as `authPhase: 'failed'`.
+- **`sendAndWait` matched by `req_id` only**: the working `DerivAPIBasic` library matches responses by
+  `msg_type`; if the Options API omits `req_id` in a response, the old `req_id`-only match never resolved.
+  `sendAndWait` now uses a pending-requests map: it matches by `req_id` when present, falls back to
+  `msg_type` otherwise (same strategy as `DerivAPIBasic`). A `connectionId` epoch discards stale
+  responses from a previous connection, and all pending requests are rejected on close.
+- **Auth and balance conflated**: a balance timeout was reported as "authorization failed" even though
+  the OTP `onopen` event already proved the connection is authenticated. The state machine now has
+  distinct phases: `connecting` → `authenticated` (socket open) → `loading_balance` → `ready` (balance
+  received). A balance failure sets `authPhase: 'balance_error'` with a "Balance retrieval failed"
+  message, not `failed` — so the diagnostics panel distinguishes a balance problem from an auth problem.
+- **OTP cache**: `fetchOTPWebSocketURL` cached the OTP URL promise for 100ms. An OTP is single-use
+  (120s, one connection), so a cached URL could be handed to a second consumer that the first already
+  consumed. The cache is now cleared immediately after the promise settles.
+- The `auth-ws.test.ts` mock `WebSocket` now uses numeric `readyState` values (`OPEN = 1`, etc.)
+  matching the real spec, so `AuthTradingWebSocket.send()` actually sends in tests. Seven tests cover
+  the balance-verify flow, the no-token case, the no-fallback-to-public-WS case, `msg_type` fallback
+  matching, and subscription cleanup.

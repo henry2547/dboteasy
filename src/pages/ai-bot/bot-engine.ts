@@ -693,9 +693,10 @@ function mapAuthStatus(status: AuthWsStatus): AuthStatus {
     if (status.authorized) return 'authorized';
     if (status.authPhase === 'no_token') return 'authorization_required';
     if (status.authPhase === 'failed') return 'error';
+    if (status.authPhase === 'balance_error') return 'error';
     if (status.wsState === 'reconnecting') return 'reconnecting';
     if (status.wsState === 'connecting') return 'connecting';
-    if (status.connected) return 'connecting'; // socket open, still verifying
+    if (status.connected) return 'connecting'; // socket open, still loading balance
     return 'disconnected';
 }
 
