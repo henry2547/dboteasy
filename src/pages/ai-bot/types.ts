@@ -12,6 +12,10 @@
 export type AuthStatus =
     | 'disconnected'
     | 'connecting'
+    | 'connected'
+    | 'authenticated'
+    | 'loading_balance'
+    | 'ready'
     | 'authorizing'
     | 'authorized'
     | 'authorization_required'

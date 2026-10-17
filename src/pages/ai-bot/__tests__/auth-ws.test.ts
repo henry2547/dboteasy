@@ -8,12 +8,21 @@
  * separately against a live Deriv account.
  */
 
-type SocketState = 'connecting' | 'open' | 'closing' | 'closed';
+// Numeric readyState constants matching the real WebSocket spec.
+const WS_CONNECTING = 0;
+const WS_OPEN = 1;
+const WS_CLOSING = 2;
+const WS_CLOSED = 3;
 
 class MockWebSocket {
     static instances: MockWebSocket[] = [];
+    static OPEN = WS_OPEN;
+    static CONNECTING = WS_CONNECTING;
+    static CLOSING = WS_CLOSING;
+    static CLOSED = WS_CLOSED;
+
     url: string;
-    readyState: SocketState = 'connecting';
+    readyState: number = WS_CONNECTING;
     onopen: ((ev: Event) => void) | null = null;
     onmessage: ((ev: MessageEvent) => void) | null = null;
     onerror: ((ev: Event) => void) | null = null;
@@ -30,12 +39,12 @@ class MockWebSocket {
     }
 
     close(): void {
-        this.readyState = 'closed';
+        this.readyState = WS_CLOSED;
     }
 
     /** Test helper: simulate the server opening the connection. */
     fireOpen(): void {
-        this.readyState = 'open';
+        this.readyState = WS_OPEN;
         this.onopen?.(new Event('open'));
     }
 
@@ -46,9 +55,10 @@ class MockWebSocket {
 }
 
 const TOKEN = 'test-access-token';
+const AUTH_INFO = { access_token: TOKEN, expires_at: 9999999999 };
 
 jest.mock('@/external/deriv-core', () => ({
-    getAuthInfo: jest.fn(() => ({ access_token: TOKEN, expires_at: 9999999999 })),
+    getAuthInfo: jest.fn(() => AUTH_INFO),
     getPublicWsUrl: jest.fn(() => 'wss://public.test/ws'),
 }));
 
@@ -60,6 +70,10 @@ jest.mock('@/services/derivws-accounts.service', () => ({
 
 import { AuthTradingWebSocket } from '../auth-ws';
 
+// Wait one microtask tick so the async resolveWsUrl inside connect() settles
+// and the MockWebSocket has been constructed.
+const tick = () => new Promise(r => setTimeout(r, 0));
+
 describe('AuthTradingWebSocket', () => {
     let originalWebSocket: typeof WebSocket;
 
@@ -67,6 +81,13 @@ describe('AuthTradingWebSocket', () => {
         originalWebSocket = global.WebSocket;
         MockWebSocket.instances = [];
         (global as any).WebSocket = MockWebSocket;
+        // Restore default mock implementations between tests.
+        const { getAuthInfo } = jest.requireMock('@/external/deriv-core') as any;
+        (getAuthInfo as jest.Mock).mockReturnValue(AUTH_INFO);
+        const { DerivWSAccountsService } = jest.requireMock('@/services/derivws-accounts.service') as any;
+        (DerivWSAccountsService.getAuthenticatedWebSocketURL as jest.Mock).mockResolvedValue(
+            'wss://otp.test/ws?otp=abc'
+        );
     });
 
     afterEach(() => {
@@ -75,20 +96,18 @@ describe('AuthTradingWebSocket', () => {
 
     it('verifies authorization with a balance request, not an authorize message', async () => {
         const ws = new AuthTradingWebSocket();
-        const statuses: any[] = [];
-        ws.onStatus(s => statuses.push({ authorized: s.authorized, authPhase: s.authPhase }));
-
         const connectPromise = ws.connect();
+        await tick(); // let resolveWsUrl settle
         // The OTP URL connection should have been created.
         expect(MockWebSocket.instances).toHaveLength(1);
         const socket = MockWebSocket.instances[0];
         expect(socket.url).toBe('wss://otp.test/ws?otp=abc');
 
-        // Open the connection — this triggers verifyAuth().
+        // Open the connection — this triggers loadBalance().
         socket.fireOpen();
 
         // The first message sent must be a balance request, never authorize.
-        await new Promise(r => setTimeout(r, 0));
+        await tick();
         const sentTypes = socket.sent.map(m => Object.keys(m).filter(k => k !== 'req_id'));
         expect(sentTypes[0]).toContain('balance');
         expect(sentTypes.some(t => t.includes('authorize'))).toBe(false);
@@ -99,9 +118,10 @@ describe('AuthTradingWebSocket', () => {
     it('sets authorized=true only after a successful balance response', async () => {
         const ws = new AuthTradingWebSocket();
         ws.connect();
+        await tick();
         const socket = MockWebSocket.instances[0];
         socket.fireOpen();
-        await new Promise(r => setTimeout(r, 0));
+        await tick();
 
         // Capture the balance req_id so we can reply with a matching response.
         const balanceReq = socket.sent.find(m => 'balance' in m);
@@ -117,7 +137,7 @@ describe('AuthTradingWebSocket', () => {
 
         const status = ws.getStatus();
         expect(status.authorized).toBe(true);
-        expect(status.authPhase).toBe('authorized');
+        expect(status.authPhase).toBe('ready');
         expect(status.loginid).toBe('VRT123456');
         expect(status.balance).toBe(100.5);
         expect(status.isVirtual).toBe(true);
@@ -127,9 +147,10 @@ describe('AuthTradingWebSocket', () => {
     it('sets authorized=false with a readable error when balance is rejected', async () => {
         const ws = new AuthTradingWebSocket();
         ws.connect();
+        await tick();
         const socket = MockWebSocket.instances[0];
         socket.fireOpen();
-        await new Promise(r => setTimeout(r, 0));
+        await tick();
 
         const balanceReq = socket.sent.find(m => 'balance' in m);
         socket.fireMessage({
@@ -140,34 +161,34 @@ describe('AuthTradingWebSocket', () => {
 
         const status = ws.getStatus();
         expect(status.authorized).toBe(false);
-        expect(status.authPhase).toBe('failed');
+        expect(status.authPhase).toBe('balance_error');
         expect(status.error).toContain('invalid or expired');
     });
 
     it('reports authorization_required when there is no token', async () => {
         const { getAuthInfo } = jest.requireMock('@/external/deriv-core') as any;
-        (getAuthInfo as jest.Mock).mockReturnValueOnce(null);
+        (getAuthInfo as jest.Mock).mockReturnValue(null);
 
         const ws = new AuthTradingWebSocket();
-        ws.connect();
-        const socket = MockWebSocket.instances[0];
-        socket.fireOpen();
-        await new Promise(r => setTimeout(r, 0));
+        await ws.connect();
+
+        // No WebSocket should be created without a token — the OTP fetch is
+        // not attempted, so there is no connection to open.
+        expect(MockWebSocket.instances).toHaveLength(0);
 
         const status = ws.getStatus();
         expect(status.authorized).toBe(false);
-        expect(status.authPhase).toBe('no_token');
+        expect(status.authPhase).toBe('failed');
         expect(status.error).toContain('Not logged in');
-        // No balance request should have been sent without a token.
-        expect(socket.sent.some(m => 'balance' in m)).toBe(false);
     });
 
     it('cleans up subscriptions on disconnect', async () => {
         const ws = new AuthTradingWebSocket();
         ws.connect();
+        await tick();
         const socket = MockWebSocket.instances[0];
         socket.fireOpen();
-        await new Promise(r => setTimeout(r, 0));
+        await tick();
 
         const balanceReq = socket.sent.find(m => 'balance' in m);
         socket.fireMessage({
@@ -184,5 +205,46 @@ describe('AuthTradingWebSocket', () => {
         expect(forgets.some(f => f.forget === 'sub-9')).toBe(true);
         expect(ws.getStatus().authorized).toBe(false);
         expect(ws.getStatus().wsState).toBe('disconnected');
+    });
+
+    it('does not fall back to the public WebSocket when the OTP fetch fails', async () => {
+        const { DerivWSAccountsService } = jest.requireMock('@/services/derivws-accounts.service') as any;
+        (DerivWSAccountsService.getAuthenticatedWebSocketURL as jest.Mock).mockRejectedValueOnce(
+            new Error('401 Unauthorized')
+        );
+
+        const ws = new AuthTradingWebSocket();
+        await ws.connect();
+
+        // No WebSocket should be created — the OTP failure must not silently
+        // fall back to the public market-data WS (which can't handle balance
+        // and caused the "Request timed out: balance" error).
+        expect(MockWebSocket.instances).toHaveLength(0);
+
+        const status = ws.getStatus();
+        expect(status.authPhase).toBe('failed');
+        expect(status.error).toContain('Could not obtain an authenticated connection URL');
+    });
+
+    it('resolves a balance response even when req_id is not echoed', async () => {
+        const ws = new AuthTradingWebSocket();
+        ws.connect();
+        await tick();
+        const socket = MockWebSocket.instances[0];
+        socket.fireOpen();
+        await tick();
+
+        // Deliver a balance response WITHOUT req_id — the API may omit it.
+        // The pending request should still resolve by matching msg_type.
+        socket.fireMessage({
+            msg_type: 'balance',
+            balance: { balance: '50.00', currency: 'USD', loginid: 'CR999', is_virtual: 0 },
+            subscription: { id: 'sub-x' },
+        });
+
+        const status = ws.getStatus();
+        expect(status.authorized).toBe(true);
+        expect(status.authPhase).toBe('ready');
+        expect(status.balance).toBe(50);
     });
 });

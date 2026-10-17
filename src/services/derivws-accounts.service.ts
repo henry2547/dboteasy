@@ -131,11 +131,21 @@ export class DerivWSAccountsService {
                 const OptionsDir = brandConfig.platform.derivws.directories.options;
                 const endpoint = `${baseURL}${OptionsDir}accounts`;
 
+                const headers: Record<string, string> = {
+                    Authorization: `Bearer ${accessToken}`,
+                };
+                // The Deriv-App-ID header identifies the application to the
+                // API. The vendored deriv-core reference (auth/accounts.ts)
+                // includes it on every authenticated REST call; omitting it can
+                // cause the accounts fetch to fail silently, which cascades
+                // into the OTP flow falling back to the unauthenticated public
+                // WebSocket — the root cause of "Request timed out: balance".
+                const appId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+                if (appId) headers['Deriv-App-ID'] = appId;
+
                 const response = await fetch(endpoint, {
                     method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+                    headers,
                 });
 
                 if (!response.ok) {
@@ -195,11 +205,16 @@ export class DerivWSAccountsService {
                 const optionsDir = brandConfig.platform.derivws.directories.options;
                 const endpoint = `${baseURL}${optionsDir}accounts/${accountId}/otp`;
 
+                const headers: Record<string, string> = {
+                    Authorization: `Bearer ${accessToken}`,
+                };
+                // Same Deriv-App-ID header as the accounts fetch — see above.
+                const appId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+                if (appId) headers['Deriv-App-ID'] = appId;
+
                 const response = await fetch(endpoint, {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+                    headers,
                 });
 
                 if (!response.ok) {
@@ -220,11 +235,10 @@ export class DerivWSAccountsService {
                 this.otpFetchPromises.delete(cacheKey);
                 throw error;
             } finally {
-                // Clear the promise after completion (success or failure)
-                // This allows fresh OTP fetches on subsequent calls
-                setTimeout(() => {
-                    this.otpFetchPromises.delete(cacheKey);
-                }, 100);
+                // Clear immediately: an OTP URL is single-use (valid 120s, one
+                // connection). Caching it even briefly risks a second consumer
+                // reusing an already-consumed OTP, which fails with 401.
+                this.otpFetchPromises.delete(cacheKey);
             }
         })();
 
