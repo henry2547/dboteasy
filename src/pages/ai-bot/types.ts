@@ -43,6 +43,10 @@ export interface DigitFrequencyInfo {
     percentage: number;
     deviationFromExpected: number;
     absoluteDeviation: number;
+    /** True for the digit with the highest count in the sample. */
+    isMostFrequent: boolean;
+    /** True for the digit with the lowest count in the sample. */
+    isLeastFrequent: boolean;
 }
 
 export interface MarketAnalysis {
@@ -84,7 +88,7 @@ export interface MarketRanking {
     analysis: MarketAnalysis;
     conditionsPassed: ScannerConditionResult[];
     conditionsFailed: ScannerConditionResult[];
-    strategyId: string | null;
+    strategyId: StrategyId | null;
     strategyLabel: string | null;
     proposedDigit: number | null;
     proposedBarrier: string | null;

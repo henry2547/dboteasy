@@ -125,6 +125,11 @@ export function analyzeMarket(
 
     const feedFresh = lastTickAt !== null && Date.now() - lastTickAt < 15000;
 
+    // Hottest / coldest digit of the sample, so the UI can mark them.
+    const counts = stats.frequencies.map(f => f.count);
+    const hottestCount = Math.max(...counts);
+    const coldestCount = Math.min(...counts);
+
     return {
         symbol,
         displayName,
@@ -135,6 +140,8 @@ export function analyzeMarket(
             percentage: f.percentage,
             deviationFromExpected: f.deviationFromExpected,
             absoluteDeviation: f.absoluteDeviation,
+            isMostFrequent: f.count === hottestCount,
+            isLeastFrequent: f.count === coldestCount,
         })),
         evenPercentage: stats.evenPercentage,
         oddPercentage: stats.oddPercentage,

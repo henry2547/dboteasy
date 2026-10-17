@@ -33,6 +33,7 @@ import {
 } from '@/utils/trade-type-modal-handler';
 import {
     LabelPairedChartLineCaptionRegularIcon,
+    LabelPairedComputerCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
@@ -44,9 +45,11 @@ import RunPanel from '../../components/run-panel';
 import ChartModal from '../chart/chart-modal';
 import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
+import { AiBotProvider } from '../ai-bot/ai-bot-context';
 import { DigitsLabProvider } from '../digits/digits-lab-context';
 import './main.scss';
 
+const AiBotPage = lazy(() => import('../ai-bot'));
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const StatisticsPage = lazy(() => import('../statistics'));
@@ -82,7 +85,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics', 'ai_bot'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -148,7 +151,7 @@ const AppWrapper = observer(() => {
 
     React.useEffect(() => {
         const el_dashboard = document.getElementById('id-dbot-dashboard');
-        const el_last_tab = document.getElementById('id-statistics');
+        const el_last_tab = document.getElementById('id-ai-bot');
 
         const observer_dashboard = new window.IntersectionObserver(
             ([entry]) => {
@@ -374,6 +377,7 @@ const AppWrapper = observer(() => {
                     <div>
                         {!isDesktop && left_tab_shadow && <span className='tabs-shadow tabs-shadow--left' />}{' '}
                         <DigitsLabProvider>
+                        <AiBotProvider>
                         <Tabs
                             active_index={active_tab}
                             className='main__tabs'
@@ -478,7 +482,31 @@ const AppWrapper = observer(() => {
                                     </Suspense>
                                 </ErrorBoundary>
                             </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedComputerCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='AI Bot' />
+                                    </>
+                                }
+                                id='id-ai-bot'
+                            >
+                                <ErrorBoundary label='AI Bot'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading the AI bot...')} />
+                                        }
+                                    >
+                                        <AiBotPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
                         </Tabs>
+                        </AiBotProvider>
                         </DigitsLabProvider>
                         {!isDesktop && right_tab_shadow && <span className='tabs-shadow tabs-shadow--right' />}{' '}
                     </div>

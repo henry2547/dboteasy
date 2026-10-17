@@ -228,3 +228,44 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
+
+## AI Bot tab (AI Market Scanner & Auto-Trading)
+The sixth main tab, `#ai_bot`, lives entirely in `src/pages/ai-bot/` and is lazy-loaded from
+`main.tsx` like the Digits/Statistics pages. `DBOT_TABS.AI_BOT = 5`, `TAB_IDS[5] = 'id-ai-bot'` and
+the `hash` array in `main.tsx` all carry the new entry — keep the three in the same order (the tab
+bar is scrollable below desktop, so six tabs still fit a phone).
+- **Provider placement.** `AiBotProvider` wraps `<Tabs>` in `main.tsx` (inside `DigitsLabProvider`),
+  so the engine — and a running session — survives tab switches. `useAiBot` seeds its state from
+  `createBotEngineState()` exported by `bot-engine.ts`: the component tree renders once *before* the
+  mount effect creates the engine, and an empty `{}` state made `DashboardPanel` throw on
+  `session.realizedProfit`. Any new field on `BotEngineState` belongs in that factory too.
+- **The scanner owns its socket.** `scan.ts`/`scanner.ts` opens one short-lived
+  `DerivPublicWebSocketClient` per scan (`src/pages/digits/deriv-public-ws.ts`) over
+  `filterDigitMarkets`, requests `ticks_history` with **`subscribe: 1`** and sends `forget`
+  immediately (same v3 quirks as the Digits lab). It sends no authenticated messages and can be run
+  while logged out. One scan returns ~13 volatility markets and takes a few seconds.
+- **Two sockets, deliberately separate.** `auth-ws.ts` is the authenticated socket (authorize,
+  balance, proposal, buy, `proposal_open_contract`); `AuthTradingWebSocket` never connects in its
+  constructor, so merely mounting the provider opens nothing. Execution is login-gated: Start Bot
+  stays disabled until `state.auth.status === 'authorized'`, and real mode needs the explicit
+  confirmation modal in `auth-panel.tsx` before it can be switched on.
+- **Persistence.** Settings, strategies and scanner config are written to localStorage under
+  `aibot_settings` / `aibot_strategies` / `aibot_scanner_config` (see `constants.ts`). Any UI check
+  that toggles them leaves a stored list behind — remove the key afterwards to restore the defaults.
+- **Strategy digit sentinel.** `StrategyConfig.digit === null` means "use the AI suggestion" (the
+  hottest digit for Matches, the coldest for Differs) and `scanner.ts` resolves it with
+  `strategy.digit ?? hottest?.digit`. The selector's "Auto" button must therefore write `null`, never
+  a sentinel like `-1`, which would end up as an invalid `barrier: '-1'` in the proposal request.
+
+### Verifying this tab
+- Click the `#id-ai-bot` `<li>` (the URL hash becomes `#ai_bot`). Expect the hero title, the state
+  chip "Stopped", and six panel headings: Live Market Scanner, Last Signal & Execution, Open
+  Contracts, Strategy Selection, Trading Settings, Event & Execution Journal.
+- "Scan now" is the anonymous-safe check: within a few seconds ~13 ranked rows appear, each with a
+  score, a Passed/Failed condition list and (for a qualifying setup) a `Strategy: …` line. No
+  sideways scroll at 431px; the two-column grid collapses to one at ≤768px.
+- `npm run type-check` (`docker compose exec web npx tsc --noEmit`) is clean and is the real gate
+  here; the Rsbuild dev build strips types. `npx eslint` does **not** run in this sandbox —
+  `eslint-plugin-react` is missing from the installed tree — so don't read its failure as a lint error.
+- Run/Pause/Stop, the proposal → buy → settle path and the login redirect are all login-gated, so
+  they are verified by hand against a real Deriv account, not in the preview.

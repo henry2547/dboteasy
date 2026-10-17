@@ -14,7 +14,8 @@ export default function StrategySelector() {
         updateStrategies(strategies.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
     };
 
-    const setDigit = (id: string, digit: number) => {
+    /** `null` means "use the AI suggestion" (the hottest / coldest digit). */
+    const setDigit = (id: string, digit: number | null) => {
         updateStrategies(strategies.map(s => (s.id === id ? { ...s, digit } : s)));
     };
 
@@ -47,7 +48,7 @@ export default function StrategySelector() {
                                         <button
                                             key={d}
                                             type='button'
-                                            className={`aibot-digit-btn ${(s.digit ?? 5) === d ? 'aibot-digit-btn--active' : ''}`}
+                                            className={`aibot-digit-btn ${s.digit === d ? 'aibot-digit-btn--active' : ''}`}
                                             onClick={() => setDigit(s.id, d)}
                                         >
                                             {d}
@@ -56,8 +57,8 @@ export default function StrategySelector() {
                                 </div>
                                 <button
                                     type='button'
-                                    className='aibot-btn aibot-btn--sm'
-                                    onClick={() => setDigit(s.id, -1)}
+                                    className={`aibot-btn aibot-btn--sm ${s.digit === null ? 'aibot-btn--active' : ''}`}
+                                    onClick={() => setDigit(s.id, null)}
                                     title='Use AI suggestion'
                                 >
                                     Auto

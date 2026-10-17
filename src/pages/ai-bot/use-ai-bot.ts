@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BotEngine, type BotEngineState } from './bot-engine';
+import { BotEngine, createBotEngineState, type BotEngineState } from './bot-engine';
 import { DEFAULT_SCANNER_CONFIG, DEFAULT_SETTINGS, DEFAULT_STRATEGIES, STORAGE_KEYS } from './constants';
 import type { ScannerConfig, StrategyConfig, TradingSettings } from './types';
 
@@ -56,7 +56,9 @@ export interface UseAiBot {
 }
 
 export function useAiBot(): UseAiBot {
-    const [state, setState] = useState<BotEngineState | null>(null);
+    // Seeded with the engine's own starting state so the first render (which
+    // happens before the mount effect creates the engine) has a valid snapshot.
+    const [state, setState] = useState<BotEngineState>(createBotEngineState);
     const [settings, setSettings] = useState<TradingSettings>(loadSettings);
     const [strategies, setStrategies] = useState<StrategyConfig[]>(loadStrategies);
     const [scannerConfig, setScannerConfig] = useState<ScannerConfig>(loadScannerConfig);
@@ -120,15 +122,12 @@ export function useAiBot(): UseAiBot {
     }, []);
 
     const runScanNow = useCallback(() => {
-        // The engine's runScan is private; we trigger it by calling start if not running,
-        // or by updating the state to re-scan. For a manual scan, we use a small trick:
-        // if the bot is running, the interval handles it; if stopped, we do a one-off scan.
-        // We expose this via a lightweight public method on the engine.
+        // One-off scan cycle; works whether the bot is running or stopped.
         engineRef.current?.scanNow();
     }, []);
 
     return {
-        state: state ?? engineRef.current?.getState() ?? ({} as BotEngineState),
+        state,
         settings,
         strategies,
         scannerConfig,

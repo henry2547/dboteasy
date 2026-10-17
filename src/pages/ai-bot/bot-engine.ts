@@ -55,6 +55,36 @@ export interface BotEngineState {
 
 export type BotEngineListener = (state: BotEngineState) => void;
 
+/**
+ * The engine's starting state. Exported so the React layer can render a valid
+ * snapshot before the engine instance exists (the first render happens before
+ * the mount effect creates it).
+ */
+export function createBotEngineState(): BotEngineState {
+    return {
+        botState: 'Stopped',
+        auth: {
+            status: 'disconnected',
+            loginid: null,
+            isVirtual: true,
+            balance: null,
+            currency: null,
+            errorMessage: null,
+        },
+        session: createSession(),
+        rankings: [],
+        lastSignal: null,
+        lastRiskCheck: null,
+        lastExecution: null,
+        lastProposal: null,
+        openContracts: [],
+        journal: [],
+        isScanning: false,
+        configVersion: 0,
+        scanError: null,
+    };
+}
+
 export class BotEngine {
     private authWs: AuthTradingWebSocket;
     private executionEngine: ExecutionEngine | null = null;
@@ -76,28 +106,7 @@ export class BotEngine {
         this.strategies = strategies;
         this.scannerConfig = scannerConfig;
         this.authWs = new AuthTradingWebSocket();
-        this.state = {
-            botState: 'Stopped',
-            auth: {
-                status: 'disconnected',
-                loginid: null,
-                isVirtual: true,
-                balance: null,
-                currency: null,
-                errorMessage: null,
-            },
-            session: createSession(),
-            rankings: [],
-            lastSignal: null,
-            lastRiskCheck: null,
-            lastExecution: null,
-            lastProposal: null,
-            openContracts: [],
-            journal: [],
-            isScanning: false,
-            configVersion: 0,
-            scanError: null,
-        };
+        this.state = createBotEngineState();
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
