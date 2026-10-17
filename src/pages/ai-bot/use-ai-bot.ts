@@ -49,6 +49,7 @@ export interface UseAiBot {
     updateScannerConfig: (config: ScannerConfig) => void;
     connectAuth: () => void;
     disconnectAuth: () => void;
+    selectAccount: (loginid: string) => void;
     startBot: () => void;
     stopBot: () => void;
     pauseBot: () => void;
@@ -135,6 +136,10 @@ export function useAiBot(): UseAiBot {
         engineRef.current?.disconnectAuth();
     }, []);
 
+    const selectAccount = useCallback((loginid: string) => {
+        engineRef.current?.selectAccount(loginid);
+    }, []);
+
     const startBot = useCallback(() => {
         engineRef.current?.start();
     }, []);
@@ -166,6 +171,7 @@ export function useAiBot(): UseAiBot {
         updateScannerConfig,
         connectAuth,
         disconnectAuth,
+        selectAccount,
         startBot,
         stopBot,
         pauseBot,

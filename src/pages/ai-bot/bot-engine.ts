@@ -15,13 +15,17 @@
  */
 
 import { AuthTradingWebSocket, type AuthWsStatus } from './auth-ws';
+import { getAuthInfo, getDerivAccounts, getActiveLoginId } from '@/external/deriv-core';
 import { scanMarkets } from './scanner';
 import { buildSignal, nextConfigVersion } from './strategy-engine';
 import { validateRisk, shouldStopSession } from './risk-manager';
 import { ExecutionEngine, type ExecutionCallbacks } from './execution-engine';
 import { createSession, recordOpen, recordSettlement, stopSession } from './session-manager';
 import type {
+    AuthAccount,
+    AuthDiagnostics,
     AuthState,
+    AuthStatus,
     BotState,
     ExecutionResult,
     JournalEntry,
@@ -70,6 +74,18 @@ export function createBotEngineState(): BotEngineState {
             balance: null,
             currency: null,
             errorMessage: null,
+            accounts: [],
+            diagnostics: {
+                wsState: 'disconnected',
+                authPhase: 'none',
+                accountAuthorized: false,
+                tradePermitted: false,
+                marketDataState: 'idle',
+                lastAuthAt: null,
+                lastError: null,
+                reconnectAttempt: 0,
+                retrying: false,
+            },
         },
         session: createSession(),
         rankings: [],
@@ -142,16 +158,14 @@ export class BotEngine {
         this.offAuthStatus?.();
         this.offAuthStatus = this.authWs.onStatus((status: AuthWsStatus) => {
             const authState: AuthState = {
-                status: status.authorized
-                    ? 'authorized'
-                    : status.connected
-                      ? 'connecting'
-                      : 'disconnected',
+                status: mapAuthStatus(status),
                 loginid: status.loginid,
                 isVirtual: status.isVirtual,
                 balance: status.balance,
                 currency: status.currency,
                 errorMessage: status.error,
+                accounts: buildAccountList(status.loginid),
+                diagnostics: buildDiagnostics(status, this.state.botState),
             };
             this.update({ auth: authState });
         });
@@ -171,8 +185,30 @@ export class BotEngine {
                 balance: null,
                 currency: null,
                 errorMessage: null,
+                accounts: buildAccountList(null),
+                diagnostics: emptyDiagnostics(),
             },
         });
+    }
+
+    /**
+     * Switch the active account. Writes the chosen loginid to localStorage (the
+     * same key the OTP flow honours), then reconnects so a fresh OTP URL is
+     * obtained for that account. Never silently falls back to another account.
+     */
+    async selectAccount(loginid: string): Promise<void> {
+        const accounts = getDerivAccounts() ?? [];
+        const exists = accounts.some(a => a.account_id === loginid);
+        if (!exists) {
+            this.log('warning', 'auth', `Account ${loginid} is not in the authorized account list.`);
+            return;
+        }
+        localStorage.setItem('active_loginid', loginid);
+        this.log('info', 'auth', `Switching account to ${loginid}. Re-authorizing…`);
+        this.disconnectAuth();
+        // Brief yield so the close fully settles before reopening.
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await this.connectAuth();
     }
 
     /** Start the bot — begins the scan loop. */
@@ -182,6 +218,20 @@ export class BotEngine {
         // Require authorization before starting.
         if (this.state.auth.status !== 'authorized') {
             this.log('error', 'start', 'Cannot start: account not authorized. Log in first.');
+            this.update({ botState: 'Error' });
+            return;
+        }
+
+        // Verify the authorized account matches the selected execution mode.
+        // Never silently fall back from Demo to Real or vice versa.
+        const authorizedIsDemo = this.state.auth.isVirtual;
+        if (this.settings.accountMode === 'demo' && !authorizedIsDemo) {
+            this.log('error', 'start', 'Cannot start in Demo mode: the authorized account is a Real account. Switch to the Demo account first.');
+            this.update({ botState: 'Error' });
+            return;
+        }
+        if (this.settings.accountMode === 'real' && authorizedIsDemo) {
+            this.log('error', 'start', 'Cannot start in Real mode: the authorized account is a Demo account. Switch to the Real account and confirm.');
             this.update({ botState: 'Error' });
             return;
         }
@@ -459,4 +509,62 @@ export class BotEngine {
         const snapshot = this.getState();
         this.listeners.forEach(listener => listener(snapshot));
     }
+}
+
+// ── Auth-state mapping helpers ──────────────────────────────────────────────
+
+/** Map the raw auth-socket status to the UI AuthStatus state-machine value. */
+function mapAuthStatus(status: AuthWsStatus): AuthStatus {
+    if (status.authorized) return 'authorized';
+    if (status.authPhase === 'no_token') return 'authorization_required';
+    if (status.authPhase === 'failed') return 'error';
+    if (status.wsState === 'reconnecting') return 'reconnecting';
+    if (status.wsState === 'connecting') return 'connecting';
+    if (status.connected) return 'connecting'; // socket open, still verifying
+    return 'disconnected';
+}
+
+/** Build the account list from the stored Deriv accounts, marking the active one. */
+function buildAccountList(activeLoginid: string | null): AuthAccount[] {
+    const accounts = getDerivAccounts() ?? [];
+    const active = activeLoginid ?? getActiveLoginId();
+    return accounts
+        .filter(a => !a.status || a.status === 'active')
+        .map(a => ({
+            loginid: a.account_id,
+            accountType: a.account_type,
+            currency: a.currency || 'USD',
+            balance: parseFloat(a.balance) || 0,
+            status: a.status ?? null,
+            isActive: a.account_id === active,
+        }));
+}
+
+function buildDiagnostics(status: AuthWsStatus, botState: BotState): AuthDiagnostics {
+    const authInfo = getAuthInfo();
+    return {
+        wsState: status.wsState,
+        authPhase: status.authPhase,
+        accountAuthorized: status.authorized,
+        tradePermitted: Boolean(authInfo?.access_token),
+        marketDataState: botState === 'Data Interrupted' ? 'error' : 'connected',
+        lastAuthAt: status.lastAuthAt,
+        lastError: status.lastError ?? status.error,
+        reconnectAttempt: status.reconnectAttempt,
+        retrying: status.wsState === 'reconnecting' || status.reconnectAttempt > 0,
+    };
+}
+
+function emptyDiagnostics(): AuthDiagnostics {
+    return {
+        wsState: 'disconnected',
+        authPhase: 'none',
+        accountAuthorized: false,
+        tradePermitted: Boolean(getAuthInfo()?.access_token),
+        marketDataState: 'idle',
+        lastAuthAt: null,
+        lastError: null,
+        reconnectAttempt: 0,
+        retrying: false,
+    };
 }

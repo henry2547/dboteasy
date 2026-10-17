@@ -32,6 +32,7 @@ const MAX_QUOTE_AGE_S = 5;
 export class ExecutionEngine {
     private activeProposalId: string | null = null;
     private activeContractId: number | null = null;
+    private openContractSubscriptionId: string | null = null;
     private isExecuting = false;
     private offMessage: (() => void) | null = null;
     private callbacks: ExecutionCallbacks | null = null;
@@ -46,6 +47,11 @@ export class ExecutionEngine {
     }
 
     destroy(): void {
+        this.cancelProposal();
+        if (this.openContractSubscriptionId) {
+            this.sendFn({ forget: this.openContractSubscriptionId });
+            this.openContractSubscriptionId = null;
+        }
         if (this.offMessage) this.offMessage();
         this.offMessage = null;
     }
@@ -85,8 +91,9 @@ export class ExecutionEngine {
             const buyResult = await this.buyContract(proposal, callbacks);
             if (!buyResult) return;
 
-            // 4. Monitor the open contract (handled by handleMessage).
+            // 4. Subscribe to contract updates and monitor until settled.
             this.activeContractId = buyResult.contractId;
+            this.subscribeOpenContract(buyResult.contractId);
         } catch (error) {
             callbacks.onError(`Execution error: ${(error as Error).message}`);
         } finally {
@@ -100,6 +107,11 @@ export class ExecutionEngine {
             this.sendFn({ forget: this.activeProposalId });
             this.activeProposalId = null;
         }
+    }
+
+    /** Subscribe to proposal_open_contract updates for the purchased contract. */
+    private subscribeOpenContract(contractId: number): void {
+        this.sendFn({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 });
     }
 
     // ── Private ──────────────────────────────────────────────────────────────
@@ -223,6 +235,8 @@ export class ExecutionEngine {
         const contract = payload.proposal_open_contract;
         if (!contract || Number(contract.contract_id) !== this.activeContractId) return;
 
+        if (payload.subscription?.id) this.openContractSubscriptionId = String(payload.subscription.id);
+
         const info: OpenContractInfo = {
             contractId: Number(contract.contract_id),
             contractType: String(contract.contract_type ?? ''),
@@ -255,6 +269,10 @@ export class ExecutionEngine {
             };
             this.activeContractId = null;
             this.cancelProposal();
+            if (this.openContractSubscriptionId) {
+                this.sendFn({ forget: this.openContractSubscriptionId });
+                this.openContractSubscriptionId = null;
+            }
             this.callbacks?.onSettled(result);
         }
     }

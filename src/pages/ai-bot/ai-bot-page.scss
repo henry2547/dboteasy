@@ -91,6 +91,9 @@
         &--authorized { color: #2e7d32; }
         &--disconnected { color: var(--text-colored-disabled); }
         &--connecting { color: #e65100; }
+        &--authorizing { color: #e65100; }
+        &--authorization_required { color: #1565c0; }
+        &--reconnecting { color: #e65100; }
         &--error { color: #c62828; }
     }
 
@@ -652,6 +655,74 @@
 
 .aibot-positive { color: #2e7d32; font-weight: 600; }
 .aibot-negative { color: #c62828; font-weight: 600; }
+
+// ── Account selector ─────────────────────────────────────────────────────────
+
+.aibot-auth__account-select {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.aibot-auth__select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--text-colored-disabled, #ccc);
+    background: var(--content-bg, #fff);
+    color: var(--text-general);
+    font-size: 0.9rem;
+    max-width: 260px;
+}
+
+// ── Diagnostics panel ─────────────────────────────────────────────────────────
+
+.aibot-diag {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--text-disabled, #eee);
+
+    &__title {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: var(--text-colored-disabled);
+        margin-bottom: 8px;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 6px 12px;
+    }
+
+    &__row {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    &__label {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        color: var(--text-colored-disabled);
+    }
+
+    &__value {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-general);
+
+        &--ok { color: #2e7d32; }
+        &--warn { color: #e65100; }
+        &--err { color: #c62828; }
+    }
+
+    &__error {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: #c62828;
+    }
+}
 
 .aibot-disclaimer {
     font-size: 0.75rem;

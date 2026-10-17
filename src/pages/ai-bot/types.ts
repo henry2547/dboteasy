@@ -9,7 +9,48 @@
 
 // ── Connection ──────────────────────────────────────────────────────────────
 
-export type AuthStatus = 'disconnected' | 'connecting' | 'authorizing' | 'authorized' | 'error';
+export type AuthStatus =
+    | 'disconnected'
+    | 'connecting'
+    | 'authorizing'
+    | 'authorized'
+    | 'authorization_required'
+    | 'error'
+    | 'reconnecting';
+
+export interface AuthAccount {
+    /** Deriv account id, e.g. VRT123456 or CR1234567. */
+    loginid: string;
+    /** 'demo' or 'real'. */
+    accountType: 'demo' | 'real';
+    currency: string;
+    balance: number;
+    /** Account status from the accounts list, when available. */
+    status: string | null;
+    /** Whether this is the currently authorized/active account. */
+    isActive: boolean;
+}
+
+export interface AuthDiagnostics {
+    /** Raw WebSocket connection state. */
+    wsState: string;
+    /** Authorization phase reported by the auth socket. */
+    authPhase: string;
+    /** Whether the selected account is authorized for execution. */
+    accountAuthorized: boolean;
+    /** Whether the user's token grants trading (the `trade` scope). */
+    tradePermitted: boolean;
+    /** Public market-data connection state (owned by the scanner). */
+    marketDataState: string;
+    /** Epoch ms of the last successful authorization, or null. */
+    lastAuthAt: number | null;
+    /** Last error message (safe, no credentials). */
+    lastError: string | null;
+    /** Current reconnect attempt counter. */
+    reconnectAttempt: number;
+    /** Whether a retry/reconnect is in progress. */
+    retrying: boolean;
+}
 
 export interface AuthState {
     status: AuthStatus;
@@ -18,6 +59,10 @@ export interface AuthState {
     balance: number | null;
     currency: string | null;
     errorMessage: string | null;
+    /** Accounts available to the authorized user (from the accounts list). */
+    accounts: AuthAccount[];
+    /** Diagnostics for the connection panel. */
+    diagnostics: AuthDiagnostics;
 }
 
 export type FeedStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
