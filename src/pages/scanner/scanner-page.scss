@@ -1,0 +1,415 @@
+/* AI Market Scanner & Automated Trading — dashboard styles. */
+
+.scanner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    box-sizing: border-box;
+    width: 100%;
+    height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding: 1.6rem 1.2rem 4.8rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+
+    @media (min-width: 768px) {
+        height: calc(100vh - 17rem);
+        padding: 2rem 2rem 5.6rem;
+    }
+}
+
+.scanner__loading {
+    padding: 1.6rem;
+    color: var(--text-less-prominent);
+    font-size: 1.2rem;
+}
+
+/* ---- header / state bar ------------------------------------------------ */
+
+.scanner-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.scanner-header__titles {
+    min-width: 0;
+}
+
+.scanner-header__title {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.scanner-header__subtitle {
+    margin: 0.3rem 0 0;
+    font-size: 1.15rem;
+    color: var(--text-less-prominent);
+}
+
+.scanner-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.scanner-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    background: var(--general-main-2, #eef0f4);
+    color: var(--text-general);
+
+    &--demo { background: #e6f4ff; color: #0b6bcb; }
+    &--real { background: #fff0f0; color: #c0392b; }
+    &--ok { background: #e6f9ee; color: #1a7f37; }
+    &--bad { background: #fff0f0; color: #c0392b; }
+}
+
+.scanner-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.15rem;
+    background: var(--general-main-2, #eef0f4);
+
+    &::before {
+        content: '';
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    &--Stopped,
+    &--Paused { color: #6b7280; }
+    &--Scanning { color: #0b6bcb; }
+    &--SetupDetected,
+    &--RiskCheck,
+    &--AwaitingConfirmation { color: #b7791f; }
+    &--Executing,
+    &--ContractOpen { color: #6d28d9; }
+    &--Cooldown { color: #0891b2; }
+    &--DataInterrupted { color: #c0392b; }
+    &--Error { color: #c0392b; }
+}
+
+.scanner-btn {
+    border: 1px solid var(--border-normal, #d1d5db);
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--general-main-2, #fff);
+    color: var(--text-general);
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &--start { background: #1a7f37; color: #fff; border-color: #1a7f37; }
+    &--stop { background: #c0392b; color: #fff; border-color: #c0392b; }
+    &--danger { background: #fff0f0; color: #c0392b; border-color: #f5b8b8; }
+}
+
+/* ---- layout grid ------------------------------------------------------- */
+
+.scanner__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.4rem;
+
+    @media (min-width: 960px) {
+        grid-template-columns: 1.6fr 1fr;
+    }
+}
+
+.scanner__col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    min-width: 0;
+}
+
+/* ---- card primitive ---------------------------------------------------- */
+
+.scanner-card {
+    background: var(--general-main-2, #fff);
+    border: 1px solid var(--border-normal, #e5e7eb);
+    border-radius: 12px;
+    padding: 1.4rem;
+}
+
+.scanner-card__title {
+    margin: 0 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.scanner-card__muted {
+    color: var(--text-less-prominent);
+    font-size: 1.1rem;
+}
+
+/* ---- market rankings --------------------------------------------------- */
+
+.scanner-rank {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.scanner-rank__item {
+    border: 1px solid var(--border-normal, #e5e7eb);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    cursor: default;
+
+    &--top { border-color: #0b6bcb; background: #f5f9ff; }
+}
+
+.scanner-rank__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.6rem;
+}
+
+.scanner-rank__name { font-weight: 600; }
+.scanner-rank__score { font-weight: 700; color: #0b6bcb; }
+
+.scanner-rank__freq {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 2px;
+    margin: 0.5rem 0;
+}
+
+.scanner-rank__bar {
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 0.15rem 0;
+    border-radius: 3px;
+    background: var(--general-main-1, #f3f4f6);
+}
+
+.scanner-rank__reasons {
+    margin: 0.4rem 0 0;
+    padding-left: 1.1rem;
+    font-size: 1.05rem;
+    color: var(--text-less-prominent);
+    line-height: 1.4;
+}
+
+.scanner-rank__strategies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+}
+
+.scanner-tag {
+    font-size: 0.95rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 6px;
+    background: #eef0f4;
+    color: var(--text-general);
+}
+
+/* ---- signal / risk / execution ---------------------------------------- */
+
+.scanner-signal__row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    font-size: 1.1rem;
+}
+
+.scanner-signal__conditions {
+    margin: 0.5rem 0 0;
+    padding-left: 1.1rem;
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+.scanner-signal__pass { color: #1a7f37; }
+.scanner-signal__fail { color: #c0392b; }
+
+.scanner-risk__check {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.2rem 0;
+    font-size: 1.05rem;
+}
+
+/* ---- session panel ----------------------------------------------------- */
+
+.scanner-session__stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.7rem;
+}
+
+.scanner-session__stat {
+    background: var(--general-main-1, #f3f4f6);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+}
+
+.scanner-session__label {
+    font-size: 1rem;
+    color: var(--text-less-prominent);
+}
+
+.scanner-session__value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 0.2rem;
+
+    &--pos { color: #1a7f37; }
+    &--neg { color: #c0392b; }
+}
+
+.scanner-progress {
+    height: 0.7rem;
+    border-radius: 999px;
+    background: var(--general-main-1, #e5e7eb);
+    overflow: hidden;
+    margin-top: 0.4rem;
+}
+
+.scanner-progress__fill {
+    height: 100%;
+    background: #0b6bcb;
+    transition: width 0.3s;
+}
+
+/* ---- strategy selector ------------------------------------------------- */
+
+.scanner-strategy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.scanner-strategy__row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-normal, #f0f0f0);
+
+    &:last-child { border-bottom: none; }
+}
+
+.scanner-strategy__digit {
+    width: 4rem;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid var(--border-normal, #d1d5db);
+    border-radius: 6px;
+    font-size: 1.05rem;
+}
+
+/* ---- settings ---------------------------------------------------------- */
+
+.scanner-settings__row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.8rem;
+}
+
+.scanner-settings__label {
+    font-size: 1.05rem;
+    color: var(--text-less-prominent);
+}
+
+.scanner-settings__input,
+.scanner-settings__select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border-normal, #d1d5db);
+    border-radius: 8px;
+    font-size: 1.1rem;
+    background: var(--general-main-1, #fff);
+    color: var(--text-general);
+}
+
+.scanner-settings__hint {
+    font-size: 1rem;
+    color: var(--text-less-prominent);
+    line-height: 1.4;
+}
+
+.scanner-settings__problems {
+    color: #c0392b;
+    font-size: 1.05rem;
+    margin: 0.5rem 0;
+    padding-left: 1.1rem;
+}
+
+/* ---- contracts --------------------------------------------------------- */
+
+.scanner-contract {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border-normal, #f0f0f0);
+
+    &:last-child { border-bottom: none; }
+}
+
+.scanner-contract__status {
+    font-weight: 600;
+
+    &--won { color: #1a7f37; }
+    &--lost { color: #c0392b; }
+    &--open { color: #6d28d9; }
+}
+
+/* ---- journal ----------------------------------------------------------- */
+
+.scanner-journal__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    max-height: 22rem;
+    overflow-y: auto;
+}
+
+.scanner-journal__entry {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.3rem 0;
+    font-size: 1.05rem;
+    border-bottom: 1px solid var(--border-normal, #f5f5f5);
+
+    &--error { color: #c0392b; }
+    &--warning { color: #b7791f; }
+    &--result { color: #1a7f37; }
+    &--signal { color: #0b6bcb; }
+}
+
+.scanner-journal__time {
+    color: var(--text-less-prominent);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.scanner-journal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+}

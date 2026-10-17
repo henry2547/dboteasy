@@ -49,6 +49,7 @@ import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
+const ScannerPage = lazy(() => import('../scanner'));
 const StatisticsPage = lazy(() => import('../statistics'));
 
 const AppWrapper = observer(() => {
@@ -82,7 +83,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'digits', 'statistics', 'scanner'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -148,7 +149,7 @@ const AppWrapper = observer(() => {
 
     React.useEffect(() => {
         const el_dashboard = document.getElementById('id-dbot-dashboard');
-        const el_last_tab = document.getElementById('id-statistics');
+        const el_last_tab = document.getElementById('id-ai-scanner');
 
         const observer_dashboard = new window.IntersectionObserver(
             ([entry]) => {
@@ -475,6 +476,29 @@ const AppWrapper = observer(() => {
                                         }
                                     >
                                         <StatisticsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedPercentCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='AI Scanner' />
+                                    </>
+                                }
+                                id='id-ai-scanner'
+                            >
+                                <ErrorBoundary label='AI Scanner'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading the AI scanner...')} />
+                                        }
+                                    >
+                                        <ScannerPage />
                                     </Suspense>
                                 </ErrorBoundary>
                             </div>
