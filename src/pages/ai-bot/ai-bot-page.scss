@@ -191,6 +191,14 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
+        gap: 8px;
+    }
+
+    &__header-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
     }
 
     &__title {
@@ -240,11 +248,23 @@
     gap: 8px;
 }
 
+.aibot-scanner-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-colored-disabled);
+    margin-bottom: 8px;
+
+    &__qualify { color: #2e7d32; font-weight: 600; }
+}
+
 .aibot-scan-row {
     border: 1px solid var(--border-color, #eee);
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: 0;
     background: var(--section-content-bg, #fafafa);
+    overflow: hidden;
 
     &--qualifies {
         border-color: #2e7d32;
@@ -256,6 +276,27 @@
         align-items: center;
         gap: 8px;
         flex-wrap: wrap;
+        width: 100%;
+        padding: 10px 12px;
+        background: none;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+        color: inherit;
+    }
+
+    &__head:hover {
+        background: rgba(0, 0, 0, 0.03);
+    }
+
+    &__chevron {
+        margin-left: auto;
+        font-size: 0.7rem;
+        color: var(--text-colored-disabled);
+        transition: transform 0.15s;
+
+        &--open { transform: rotate(0deg); }
     }
 
     &__rank {
@@ -278,11 +319,11 @@
     &__score {
         font-size: 0.8rem;
         font-weight: 600;
-        margin-left: auto;
     }
 
     &__detail {
-        margin-top: 8px;
+        margin-top: 0;
+        padding: 0 12px 10px;
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -618,6 +659,103 @@
     text-align: center;
     padding: 16px 0;
     line-height: 1.5;
+}
+
+// ── Responsive (mobile) ──────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+    .aibot {
+        padding: 10px;
+    }
+
+    .aibot-hero {
+        &__title { font-size: 1.15rem; }
+        &__subtitle { font-size: 0.78rem; }
+    }
+
+    .aibot-auth,
+    .aibot-dashboard,
+    .aibot-panel {
+        padding: 12px;
+    }
+
+    .aibot-auth__info {
+        gap: 10px;
+    }
+
+    .aibot-dashboard__stats {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 6px;
+    }
+
+    .aibot-stat {
+        padding: 6px 8px;
+
+        &__label { font-size: 0.65rem; }
+        &__value { font-size: 0.9rem; }
+    }
+
+    .aibot-panel__title {
+        font-size: 0.95rem;
+    }
+
+    .aibot-panel__header-actions {
+        gap: 4px;
+    }
+
+    .aibot-scan-row {
+        &__head {
+            padding: 8px 10px;
+            gap: 6px;
+        }
+
+        &__name { font-size: 0.82rem; }
+        &__category { display: none; }
+        &__score { font-size: 0.75rem; }
+        &__detail { padding: 0 10px 8px; }
+        &__strategy { font-size: 0.8rem; }
+        &__reason { font-size: 0.75rem; }
+    }
+
+    .aibot-freq {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+
+    .aibot-journal {
+        max-height: 220px;
+
+        &__entry { font-size: 0.72rem; }
+        &__time { min-width: 52px; }
+        &__level { min-width: 44px; }
+        &__category { min-width: 52px; }
+    }
+
+    .aibot-modal {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 420px) {
+    .aibot {
+        padding: 8px;
+    }
+
+    .aibot-hero__title { font-size: 1rem; }
+
+    .aibot-dashboard__stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .aibot-scan-row__head {
+        gap: 4px;
+    }
+
+    .aibot-scan-row__rank {
+        min-width: 22px;
+        font-size: 0.78rem;
+    }
 }
 
 // ── Modal ────────────────────────────────────────────────────────────────────
