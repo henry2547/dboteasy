@@ -444,3 +444,36 @@ second WebSocket and reads the same market the Digits/Statistics tabs show.
   a card flashes green + the banner shows "Entry signal — <strategy> on
   <market> · digit N" when a threshold breaches. No sideways scroll at 431px
   (the grid collapses to one column below 640px). `npx tsc --noEmit` is clean.
+
+## Advanced analytics engines (Digits tab)
+Five quantitative engines render inside the Digits tab, after the existing walk-forward
+backtest panel, via `components/lab-engines-section.tsx`. They read the ONE shared public
+feed through `useLabEngines()` (`src/pages/digits/use-lab-engines.ts`) — no second WebSocket.
+Pure modules live in `src/pages/digits/engines/` with no React/network coupling, so they are
+unit-tested in isolation (`engines/__tests__/lab-engines.test.ts`, 21 tests).
+- **Engine A** `velocity-matrix.ts` — Frequency % = Count / WindowSize × 100 over five
+  concentric windows (20/50/100/500/1000). A digit is flagged PEAK/EXHAUSTED only when *every*
+  window that has data agrees it sits outside the 8–12% band (8/12 are inclusive; use
+  `CONVERGENCE_LOW_PERCENT` / `CONVERGENCE_HIGH_PERCENT`, not literals).
+- **Engine B** `entropy-tracker.ts` — H(X) = −Σ P·log₂P. Ceiling `MAX_ENTROPY` = log₂(10)
+  ≈ 3.3219; `STRUCTURAL_CLUSTER` below 2.95 bits, `PURE_NOISE` at or above. The state is
+  binary per the agreed contract; `purityRatio` is published alongside so the UI can show how
+  near the ceiling a reading actually is. Uses the page's selected analysis window.
+- **Engine C** `latency-guard.ts` — `isExecutionSafe` is false when the round-trip exceeds 40%
+  of the average tick interval (`PING_BUDGET_SHARE`), and **fails closed** when either
+  measurement is missing (an unmeasured guard shows "Guard measuring", not a false warning).
+  The Digits tab owns no execution button, so the flag is surfaced as a warning only.
+- **Engine D** `scattergram.ts` — `{ tickIndex, digit, epoch }` traced back from the live frame
+  (0) to −100, plus a per-digit gap coefficient of variation (clustered vs rhythmic).
+- **Engine E** `walk-forward.ts` — index-by-index walk; `shouldEnter` receives ONLY the trailing
+  20-tick state window ending at `i`, and the outcome reads strictly `digits[i + 1]`. The
+  enforcement is structural (the runner never builds a slice reaching past `i`), and
+  `lookaheadViolations` stays 0.
+- `sanity.ts` shapes all five into the `MarketSanityMetrics` broadcast contract; unknown
+  measurements broadcast as 0 while `isExecutionSafe` stays false so "unmeasured" is never
+  mistaken for "safe".
+- **Verifying:** open `#id-digits`; below the walk-forward backtest panel expect the
+  "Advanced analytics engines" heading and five panels (matrix, entropy gauge, latency guard,
+  scattergram, zero-lookahead walk-forward). Out-of-band matrix cells are tinted red (>12%) /
+  blue (<8%). Run `docker compose exec web npx jest src/pages/digits/engines`.
+  `npx tsc --noEmit` clean. No sideways scroll at 431px (the matrix scrolls inside its own panel).
