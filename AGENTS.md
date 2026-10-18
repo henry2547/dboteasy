@@ -86,7 +86,8 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has five tabs: Dashboard, Bot Builder, Charts, Digits, Statistics.
+The main tab bar has six tabs: Dashboard, Bot Builder, Strategy Engine, Deriv Chart, Digits,
+Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
@@ -229,11 +230,12 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
 
-## AI Bot tab (AI Market Scanner & Auto-Trading)
-The sixth main tab, `#ai_bot`, lives entirely in `src/pages/ai-bot/` and is lazy-loaded from
-`main.tsx` like the Digits/Statistics pages. `DBOT_TABS.AI_BOT = 5`, `TAB_IDS[5] = 'id-ai-bot'` and
-the `hash` array in `main.tsx` all carry the new entry — keep the three in the same order (the tab
-bar is scrollable below desktop, so six tabs still fit a phone).
+## AI Bot module (tab removed — code unused but kept)
+The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
+`AiBotProvider` or lazy-loads `AiBotPage`, and `DBOT_TABS` / `TAB_IDS` / the `hash` array in
+`main.tsx` no longer carry an entry for it. `src/pages/ai-bot/` is unused but kept (same as
+`src/pages/dtrader/`), so the notes below still describe how it works; restoring the tab means
+putting those four places back, in the same tab order.
 - **Provider placement.** `AiBotProvider` wraps `<Tabs>` in `main.tsx` (inside `DigitsLabProvider`),
   so the engine — and a running session — survives tab switches. `useAiBot` seeds its state from
   `createBotEngineState()` exported by `bot-engine.ts`: the component tree renders once *before* the
@@ -321,7 +323,9 @@ bar is scrollable below desktop, so six tabs still fit a phone).
   a sentinel like `-1`, which would end up as an invalid `barrier: '-1'` in the proposal request.
 
 ### Verifying this tab
-- Click the `#id-ai-bot` `<li>` (the URL hash becomes `#ai_bot`). Expect the hero title, the state
+- **The tab is gone from the UI**, so there is no `#id-ai-bot` `<li>` to click and the page is
+  unreachable through the app. When the tab is restored, clicking it (URL hash `#ai_bot`) should
+  show the hero title, the state
   chip "Stopped", and five panel headings: Live Market Scanner, Last Signal & Execution, Strategy
   Selection, Trading Settings and Trade Monitor. The Trade Monitor has four tabs (`.aibot-tab`:
   Summary / Transactions / Analysis / Journal) that each render an empty state while logged out
@@ -417,7 +421,7 @@ The seventh main tab, `#strategy_engine`, lives in `src/pages/strategy-engine/`
 and is lazy-loaded from `main.tsx` like the other pages. It sits **right after
 Bot Builder** (index 2), so `DBOT_TABS` / `TAB_IDS` / the `hash` array in
 `main.tsx` are now: Dashboard, Bot Builder, **Strategy Engine**, Deriv Chart,
-Digits, Statistics, AI Bot — keep the three in the same order. It reuses the
+Digits, Statistics — keep the three in the same order. It reuses the
 shared public feed (`useDigitsLabContext` from the Digits lab), so it opens no
 second WebSocket and reads the same market the Digits/Statistics tabs show.
 - **Pure engine** (`strategy-engine-core.ts`): eight strategy modules
