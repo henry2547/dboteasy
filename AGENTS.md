@@ -411,3 +411,36 @@ with `show_digits_stats={false}`. The tab label, loading message and
 ErrorBoundary label all say "Deriv Chart". The `derivDtrader` service domain in
 `routes.ts` is untouched — it powers standalone links (cashier, reports, etc.),
 not the tab.
+
+## Strategy Engine tab (reactive digit-market evaluation)
+The seventh main tab, `#strategy_engine`, lives in `src/pages/strategy-engine/`
+and is lazy-loaded from `main.tsx` like the other pages. It sits **right after
+Bot Builder** (index 2), so `DBOT_TABS` / `TAB_IDS` / the `hash` array in
+`main.tsx` are now: Dashboard, Bot Builder, **Strategy Engine**, Deriv Chart,
+Digits, Statistics, AI Bot — keep the three in the same order. It reuses the
+shared public feed (`useDigitsLabContext` from the Digits lab), so it opens no
+second WebSocket and reads the same market the Digits/Statistics tabs show.
+- **Pure engine** (`strategy-engine-core.ts`): eight strategy modules
+  (OVER_1, OVER_2, UNDER_7, UNDER_8, EVEN, ODD, MATCHES, DIFFERS) over a
+  20/50/100-tick window. Digit parsing is never done here — it consumes digits
+  already extracted string-safe upstream by `digits/precision.ts`. Every
+  conditional filter is documented inline with its probability reasoning.
+  `resolveOutcome` simulates a win/loss on the *next* tick for the circuit
+  breaker; flat staking (`FLAT_STAKE`) is hardcoded — there is no Martingale
+  path anywhere.
+- **Reactive layer** (`use-strategy-engine.ts`): drives evaluation from the live
+  tick stream, throttled to one dispatch per `EVAL_THROTTLE_MS` (100ms) so the UI
+  never locks. Owns per-strategy runtime: pending outcomes, the circuit breaker
+  (3 consecutive losses → OFF + 5-min cool-down, then auto-rearm), and the flash
+  event the dashboard animates on a threshold breach.
+- **Dashboard** (`strategy-engine-page.tsx` + `.scss`): hero, market selector
+  (reused from Digits), window toggle, flash banner, overview (latest digit /
+  sample / window / active count / recent-digit trail), an 8-card grid where
+  each card flashes (`se-card--flash`) the instant its entry fires, and a
+  recent-outcomes log. `StrategyCard` shows the contract type, target digit, a
+  mini frequency bar, W/L/win-rate/loss-streak, and Pause/Reset controls.
+- **Verifying:** click `#id-strategy-engine`; expect the hero, the flash banner,
+  8 strategy cards, and the window toggle. With a live feed (Volatility 100),
+  a card flashes green + the banner shows "Entry signal — <strategy> on
+  <market> · digit N" when a threshold breaches. No sideways scroll at 431px
+  (the grid collapses to one column below 640px). `npx tsc --noEmit` is clean.
