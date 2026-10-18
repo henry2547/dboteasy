@@ -2,6 +2,7 @@ import BacktestPanel from './components/backtest-panel';
 import BarrierPanel from './components/barrier-panel';
 import DigitDistribution from './components/digit-distribution';
 import DigitGrid from './components/digit-grid';
+import LabEnginesSection from './components/lab-engines-section';
 import MarketConditionsPanel from './components/market-conditions-panel';
 import MarketSelector from './components/market-selector';
 import ScanMarketsButton from './components/scan-markets-button';
@@ -9,9 +10,11 @@ import StrategyPanel from './components/strategy-panel';
 import TickPanel from './components/tick-panel';
 import { useDigitsLabContext } from './digits-lab-context';
 import { formatPercent } from './format';
+import { useLabEngines } from './use-lab-engines';
 import { ANALYSIS_WINDOWS } from './use-digits-lab';
 import './digits-page.scss';
 import './digits-enhancements.scss';
+import './digits-lab-engines.scss';
 
 /**
  * Digits Analysis Lab — a read-only, public-market-data view of Deriv's feed.
@@ -22,6 +25,7 @@ import './digits-enhancements.scss';
  */
 export default function DigitsPage() {
     const lab = useDigitsLabContext();
+    const engines = useLabEngines();
     const { statistics } = lab;
     const recentDigits = lab.analysisTicks.map(tick => tick.lastDigit);
 
@@ -136,6 +140,8 @@ export default function DigitsPage() {
             <BarrierPanel barriers={lab.barrierStats} />
             <StrategyPanel performance={lab.rulePerformance} signals={lab.signals} />
             <BacktestPanel results={lab.backtests} />
+
+            <LabEnginesSection engines={engines} />
 
             <ScanMarketsButton
                 isScanning={lab.isScanning}

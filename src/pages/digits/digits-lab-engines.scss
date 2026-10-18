@@ -1,0 +1,368 @@
+/* Advanced analytics engines (Engine A–E) rendered inside the Digits tab. */
+
+.digits-engines {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+
+    &__head {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.7rem;
+        font-weight: 700;
+    }
+
+    &__subtitle {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+/* --------------------------------------------------- Engine A: velocity matrix */
+
+.digits-matrix {
+    &__help {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__scroll {
+        overflow-x: auto;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+
+        th,
+        td {
+            padding: 0.42rem 0.3rem;
+            text-align: center;
+            font-size: 1.05rem;
+            border-bottom: 1px solid var(--border-divider);
+        }
+
+        thead th {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__digit {
+        text-align: left;
+        font-weight: 700;
+    }
+
+    &__cell {
+        color: var(--text-general);
+
+        &--hot {
+            background: color-mix(in srgb, var(--status-danger) 16%, transparent);
+            color: var(--status-danger);
+            font-weight: 700;
+        }
+
+        &--cold {
+            background: color-mix(in srgb, var(--brand-primary) 16%, transparent);
+            color: var(--brand-primary);
+            font-weight: 700;
+        }
+    }
+
+    &__row--peak th,
+    &__row--peak td {
+        box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--status-danger) 6%, transparent);
+    }
+
+    &__row--exhausted th,
+    &__row--exhausted td {
+        box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--brand-primary) 6%, transparent);
+    }
+
+    &__footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    &__convergence {
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        border: 1px solid var(--border-divider);
+
+        &--peak {
+            color: var(--status-danger);
+            border-color: color-mix(in srgb, var(--status-danger) 45%, transparent);
+        }
+
+        &--exhausted {
+            color: var(--brand-primary);
+            border-color: color-mix(in srgb, var(--brand-primary) 45%, transparent);
+        }
+
+        &--balanced {
+            color: var(--text-less-prominent);
+        }
+    }
+}
+
+/* --------------------------------------------------- Engine B: entropy tracker */
+
+.digits-entropy {
+    &__readout {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    &__value {
+        font-size: 2.6rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__unit {
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__badge {
+        margin-left: auto;
+        padding: 0.3rem 0.8rem;
+        border-radius: 999px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        border: 1px solid var(--border-divider);
+
+        &--pure_noise {
+            color: var(--brand-success);
+            border-color: color-mix(in srgb, var(--brand-success) 45%, transparent);
+        }
+
+        &--structural_cluster {
+            color: var(--status-danger);
+            border-color: color-mix(in srgb, var(--status-danger) 45%, transparent);
+        }
+    }
+
+    &__gauge {
+        position: relative;
+        height: 1rem;
+        border-radius: 999px;
+        background: var(--general-section-3);
+        overflow: hidden;
+    }
+
+    &__fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary));
+    }
+
+    &__threshold {
+        position: absolute;
+        top: -2px;
+        bottom: -2px;
+        width: 2px;
+        background: var(--status-danger);
+    }
+
+    &__summary {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+/* --------------------------------------------------- Engine C: latency guard */
+
+.digits-latency {
+    &--unsafe {
+        border-color: color-mix(in srgb, var(--status-danger) 55%, transparent);
+    }
+
+    &--measuring {
+        border-color: var(--border-divider);
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    &__cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    &__label {
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-less-prominent);
+    }
+
+    &__value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__verdict {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+
+        &--safe {
+            color: var(--brand-success);
+        }
+
+        &--unsafe {
+            color: var(--status-danger);
+        }
+
+        &--measuring {
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__reason {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+/* --------------------------------------------------- Engine D: scattergram */
+
+.digits-scatter {
+    &__chart {
+        width: 100%;
+        height: 14rem;
+    }
+
+    &__grid {
+        stroke: var(--border-divider);
+        stroke-width: 0.5;
+    }
+
+    &__axis-label {
+        fill: var(--text-less-prominent);
+        font-size: 8px;
+    }
+
+    &__dot {
+        opacity: 0.9;
+    }
+
+    &__reads {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+/* --------------------------------------------------- Engine E: walk-forward */
+
+.digits-walkforward {
+    &__audit {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--brand-success);
+    }
+
+    &__rows {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    &__row {
+        display: grid;
+        grid-template-columns: minmax(8rem, 1.4fr) auto minmax(0, 2fr);
+        gap: 1rem;
+        align-items: center;
+        padding: 0.8rem;
+        border-radius: 10px;
+        background: var(--general-section-2);
+
+        @media (max-width: 640px) {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__label {
+        display: flex;
+        flex-direction: column;
+
+        strong {
+            font-size: 1.25rem;
+        }
+
+        span {
+            font-size: 1.05rem;
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__spark {
+        width: 11rem;
+        height: 2.6rem;
+
+        &--empty {
+            font-size: 1.05rem;
+            color: var(--text-less-prominent);
+            width: auto;
+        }
+    }
+
+    &__spark-line {
+        fill: none;
+        stroke: var(--brand-primary);
+        stroke-width: 1.5;
+        vector-effect: non-scaling-stroke;
+    }
+
+    &__metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.6rem;
+        margin: 0;
+
+        div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        dt {
+            font-size: 1rem;
+            color: var(--text-less-prominent);
+        }
+
+        dd {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+}

@@ -1,0 +1,559 @@
+/* Strategy Engine — real-time evaluation dashboard. */
+
+.strategy-engine {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    box-sizing: border-box;
+    width: 100%;
+    /* The app's main area is a fixed-height, overflow-hidden flex box, so this
+       page owns its own scrolling to keep every card reachable at every width. */
+    height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding: 2rem 1.2rem 4.8rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+
+    @media (min-width: 768px) {
+        height: calc(100vh - 17rem);
+        padding: 2.4rem 2.4rem 5.6rem;
+    }
+
+    @media (min-width: 1200px) {
+        padding: 2.8rem 3.2rem 6.4rem;
+    }
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.se-hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    align-items: center;
+    justify-content: space-between;
+
+    &__title {
+        margin: 0;
+        font-size: 1.9rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    &__subtitle {
+        margin: 0.4rem 0 0;
+        font-size: 1.25rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+}
+
+.se-status {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: var(--general-section-1);
+    color: var(--text-less-prominent);
+    border: 1px solid var(--general-main-3);
+
+    &--connected {
+        color: var(--text-profit-success);
+        border-color: var(--text-profit-success);
+    }
+
+    &--error,
+    &--disconnected {
+        color: var(--text-loss-danger);
+        border-color: var(--text-loss-danger);
+    }
+}
+
+.se-button {
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-section-1);
+    color: var(--text-general);
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+/* ---------------------------------------------------------------- controls */
+
+.se-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    align-items: center;
+}
+
+.se-window {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem;
+    border-radius: 10px;
+    background: var(--general-section-1);
+    border: 1px solid var(--general-main-3);
+
+    &__label {
+        padding: 0 0.6rem;
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__btn {
+        padding: 0.4rem 0.9rem;
+        border-radius: 7px;
+        border: none;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.15rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &--active {
+            background: var(--state-hover);
+            color: var(--text-primary);
+        }
+    }
+}
+
+/* ---------------------------------------------------------------- flash banner */
+
+.se-flash-banner {
+    display: flex;
+    align-items: center;
+    min-height: 4rem;
+    padding: 0.8rem 1.4rem;
+    border-radius: 10px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-section-1);
+    color: var(--text-less-prominent);
+    font-size: 1.2rem;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+    &--active {
+        background: color-mix(in srgb, var(--brand-success, #0bb88a) 16%, var(--general-section-1));
+        border-color: var(--text-profit-success);
+        color: var(--text-profit-success);
+        font-weight: 700;
+        animation: se-flash-pulse 0.6s ease-out;
+    }
+
+    &__content {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    &__dot {
+        width: 0.9rem;
+        height: 0.9rem;
+        border-radius: 50%;
+        background: var(--text-profit-success);
+        box-shadow: 0 0 0 0 rgba(11, 184, 138, 0.6);
+        animation: se-dot-blink 0.8s ease-out 2;
+    }
+
+    &__idle {
+        font-weight: 500;
+    }
+}
+
+@keyframes se-flash-pulse {
+    0% {
+        transform: scale(0.99);
+        box-shadow: 0 0 0 0 rgba(11, 184, 138, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(11, 184, 138, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(11, 184, 138, 0);
+    }
+}
+
+@keyframes se-dot-blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.25;
+    }
+}
+
+/* ---------------------------------------------------------------- overview */
+
+.se-overview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.6rem;
+    align-items: center;
+    padding: 1rem 1.4rem;
+    border-radius: 12px;
+    background: var(--general-section-1);
+    border: 1px solid var(--general-main-3);
+
+    &__stat {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    &__label {
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__value {
+        font-size: 1.5rem;
+        font-weight: 700;
+
+        &--big {
+            font-size: 2.4rem;
+            line-height: 1;
+            color: var(--text-primary);
+        }
+    }
+
+    &__trail {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-left: auto;
+    }
+}
+
+.se-trail-digit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    font-size: 1.05rem;
+    font-weight: 700;
+    background: var(--general-main-3);
+    color: var(--text-general);
+
+    @each $i in 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 {
+        &--#{$i} {
+            background: hsl(200 + $i * 14, 55%, 45%);
+            color: #fff;
+        }
+    }
+}
+
+/* ---------------------------------------------------------------- empty */
+
+.se-empty {
+    padding: 3rem 1.4rem;
+    text-align: center;
+    border-radius: 12px;
+    border: 1px dashed var(--general-main-3);
+    color: var(--text-less-prominent);
+    font-size: 1.2rem;
+}
+
+/* ---------------------------------------------------------------- strategy grid */
+
+.se-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+
+    @media (min-width: 640px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 1100px) {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.se-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 1.2rem;
+    border-radius: 14px;
+    background: var(--general-section-1);
+    border: 1px solid var(--general-main-3);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+
+    &--ready {
+        border-color: var(--text-profit-success);
+        box-shadow: 0 0 0 1px var(--text-profit-success);
+    }
+
+    &--pending {
+        border-color: var(--brand-warning, #f0a500);
+    }
+
+    &--tripped {
+        opacity: 0.7;
+        border-color: var(--text-loss-danger);
+    }
+
+    /* The flash — fires the instant an entry threshold is breached. */
+    &--flash {
+        border-color: var(--text-profit-success);
+        box-shadow: 0 0 0 2px var(--text-profit-success), 0 0 24px rgba(11, 184, 138, 0.45);
+        animation: se-card-flash 0.9s ease-out;
+    }
+
+    &__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.6rem;
+    }
+
+    &__title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    &__contract {
+        font-size: 0.95rem;
+        color: var(--text-less-prominent);
+        font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+
+    &__state {
+        padding: 0.25rem 0.7rem;
+        border-radius: 999px;
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        background: var(--general-main-3);
+        color: var(--text-less-prominent);
+        white-space: nowrap;
+
+        &--ready {
+            background: var(--text-profit-success);
+            color: #fff;
+        }
+
+        &--pending {
+            background: var(--brand-warning, #f0a500);
+            color: #fff;
+        }
+
+        &--tripped {
+            background: var(--text-loss-danger);
+            color: #fff;
+        }
+    }
+
+    &__desc {
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1.4;
+        color: var(--text-less-prominent);
+    }
+
+    &__target {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.8rem;
+        border-radius: 8px;
+        background: var(--general-main-3);
+    }
+
+    &__target-label {
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__target-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    &__freq {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.18rem;
+        height: 5rem;
+    }
+
+    &__stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.4rem;
+    }
+
+    &__actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    &__btn {
+        flex: 1;
+        padding: 0.45rem 0.6rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+        color: var(--text-general);
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        &--ghost {
+            background: transparent;
+        }
+    }
+
+    &__breaker {
+        margin: 0;
+        padding: 0.5rem 0.7rem;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--text-loss-danger) 12%, var(--general-main-3));
+        color: var(--text-loss-danger);
+        font-size: 1rem;
+        line-height: 1.35;
+    }
+}
+
+@keyframes se-card-flash {
+    0% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 2px var(--text-profit-success), 0 0 32px rgba(11, 184, 138, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 2px var(--text-profit-success), 0 0 24px rgba(11, 184, 138, 0.45);
+    }
+}
+
+.se-freq-bar {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    border-radius: 3px 3px 0 0;
+    background: var(--general-main-3);
+    transition: background 0.2s, height 0.3s;
+
+    &--target {
+        background: var(--text-profit-success);
+    }
+
+    &__digit {
+        position: absolute;
+        bottom: -1.4rem;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+/* ---------------------------------------------------------------- outcomes */
+
+.se-outcomes {
+    padding: 1.2rem 1.4rem;
+    border-radius: 12px;
+    background: var(--general-section-1);
+    border: 1px solid var(--general-main-3);
+
+    &__title {
+        margin: 0 0 0.8rem;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    &__empty {
+        margin: 0;
+        color: var(--text-less-prominent);
+        font-size: 1.1rem;
+    }
+
+    &__list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        max-height: 18rem;
+        overflow-y: auto;
+    }
+}
+
+.se-outcome {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    background: var(--general-main-3);
+    font-size: 1.1rem;
+
+    &--win {
+        border-left: 3px solid var(--text-profit-success);
+    }
+
+    &--loss {
+        border-left: 3px solid var(--text-loss-danger);
+    }
+
+    &__name {
+        font-weight: 700;
+        min-width: 6rem;
+    }
+
+    &__result {
+        font-weight: 700;
+        font-size: 1rem;
+        padding: 0.1rem 0.5rem;
+        border-radius: 5px;
+        color: #fff;
+    }
+
+    &--win &__result {
+        background: var(--text-profit-success);
+    }
+
+    &--loss &__result {
+        background: var(--text-loss-danger);
+    }
+
+    &__digits {
+        margin-left: auto;
+        color: var(--text-less-prominent);
+        font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+}
