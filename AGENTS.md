@@ -35,7 +35,7 @@ and compiling per request; hot updates after that are unchanged.
 - No external service credentials are required for local development.
 
 ## Digits Analysis Lab
-Read-only, public-market-data feature added as the 5th main tab (`#digits`). Lives entirely in `src/pages/digits/`:
+Read-only, public-market-data feature added as the 6th main tab (`#digits`). Lives entirely in `src/pages/digits/`:
 - `deriv-public-ws.ts` — public WebSocket client. **Only public market-data messages are sent** (`active_symbols`, `ticks_history`, `ticks`, `ping`, `forget`). No login, no trading.
 - `precision.ts`, `statistics.ts`, `strategies.ts`, `backtest.ts` — pure calculations, no network. Round only for display.
 - `use-digits-lab.ts` — orchestration hook (market selection, 1000-tick FIFO, generation guards).
@@ -68,7 +68,7 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
 ## Layout notes
 - `.main` in `src/pages/main/main.scss` is a fixed-height, `overflow: hidden` flex box, so a tab page
   must own its own scrolling. `.digits` uses a viewport-based height with `overflow-y: auto`.
-- The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because five tabs
+- The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because seven tabs
   do not fit a narrow phone viewport.
 - The digit-frequency grid (`.digits-grid`) is a fixed 5-column grid at every width — digits 0–4 on
   the first row, 5–9 on the second — so it never scrolls sideways on a phone; below the 768px
@@ -86,11 +86,29 @@ the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has six tabs: Dashboard, Bot Builder, Strategy Engine, Deriv Chart, Digits,
-Statistics.
+The main tab bar has seven tabs, in this order: Dashboard, Free Bots, Bot Builder, Strategy Engine,
+Deriv Chart, Digits, Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
+**Bot Builder is index 2** (Free Bots sits right after Dashboard since the scanner hands a row straight
+to the builder). Code that switches on the active tab compares against `DBOT_TABS.BOT_BUILDER`, never a
+literal — the vendored tours, save/load modals and `bot-builder.tsx` were all moved off `=== 1` when the
+tabs were reordered.
+
+### Floating market scanner (app-wide)
+`ScanMarketsButton` (`digits/components/scan-markets-button.tsx`) is mounted ONCE in the app shell —
+`GlobalScanButton` (`digits/components/global-scan-button.tsx`, lazy-loaded in `main.tsx` inside
+`DigitsLabProvider`, after `</Tabs>`) — so the button is on every tab, not just Digits. It uses the
+shared lab feed through `useDigitsLabContext()`, so it scans the same markets the Digits tab shows.
+- It is a `position: fixed` pill that can be dragged anywhere in the viewport in any direction
+  (pointer events, `touch-action: none`). Position is clamped to the viewport on drag and on resize;
+  the results panel is `position: fixed` too and flips below the button when it sits in the top half,
+  so it stays readable wherever the button is parked.
+- A drag ends with a click on the same button, so `pointerup` after movement sets a one-shot flag that
+  `click` swallows; `pointerdown` clears it, so the next tap always scans.
+- Styles live in `digits/components/scan-markets-button.scss` (imported by the component, NOT by the
+  Digits page — the button must be styled while other tabs are open).
 
 - **Digits + Statistics share ONE feed.** `DigitsLabProvider`
   (`src/pages/digits/digits-lab-context.tsx`) is mounted around `<Tabs>` in `main.tsx`; both pages read
@@ -102,6 +120,47 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
 - **Scanner:** `scan-markets.ts` opens its OWN short-lived public WebSocket (never disturbs the live
   subscription) and ranks volatility markets. Remember `ticks_history` needs `subscribe: 1`; the scan
   sends `forget` straight after each request.
+- **Scanner → Load Bot:** every ranked row renders
+  `src/pages/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
+  template through `matchFreeBotSetup` (`free-bots/scanner-match.ts`), so a row can only ever load the
+  strategy it displayed; **Load Bot is disabled unless all three setup conditions hold** (an unconfirmed
+  row keeps its conditions, reason, evidence and the disabled-reason visible instead of being forced
+  onto a template by its score). Loading goes through
+  `useFreeBotLoader().loadBot({ marketSource: 'scanner' })`, which re-targets the XML, waits for the
+  live workspace, checks the market/contract/prediction **and block count** it reports, then switches to
+  the Bot Builder tab — the panel closes only when that load reports `loaded`
+  (`botLoaderStore.status`). `MarketScan` carries `scannedAt` so each row can show its scan time.
+  Verify: press **Scan markets** (the floating button, visible on every tab), then **Load … bot** on a row whose conditions are
+  all ✓ — expect the Bot Builder tab to open with that symbol in `trade_definition_market` and the
+  matching `DIGITOVER`/`DIGITUNDER` + prediction; rows with ✗ conditions have the button disabled.
+  `docker compose exec web npx jest src/pages/free-bots`.
+- **Loaded-bot banner (Bot Builder):** `BotStatusBanner` (`free-bots/components/bot-status-banner.tsx`)
+  renders as an overlay whenever the Bot Builder tab is active. It reads the live
+  `botLoaderStore`, the header's authorized account (`useApiBase`) and `runPanel.is_running` — never a
+  simulated message. Validate re-reads the **workspace** XML (so canvas edits are re-checked), requires
+  the loaded/active account not to have changed, and Start stays disabled until validation passes.
+  A real account needs a second, explicit **Confirm real-account start** click; Demo starts directly.
+  The banner never claims "Running" until `runPanel.is_running` is true.
+- **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
+  (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
+  **59** for the two original templates, **63** for the two-digit and rare-nine ones and **67** for
+  `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
+  that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
+- **Free Bots library (six templates).** `templates.ts` describes every asset in `src/xml/`; the first
+  two are the uploaded files, the other four are derived from them and add a second entry gate built from
+  the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
+  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares) and `under7_rare_nine`
+  (`obs_and` over `obs_min_sample` + `obs_freq_below`). Those observer blocks sit NESTED inside the
+  `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
+  then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
+  gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`
+  only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
+  the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
+  round, or every observer-gated template fails the loader inspection.
+- Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
+  and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
+  card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.
 - **Statistics from raw digits:** `calculateStatisticsFromDigits` in `statistics.ts` is the digits-only
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab
@@ -136,8 +195,8 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
 ### Verifying these tabs
 - The tab targets are the `<li>` elements `#id-digits`, `#id-statistics` — click these to
   switch; the URL hash only selects a tab on first load, not after mount.
-- Digits: check the market-conditions panel, the chart cursor + ticker trail, the digit-circle marker
-  and the floating "Scan markets" button.
+- Digits: check the market-conditions panel, the chart cursor + ticker trail and the digit-circle marker.
+  The floating "Scan markets" button is app-wide now — it is present on every tab and draggable.
 - The scanner returns ~8 volatility markets; picking one switches the whole tab to that market.
 - Known pre-existing console warning: `Failed to load image` (branding logo) — unrelated to this work.
 

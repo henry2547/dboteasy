@@ -1,0 +1,111 @@
+/* Floating, draggable market scanner — rendered app-wide, not inside a tab page. */
+
+.digits-scan {
+    position: fixed;
+    right: 1.6rem;
+    bottom: 8.4rem;
+    z-index: 30;
+
+    @media (min-width: 768px) {
+        right: 2.4rem;
+        bottom: 9.6rem;
+    }
+
+    &__fab {
+        display: block;
+        padding: 1rem 1.6rem;
+        border-radius: 999px;
+        border: none;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--brand-primary);
+        box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+
+        &:active {
+            cursor: grabbing;
+        }
+
+        &:disabled {
+            opacity: 0.7;
+            cursor: progress;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--text-general);
+            outline-offset: 2px;
+        }
+    }
+
+    &__panel {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 0.8rem);
+        width: min(40rem, calc(100vw - 2.4rem));
+        max-height: 62vh;
+        overflow-y: auto;
+        padding: 1.2rem;
+        border-radius: 12px;
+        background: var(--general-main-1);
+        border: 1px solid var(--general-main-3);
+        box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
+    }
+
+    /* Button parked in the top half: open the results downwards instead. */
+    &--panel-below &__panel {
+        top: calc(100% + 0.8rem);
+        bottom: auto;
+    }
+
+    &__panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    &__close {
+        border: none;
+        background: transparent;
+        color: var(--text-less-prominent);
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    &__note {
+        margin: 0.8rem 0 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+
+        &--error {
+            color: var(--text-loss-danger);
+        }
+    }
+
+    &__recommendation {
+        margin: 0.8rem 0;
+        font-size: 1.2rem;
+        color: var(--text-general);
+    }
+
+    &__list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    /* The result rows themselves are `.scanner-bot` cards (free-bots/components). */
+}

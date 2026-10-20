@@ -1,0 +1,141 @@
+/* One Market Scanner result with its Free Bot. Lives inside `.digits-scan__panel`. */
+
+.scanner-bot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-section-1);
+    color: var(--text-general);
+
+    &--active {
+        border-color: var(--brand-primary);
+        box-shadow: inset 3px 0 0 var(--brand-primary);
+    }
+
+    &__pick {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        width: 100%;
+        padding: 0;
+        border: none;
+        background: transparent;
+        text-align: left;
+        color: inherit;
+        cursor: pointer;
+    }
+
+    &__name {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    &__symbol {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--brand-primary);
+    }
+
+    &__meta {
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__strategy {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.3rem;
+    }
+
+    &__chip {
+        padding: 0.15rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid var(--general-main-3);
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-general);
+
+        &--strategy {
+            border-color: var(--brand-primary);
+            color: var(--brand-primary);
+        }
+
+        &--ok {
+            border-color: var(--brand-success);
+            color: var(--brand-success);
+        }
+
+        &--waiting {
+            border-color: var(--brand-warning);
+            color: var(--brand-warning);
+        }
+
+        &--idle {
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__conditions {
+        margin: 0.3rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.2rem;
+        font-size: 1.05rem;
+    }
+
+    &__condition {
+        &--ok {
+            color: var(--text-general);
+        }
+
+        &--fail {
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__detail {
+        color: var(--text-less-prominent);
+    }
+
+    &__evidence,
+    &__reason {
+        margin: 0.2rem 0 0;
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__notice {
+        margin: 0.3rem 0 0;
+        font-size: 1.05rem;
+        color: var(--brand-warning);
+    }
+
+    &__error {
+        margin: 0.3rem 0 0;
+        font-size: 1.05rem;
+        color: var(--text-loss-danger);
+    }
+
+    &__load {
+        margin-top: 0.4rem;
+        align-self: flex-start;
+        padding: 0.5rem 1.1rem;
+        border-radius: 999px;
+        border: none;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--brand-primary);
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+    }
+}

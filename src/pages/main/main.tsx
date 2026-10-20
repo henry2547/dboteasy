@@ -34,6 +34,7 @@ import {
 import {
     LabelPairedChartLineCaptionRegularIcon,
     LabelPairedCircleDotCaptionFillIcon,
+    LabelPairedCircleStarCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
@@ -52,6 +53,8 @@ const DerivChart = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const StatisticsPage = lazy(() => import('../statistics'));
 const StrategyEnginePage = lazy(() => import('../strategy-engine'));
+const FreeBotsPage = lazy(() => import('../free-bots'));
+const GlobalScanButton = lazy(() => import('../digits/components/global-scan-button'));
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();
@@ -84,7 +87,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'strategy_engine', 'chart', 'digits', 'statistics'];
+    const hash = ['dashboard', 'free_bots', 'bot_builder', 'strategy_engine', 'chart', 'digits', 'statistics'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -405,6 +408,27 @@ const AppWrapper = observer(() => {
                             <div
                                 label={
                                     <>
+                                        <LabelPairedCircleStarCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Free Bots' />
+                                    </>
+                                }
+                                id='id-free-bots'
+                            >
+                                <ErrorBoundary label='Free Bots'>
+                                    <Suspense
+                                        fallback={<ChunkLoader message={localize('Please wait, loading the free bots...')} />}
+                                    >
+                                        <FreeBotsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
+                            <div
+                                label={
+                                    <>
                                         <LabelPairedPuzzlePieceTwoCaptionBoldIcon
                                             height='24px'
                                             width='24px'
@@ -512,6 +536,9 @@ const AppWrapper = observer(() => {
                                 </ErrorBoundary>
                             </div>
                         </Tabs>
+                        <Suspense fallback={null}>
+                            <GlobalScanButton />
+                        </Suspense>
                         </DigitsLabProvider>
                         {!isDesktop && right_tab_shadow && <span className='tabs-shadow tabs-shadow--right' />}{' '}
                     </div>
