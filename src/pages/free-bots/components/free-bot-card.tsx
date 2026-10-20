@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { MarketSymbol } from '@/pages/digits/types';
 import type { MarketSupport } from '../market-support';
 import type { FreeBotTemplate } from '../templates';
@@ -16,6 +17,9 @@ interface FreeBotCardProps {
  * One bot in the library. Every value shown comes from the template that the
  * XML asset is checked against, and the market line makes clear that the
  * template's own market is only a default.
+ *
+ * The card starts collapsed to just the bot's name, so the library stays short
+ * and several bots fit on one screen; the header toggles the rest open.
  */
 export default function FreeBotCard({
     template,
@@ -26,6 +30,9 @@ export default function FreeBotCard({
     errorMessage,
     onLoad,
 }: FreeBotCardProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const detailsId = `free-bot-${template.id}-details`;
+
     const rows: [string, string][] = [
         ['Strategy', template.strategyLabel],
         ['Entry trigger', template.entryRule],
@@ -57,42 +64,61 @@ export default function FreeBotCard({
 
     return (
         <article className='free-bot-card' aria-label={template.name}>
-            <header className='free-bot-card__head'>
-                <h3 className='free-bot-card__name'>{template.name}</h3>
-                <span className='free-bot-card__tag'>{template.strategyLabel}</span>
-            </header>
+            <h3 className='free-bot-card__name'>
+                <button
+                    type='button'
+                    className='free-bot-card__toggle'
+                    onClick={() => setIsOpen(open => !open)}
+                    aria-expanded={isOpen}
+                    aria-controls={detailsId}
+                >
+                    <span>{template.name}</span>
+                    <span className='free-bot-card__caret' aria-hidden='true'>
+                        {isOpen ? '▲' : '▼'}
+                    </span>
+                </button>
+            </h3>
 
-            <dl className='free-bot-card__settings'>
-                {rows.map(([label, value]) => (
-                    <div className='free-bot-card__row' key={label}>
-                        <dt className='free-bot-card__label'>{label}</dt>
-                        <dd className='free-bot-card__value'>{value}</dd>
+            {isOpen && (
+                <div className='free-bot-card__body' id={detailsId}>
+                    <div className='free-bot-card__head'>
+                        <span className='free-bot-card__tag'>{template.strategyLabel}</span>
                     </div>
-                ))}
-            </dl>
 
-            <p className='free-bot-card__market'>
-                Will be loaded on: <strong>{marketLine}</strong>
-            </p>
+                    <dl className='free-bot-card__settings'>
+                        {rows.map(([label, value]) => (
+                            <div className='free-bot-card__row' key={label}>
+                                <dt className='free-bot-card__label'>{label}</dt>
+                                <dd className='free-bot-card__value'>{value}</dd>
+                            </div>
+                        ))}
+                    </dl>
 
-            <p className='free-bot-card__source'>Template file: {template.sourceFile}</p>
+                    <p className='free-bot-card__market'>
+                        Will be loaded on: <strong>{marketLine}</strong>
+                    </p>
 
-            <p className='free-bot-card__note'>
-                These are the XML defaults, not guaranteed profitable settings. Every value stays editable in the Bot
-                Builder after loading.
-            </p>
+                    <p className='free-bot-card__source'>Template file: {template.sourceFile}</p>
 
-            <button
-                type='button'
-                className='free-bot-card__load'
-                onClick={onLoad}
-                disabled={blocked}
-                title={blockReason || `Load ${template.name} into the Bot Builder`}
-            >
-                {loading ? 'Loading…' : 'Load in Bot Builder'}
-            </button>
+                    <p className='free-bot-card__note'>
+                        These are the XML defaults, not guaranteed profitable settings. Every value stays editable in
+                        the Bot Builder after loading.
+                    </p>
 
-            {blockReason && <p className='free-bot-card__blocked'>{blockReason}</p>}
+                    <button
+                        type='button'
+                        className='free-bot-card__load'
+                        onClick={onLoad}
+                        disabled={blocked}
+                        title={blockReason || `Load ${template.name} into the Bot Builder`}
+                    >
+                        {loading ? 'Loading…' : 'Load in Bot Builder'}
+                    </button>
+
+                    {blockReason && <p className='free-bot-card__blocked'>{blockReason}</p>}
+                </div>
+            )}
+
             {errorMessage && <p className='free-bot-card__error'>{errorMessage}</p>}
         </article>
     );

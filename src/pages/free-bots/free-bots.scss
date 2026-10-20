@@ -185,6 +185,35 @@
         font-weight: 700;
     }
 
+    /* The whole header line is the collapse toggle, so a collapsed card shows
+       nothing but the bot's name. */
+    &__toggle {
+        display: flex;
+        gap: 0.8rem;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    &__caret {
+        flex: 0 0 auto;
+        font-size: 1rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
     &__tag {
         padding: 0.25rem 0.7rem;
         border-radius: 999px;
