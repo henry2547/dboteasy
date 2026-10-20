@@ -69,6 +69,25 @@ describe('inspectFreeBotXml', () => {
         expect(report.errors.join(' ')).toContain('Entry condition mismatch');
     });
 
+    it('accepts a stake that is initialised before the first trade', () => {
+        const report = inspectFreeBotXml(xmlOf(), over1, isKnown);
+        const check = report.checks.find(item => item.id === 'stake-at-start');
+
+        expect(report.ok).toBe(true);
+        expect(check?.passed).toBe(true);
+    });
+
+    it('fails a stake that is only set inside before_purchase', () => {
+        // `Bot.start()` reads the amount before `before_purchase` ever runs, so a
+        // stake set there is undefined when Deriv is asked for the first quote.
+        const xml = xmlOf().replace('<statement name="INITIALIZATION">', '<statement name="NOT_RUN_AT_START">');
+        const report = inspectFreeBotXml(xml, over1, isKnown);
+        const check = report.checks.find(item => item.id === 'stake-at-start');
+
+        expect(check?.passed).toBe(false);
+        expect(report.errors.join(' ')).toContain('freebot-stake');
+    });
+
     it('fails a template whose variable references do not resolve', () => {
         const xml = xmlOf().replace(
             '<field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>',

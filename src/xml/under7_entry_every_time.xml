@@ -40,35 +40,7 @@
         </next>
       </block>
     </statement>
-    <statement name="SUBMARKET">
-      <block type="trade_definition_tradeoptions" id="freebot-under7-tradeoptions">
-        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
-        <field name="DURATIONTYPE_LIST">t</field>
-        <field name="CURRENCY_LIST">USD</field>
-        <value name="DURATION">
-          <shadow type="math_number_positive" id="freebot-under7-duration">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="AMOUNT">
-          <shadow type="math_number_positive" id="freebot-under7-initial-stake">
-            <field name="NUM">10</field>
-          </shadow>
-          <block type="variables_get" id="freebot-under7-stake">
-            <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
-          </block>
-        </value>
-        <value name="PREDICTION">
-          <shadow type="math_number_positive" id="freebot-under7-prediction">
-            <field name="NUM">7</field>
-          </shadow>
-        </value>
-        <field name="AMOUNT_LIMITS"></field>
-      </block>
-    </statement>
-  </block>
-  <block type="before_purchase" id="freebot-under7-before-purchase" x="0" y="740">
-    <statement name="BEFOREPURCHASE_STACK">
+    <statement name="INITIALIZATION">
       <block type="controls_if" id="freebot-under7-init">
         <value name="IF0">
           <block type="logic_negate" id="freebot-under7-not-initialised">
@@ -119,28 +91,56 @@
             </next>
           </block>
         </statement>
-        <next>
-          <block type="controls_if" id="freebot-under7-entry">
-            <value name="IF0">
-              <block type="logic_compare" id="freebot-under7-entry-compare">
-                <field name="OP">GTE</field>
-                <value name="A">
-                  <block type="last_digit" id="freebot-under7-entry-digit"></block>
-                </value>
-                <value name="B">
-                  <shadow type="math_number" id="freebot-under7-entry-trigger">
-                    <field name="NUM">7</field>
-                  </shadow>
-                </value>
-              </block>
-            </value>
-            <statement name="DO0">
-              <block type="purchase" id="freebot-under7-purchase">
-                <field name="PURCHASE_LIST">DIGITUNDER</field>
-              </block>
-            </statement>
+      </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="freebot-under7-tradeoptions">
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <field name="CURRENCY_LIST">USD</field>
+        <value name="DURATION">
+          <shadow type="math_number_positive" id="freebot-under7-duration">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number_positive" id="freebot-under7-initial-stake">
+            <field name="NUM">10</field>
+          </shadow>
+          <block type="variables_get" id="freebot-under7-stake">
+            <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
           </block>
-        </next>
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive" id="freebot-under7-prediction">
+            <field name="NUM">7</field>
+          </shadow>
+        </value>
+        <field name="AMOUNT_LIMITS"></field>
+      </block>
+    </statement>
+  </block>
+  <block type="before_purchase" id="freebot-under7-before-purchase" x="0" y="740">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="freebot-under7-entry">
+        <value name="IF0">
+          <block type="logic_compare" id="freebot-under7-entry-compare">
+            <field name="OP">GTE</field>
+            <value name="A">
+              <block type="last_digit" id="freebot-under7-entry-digit"></block>
+            </value>
+            <value name="B">
+              <shadow type="math_number" id="freebot-under7-entry-trigger">
+                <field name="NUM">7</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="purchase" id="freebot-under7-purchase">
+            <field name="PURCHASE_LIST">DIGITUNDER</field>
+          </block>
+        </statement>
       </block>
     </statement>
   </block>

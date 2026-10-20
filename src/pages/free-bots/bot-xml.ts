@@ -381,6 +381,42 @@ export function inspectFreeBotXml(
     });
     if (!stakeOk) errors.push(`Expected an initial stake of ${template.stake} but the XML says ${settings.stake ?? 'nothing'}.`);
 
+    // `Bot.start()` runs before `before_purchase` on every trade loop, so a stake
+    // kept in a variable has to be set by the trade definition's run-once block.
+    // A stake initialised inside `before_purchase` is still unset when the first
+    // proposal is requested and Deriv rejects it with "Invalid input provided".
+    const tradeOptions = blocksOfType(doc, 'trade_definition_tradeoptions')[0] ?? null;
+    const runOnce = Array.from(blocksOfType(doc, 'trade_definition')[0]?.children ?? []).find(
+        child => child.tagName === 'statement' && child.getAttribute('name') === 'INITIALIZATION'
+    );
+    const optionVariables = Array.from(
+        tradeOptions?.querySelectorAll('value block[type="variables_get"] field[name="VAR"]') ?? []
+    )
+        .map(field => field.getAttribute('id'))
+        .filter((id): id is string => !!id);
+    const startedVariables = new Set(
+        Array.from(runOnce?.querySelectorAll('block[type="variables_set"] field[name="VAR"]') ?? [])
+            .map(field => field.getAttribute('id'))
+            .filter((id): id is string => !!id)
+    );
+    const unsetVariables = optionVariables.filter(id => !startedVariables.has(id));
+    const startOk = unsetVariables.length === 0;
+    checks.push({
+        id: 'stake-at-start',
+        label: 'Stake set before the first trade',
+        passed: startOk,
+        detail: startOk
+            ? optionVariables.length
+                ? `${optionVariables.length} stake value(s) initialised in the run-once block.`
+                : 'The trade options use fixed values.'
+            : `${unsetVariables.join(', ')} is only set after the first trade is requested.`,
+    });
+    if (!startOk) {
+        errors.push(
+            `The stake value ${unsetVariables.join(', ')} must be initialised in the trade definition's "Run once at start" block — it is still unset when the first trade is requested.`
+        );
+    }
+
     const entry = findEntryCondition(doc);
     const expectsParity = !!template.entryParity;
     const entryOk =
