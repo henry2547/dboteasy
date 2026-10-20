@@ -57,6 +57,14 @@ changes. React consumers must ignore non-transitions — otherwise every incomin
 the "connected" handler and re-selects the market, which invalidates the request in flight and
 the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
 
+### Symbol preload failures are non-fatal
+`api_base.init()` preloads `active_symbols` fire-and-forget (10 s timeout). A slow or failed fetch
+must stay a `console.warn`, never an uncaught promise rejection: the promise is stored on
+`api_base.active_symbols_promise`, so every assignment site attaches a rejection handler, and
+`ActiveSymbols.retrieveActiveSymbols()` catches a rejected shared promise and falls through to its
+single fresh-fetch retry. The dashboard and Digits page read the public feed independently and keep
+working while the bot-side symbol list is empty.
+
 ## Branding: logo and splash
 - `public/logo.png` is the brand mark. `brand.config.json` -> `platform.logo_path` must point at it
   (`"/logo.png"`); `getLogoCandidates()` returns nothing when `logo_path` is `null`, so dropping the

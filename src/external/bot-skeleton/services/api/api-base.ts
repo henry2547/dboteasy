@@ -191,7 +191,15 @@ class APIBase {
         const hasAccountID = V2GetActiveAccountId();
 
         if (!this.has_active_symbols && !hasAccountID) {
-            this.active_symbols_promise = this.getActiveSymbols().then(() => undefined);
+            // Fire-and-forget preload: a slow or failed fetch must not surface as an
+            // unhandled rejection. Callers that need symbols await the promise
+            // themselves (see active-symbols.js), which retries on failure.
+            this.active_symbols_promise = this.getActiveSymbols()
+                .then(() => undefined)
+                .catch(error => {
+                    console.warn('Active symbols preload failed:', error);
+                    return undefined;
+                });
         }
 
         this.initEventListeners();
@@ -355,6 +363,9 @@ class APIBase {
                 this.toggleRunButton(false);
             } else {
                 this.active_symbols_promise = this.getActiveSymbols();
+                // Awaiters still observe the rejection; this only stops an unhandled
+                // rejection when nothing is awaiting the shared promise.
+                this.active_symbols_promise.catch(() => undefined);
             }
             this.subscribe();
         } catch (e) {
@@ -396,11 +407,17 @@ class APIBase {
             throw new Error('API connection not available for fetching active symbols');
         }
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let enrichmentTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
         try {
             // Add timeout to prevent hanging
-            const timeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Active symbols fetch timeout')), this.ACTIVE_SYMBOLS_TIMEOUT_MS)
-            );
+            const timeout = new Promise((_, reject) => {
+                timeoutId = setTimeout(
+                    () => reject(new Error('Active symbols fetch timeout')),
+                    this.ACTIVE_SYMBOLS_TIMEOUT_MS
+                );
+            });
 
             const activeSymbolsPromise = doUntilDone(() => this.api?.send({ active_symbols: 'brief' }), [], this);
 
@@ -420,9 +437,12 @@ class APIBase {
 
             // Process active symbols using the dedicated service with fallback
             try {
-                const enrichmentTimeout = new Promise<never>((_, reject) =>
-                    setTimeout(() => reject(new Error('Enrichment timeout')), this.ENRICHMENT_TIMEOUT_MS)
-                );
+                const enrichmentTimeout = new Promise<never>((_, reject) => {
+                    enrichmentTimeoutId = setTimeout(
+                        () => reject(new Error('Enrichment timeout')),
+                        this.ENRICHMENT_TIMEOUT_MS
+                    );
+                });
 
                 const enrichmentPromise = activeSymbolsProcessorService.processActiveSymbols(active_symbols);
                 const processedResult = await Promise.race([enrichmentPromise, enrichmentTimeout]);
@@ -441,6 +461,9 @@ class APIBase {
         } catch (error) {
             console.error('Failed to fetch and process active symbols:', error);
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
+            clearTimeout(enrichmentTimeoutId);
         }
     };
 

@@ -58,8 +58,15 @@ export default class ActiveSymbols {
             if (!api_base.active_symbols_promise) {
                 api_base.active_symbols_promise = api_base.getActiveSymbols();
             }
-            // Wait for the promise and use its resolved value
-            const symbols = await api_base.active_symbols_promise;
+            // Wait for the promise and use its resolved value. A failed shared
+            // fetch is handled below by the single fresh-fetch retry.
+            let symbols;
+            try {
+                symbols = await api_base.active_symbols_promise;
+            } catch (error) {
+                console.warn('Shared active symbols fetch failed, retrying:', error);
+                symbols = null;
+            }
             this.active_symbols = symbols ?? api_base?.active_symbols ?? [];
         }
 
