@@ -223,6 +223,42 @@
         font-weight: 600;
     }
 
+    /* The two rules a user has to understand before loading a bot, stated in
+       plain language above the numeric defaults. */
+    &__rule {
+        margin: 0;
+        padding: 0.7rem 0.9rem;
+        border-radius: 8px;
+        border-left: 3px solid var(--brand-primary);
+        background: var(--general-main-1);
+        font-size: 1.2rem;
+        line-height: 1.5;
+
+        &--restart {
+            border-left-color: var(--brand-warning);
+        }
+    }
+
+    &__rule-label {
+        display: block;
+        margin-bottom: 0.2rem;
+        color: var(--brand-primary);
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    &__rule--restart &__rule-label {
+        color: var(--brand-warning);
+    }
+
+    &__blocks {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+    }
+
     &__settings {
         display: grid;
         gap: 0.35rem;

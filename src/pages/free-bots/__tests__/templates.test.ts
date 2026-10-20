@@ -1,5 +1,5 @@
 /**
- * The two Free Bots templates are only loadable if they survive the app's own
+ * Every Free Bots template is only loadable if it survives the app's own
  * pre-flight inspection, so these tests run `inspectFreeBotXml` — the exact
  * function `use-free-bot-loader` calls before anything reaches the workspace —
  * against the shipped assets.
@@ -13,10 +13,14 @@ import fs from 'fs';
 import path from 'path';
 
 // rsbuild inlines `src/xml/*.xml` as raw strings (raw-loader); jest has no such
-// loader, so the two assets are mocked here — every assertion reads the real
-// file from disk instead.
+// loader, so every asset is mocked here — each assertion reads the real file
+// from disk instead.
 jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
+jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
+jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
+jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml } from '../bot-xml';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from '../templates';
@@ -41,6 +45,14 @@ function registeredBlockTypes(): Set<string> {
     };
 
     walk(blocks_root);
+
+    // The observer blocks are registered from a runtime catalogue (`obs_…` types are derived from
+    // ids), so they cannot be read off `window.Blockly.Blocks = …` assignments — take them from the
+    // catalogue the Builder itself registers from.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const catalog = require('@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog');
+    (catalog.BLOCKS as { type: string }[]).forEach(spec => types.add(spec.type));
+
     return types;
 }
 
@@ -70,6 +82,22 @@ describe('Free Bots templates', () => {
         expect(report.settings.entryOperator).toBe(template.entryOperator);
         expect(report.settings.triggerDigit).toBe(String(template.triggerDigit));
         expect(report.variables.some(name => name.startsWith('freebot:'))).toBe(true);
+    });
+
+    it.each(FREE_BOT_TEMPLATES)('$name states its purchase and restart conditions', template => {
+        expect(template.buyCondition.length).toBeGreaterThan(20);
+        expect(template.restartCondition.length).toBeGreaterThan(20);
+    });
+
+    it('the observer-gated templates really carry observer blocks', () => {
+        const gated = FREE_BOT_TEMPLATES.filter(template => template.blocksUsed !== 'Standard digit blocks only');
+
+        expect(gated.length).toBeGreaterThanOrEqual(3);
+        gated.forEach(template => {
+            const report = inspectFreeBotXml(assetOf(template), template, isKnown);
+            expect(report.blockTypes.some(type => type.startsWith('obs_'))).toBe(true);
+            expect(report.unsupportedTypes).toEqual([]);
+        });
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {

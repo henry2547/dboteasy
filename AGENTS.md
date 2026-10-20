@@ -143,9 +143,24 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **59** for both templates. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  **59** for the two original templates, **63** for the two-digit and rare-nine ones and **67** for
+  `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
-  that formula in sync if a template gains blocks.
+  that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
+- **Free Bots library (six templates).** `templates.ts` describes every asset in `src/xml/`; the first
+  two are the uploaded files, the other four are derived from them and add a second entry gate built from
+  the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
+  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares) and `under7_rare_nine`
+  (`obs_and` over `obs_min_sample` + `obs_freq_below`). Those observer blocks sit NESTED inside the
+  `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
+  then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
+  gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`
+  only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
+  the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
+  round, or every observer-gated template fails the loader inspection.
+- Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
+  and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
+  card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.
 - **Statistics from raw digits:** `calculateStatisticsFromDigits` in `statistics.ts` is the digits-only
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab

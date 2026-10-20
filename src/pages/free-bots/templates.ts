@@ -6,21 +6,35 @@
  * settings, and `bot-xml.ts` re-reads the asset before anything is loaded into
  * the Bot Builder — a card never shows a value the XML does not carry.
  *
- * The two assets were built from the two uploaded strategy files
+ * The first two assets were built from the two uploaded strategy files
  * ("Over 1 with Entry every time.xml" / "Under 8 with Entry every time.xml");
- * `sourceFile` records that origin.
+ * `sourceFile` records that origin. The later four are derived from those two
+ * and add an extra confirmation gate built from the Bot Builder's observer
+ * blocks (`Read Digit N Ticks Ago`, `Check Minimum Sample Size`,
+ * `Digit Frequency Below`), which is why each card lists the blocks it uses.
  */
 
 import over1EntryEveryTimeXml from '@/xml/over1_entry_every_time.xml';
+import over1TwoLowDigitsXml from '@/xml/over1_two_low_digits.xml';
+import over2ThreeLowDigitsXml from '@/xml/over2_three_low_digits.xml';
+import under7RareNineXml from '@/xml/under7_rare_nine.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
+import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 
-export type FreeBotId = 'over1_entry_every_time' | 'under8_entry_every_time';
-export type FreeBotStrategy = 'over1' | 'under8';
+export type FreeBotId =
+    | 'over1_entry_every_time'
+    | 'under8_entry_every_time'
+    | 'over1_two_low_digits'
+    | 'under8_two_high_digits'
+    | 'over2_three_low_digits'
+    | 'under7_rare_nine';
+
+export type FreeBotStrategy = 'over1' | 'under8' | 'over2' | 'under7';
 
 export interface FreeBotTemplate {
     id: FreeBotId;
     name: string;
-    /** Uploaded XML the template was taken from. */
+    /** Uploaded XML the template was taken from (or the template it was derived from). */
     sourceFile: string;
     /** Asset under `src/xml/` that is loaded into the Bot Builder. */
     asset: string;
@@ -39,8 +53,16 @@ export interface FreeBotTemplate {
     entryOperator: 'LTE' | 'GTE';
     triggerDigit: number;
     entryRule: string;
+    /** Plain-language purchase condition, shown on the card as "Buys when". */
+    buyCondition: string;
     afterPurchase: string;
+    /** Plain-language restart rule, shown on the card as "Trades again when". */
+    restartCondition: string;
+    /** Observer blocks the template leans on, or "Standard digit blocks only". */
+    blocksUsed: string;
 }
+
+const MARTINGALE_STOP = 'the bot stops for good at +10 profit or −20 loss';
 
 export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     {
@@ -61,7 +83,13 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 1,
         entryRule: 'Last digit is less than or equal to 1 (0 or 1)',
+        buyCondition: 'Every tick whose last digit is 0 or 1 — no extra filter, so it buys often.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again immediately until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Standard digit blocks only',
     },
     {
         id: 'under8_entry_every_time',
@@ -81,13 +109,131 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 8,
         entryRule: 'Last digit is greater than or equal to 8 (8 or 9)',
+        buyCondition: 'Every tick whose last digit is 8 or 9 — no extra filter, so it buys often.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Standard digit blocks only',
+    },
+    {
+        id: 'over1_two_low_digits',
+        name: 'Over 1 — Two Low Digits in a Row',
+        sourceFile: 'Derived from Over 1 with Entry every time.xml',
+        asset: 'over1_two_low_digits.xml',
+        strategy: 'over1',
+        strategyLabel: 'Digit Over',
+        contractType: 'DIGITOVER',
+        prediction: 1,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: 'LTE',
+        triggerDigit: 1,
+        entryRule: 'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1',
+        buyCondition:
+            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that shows another double low run, until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number',
+    },
+    {
+        id: 'under8_two_high_digits',
+        name: 'Under 8 — Two High Digits in a Row',
+        sourceFile: 'Derived from Under 8 with Entry every time.xml',
+        asset: 'under8_two_high_digits.xml',
+        strategy: 'under8',
+        strategyLabel: 'Digit Under',
+        contractType: 'DIGITUNDER',
+        prediction: 8,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 2,
+        entryOperator: 'GTE',
+        triggerDigit: 8,
+        entryRule: 'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8',
+        buyCondition:
+            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that shows another double high run, until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Read Digit N Ticks Ago · Greater Than Or Equal To · Number',
+    },
+    {
+        id: 'over2_three_low_digits',
+        name: 'Over 2 — Three Low Digits in a Row',
+        sourceFile: 'Derived from Over 1 with Entry every time.xml',
+        asset: 'over2_three_low_digits.xml',
+        strategy: 'over2',
+        strategyLabel: 'Digit Over',
+        contractType: 'DIGITOVER',
+        prediction: 2,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 5,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: 'LTE',
+        triggerDigit: 2,
+        entryRule: 'Last digit ≤ 2 AND the two digits before it were also ≤ 2',
+        buyCondition:
+            'The last three digits in a row are all 0, 1 or 2 — one tick ago and two ticks ago are both checked with Read Digit N Ticks Ago, then combined with AND.',
+        afterPurchase: 'Win → stake back to 5 · Loss → stake × 1.5 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 5 after a win, ×1.5 after a loss, and it trades again on the next tick that completes another three-in-a-row run, until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND',
+    },
+    {
+        id: 'under7_rare_nine',
+        name: 'Under 7 — Only When 9 Is Rare',
+        sourceFile: 'Derived from Under 8 with Entry every time.xml',
+        asset: 'under7_rare_nine.xml',
+        strategy: 'under7',
+        strategyLabel: 'Digit Under',
+        contractType: 'DIGITUNDER',
+        prediction: 7,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 2,
+        entryOperator: 'GTE',
+        triggerDigit: 7,
+        entryRule: 'Last digit ≥ 7 · at least 100 ticks observed · digit 9 under 10% of the window',
+        buyCondition:
+            'The last digit is 7, 8 or 9, this run has already seen 100 genuine ticks, and digit 9 took less than 10% of the analysis window — checked with Check Minimum Sample Size and Digit Frequency Below.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND',
     },
 ];
 
 const FREE_BOT_XML: Record<FreeBotId, string> = {
     over1_entry_every_time: over1EntryEveryTimeXml,
     under8_entry_every_time: under8EntryEveryTimeXml,
+    over1_two_low_digits: over1TwoLowDigitsXml,
+    under8_two_high_digits: under8TwoHighDigitsXml,
+    over2_three_low_digits: over2ThreeLowDigitsXml,
+    under7_rare_nine: under7RareNineXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {

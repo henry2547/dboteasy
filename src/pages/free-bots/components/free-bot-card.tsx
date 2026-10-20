@@ -35,7 +35,6 @@ export default function FreeBotCard({
 
     const rows: [string, string][] = [
         ['Strategy', template.strategyLabel],
-        ['Entry trigger', template.entryRule],
         ['Contract', `${template.contractType} · prediction ${template.prediction}`],
         ['Duration', `${template.durationTicks} tick`],
         ['Default market in the XML', `${template.defaultMarket} — replaced by the market you pick`],
@@ -43,7 +42,6 @@ export default function FreeBotCard({
         ['Take profit', `${template.takeProfit} USD`],
         ['Stop loss', `${template.stopLoss} USD`],
         ['Martingale multiplier', `×${template.multiplier}`],
-        ['After purchase', template.afterPurchase],
     ];
 
     const marketLine = market
@@ -84,6 +82,18 @@ export default function FreeBotCard({
                     <div className='free-bot-card__head'>
                         <span className='free-bot-card__tag'>{template.strategyLabel}</span>
                     </div>
+
+                    <p className='free-bot-card__rule free-bot-card__rule--buy'>
+                        <span className='free-bot-card__rule-label'>Buys when</span>
+                        {template.buyCondition}
+                    </p>
+
+                    <p className='free-bot-card__rule free-bot-card__rule--restart'>
+                        <span className='free-bot-card__rule-label'>Trades again when</span>
+                        {template.restartCondition}
+                    </p>
+
+                    <p className='free-bot-card__blocks'>Blocks used: {template.blocksUsed}</p>
 
                     <dl className='free-bot-card__settings'>
                         {rows.map(([label, value]) => (
