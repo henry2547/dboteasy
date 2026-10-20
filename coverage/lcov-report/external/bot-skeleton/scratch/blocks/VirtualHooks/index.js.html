@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">52.98% </span>
+                <span class="strong">54.22% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>160/302</span>
+                <span class='fraction'>167/308</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">40% </span>
+                <span class="strong">36.84% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/15</span>
+                <span class='fraction'>7/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">22.22% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/27</span>
+                <span class='fraction'>7/28</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">52.98% </span>
+                <span class="strong">54.22% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>160/302</span>
+                <span class='fraction'>167/308</span>
             </div>
         
             
@@ -365,7 +365,13 @@
 <a name='L300'></a><a href='#L300'>300</a>
 <a name='L301'></a><a href='#L301'>301</a>
 <a name='L302'></a><a href='#L302'>302</a>
-<a name='L303'></a><a href='#L303'>303</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -389,8 +395,10 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -636,14 +644,18 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -652,11 +664,11 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -688,11 +700,13 @@
 import { localize } from '@deriv-com/translations';
 import { modifyContextMenu } from '../../utils';
 &nbsp;
-const COLOURS = {
-    colour: '#6d28d9',
-    colourSecondary: '#7c3aed',
-    colourTertiary: '#c4b5fd',
-};
+// Same palette as the digit blocks (`blocks/Digits/`), so these look like every other trading
+// block. `Colours` is only populated once Blockly initialises, so read it when a block is built.
+const colours = <span class="fstat-no" title="function not covered" >() =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >    colour: window.Blockly.Colours.Base.colour,</span>
+<span class="cstat-no" title="statement not covered" >    colourSecondary: window.Blockly.Colours.Base.colourSecondary,</span>
+<span class="cstat-no" title="statement not covered" >    colourTertiary: window.Blockly.Colours.Base.colourTertiary,</span>
+<span class="cstat-no" title="statement not covered" >});</span>
 &nbsp;
 const EVENT_OPTIONS = [
     ['New tick', 'tick'],
@@ -776,7 +790,7 @@ window.Blockly.Blocks.vhook_register = {
 <span class="cstat-no" title="statement not covered" >            args4: [{ type: 'input_value', name: 'CONDITION', check: 'Boolean' }],</span>
 <span class="cstat-no" title="statement not covered" >            previousStatement: null,</span>
 <span class="cstat-no" title="statement not covered" >            nextStatement: null,</span>
-<span class="cstat-no" title="statement not covered" >            ...COLOURS,</span>
+<span class="cstat-no" title="statement not covered" >            ...colours(),</span>
 <span class="cstat-no" title="statement not covered" >            tooltip: localize(</span>
 <span class="cstat-no" title="statement not covered" >                'Registers a named hook. Nothing runs when the workspace loads or the bot starts — only when the event you chose actually occurs. Leave the market empty to listen on the market the bot trades. A duplicate hook name is rejected before the run so one event cannot run twice.'</span>
 <span class="cstat-no" title="statement not covered" >            ),</span>
@@ -808,7 +822,7 @@ window.Blockly.Blocks.vhook_listener = {
 <span class="cstat-no" title="statement not covered" >            message1: localize('do {{ action }}', { action: '%1' }),</span>
 <span class="cstat-no" title="statement not covered" >            args1: [{ type: 'input_statement', name: 'DO' }],</span>
 <span class="cstat-no" title="statement not covered" >            nextStatement: null,</span>
-<span class="cstat-no" title="statement not covered" >            ...COLOURS,</span>
+<span class="cstat-no" title="statement not covered" >            ...colours(),</span>
 <span class="cstat-no" title="statement not covered" >            tooltip: localize(</span>
 <span class="cstat-no" title="statement not covered" >                'Runs the connected blocks, in order, when the named hook fires. It does not run when the workspace loads, when you press Run, or when unrelated hooks fire. Multiple listeners on one hook run in canvas order.'</span>
 <span class="cstat-no" title="statement not covered" >            ),</span>
@@ -839,7 +853,7 @@ window.Blockly.Blocks.vhook_trigger = {
 <span class="cstat-no" title="statement not covered" >            args1: [{ type: 'input_value', name: 'DATA', check: 'String' }],</span>
 <span class="cstat-no" title="statement not covered" >            previousStatement: null,</span>
 <span class="cstat-no" title="statement not covered" >            nextStatement: null,</span>
-<span class="cstat-no" title="statement not covered" >            ...COLOURS,</span>
+<span class="cstat-no" title="statement not covered" >            ...colours(),</span>
 <span class="cstat-no" title="statement not covered" >            tooltip: localize(</span>
 <span class="cstat-no" title="statement not covered" >                'Deliberately fires a registered hook. An unknown or disabled hook is reported instead of firing, and a hook can never trigger itself or recurse past four levels.'</span>
 <span class="cstat-no" title="statement not covered" >            ),</span>
@@ -886,7 +900,7 @@ window.Blockly.Blocks.vhook_condition = {
 <span class="cstat-no" title="statement not covered" >            inputsInline: false,</span>
 <span class="cstat-no" title="statement not covered" >            output: 'Boolean',</span>
 <span class="cstat-no" title="statement not covered" >            outputShape: window.Blockly.OUTPUT_SHAPE_HEXAGONAL,</span>
-<span class="cstat-no" title="statement not covered" >            ...COLOURS,</span>
+<span class="cstat-no" title="statement not covered" >            ...colours(),</span>
 <span class="cstat-no" title="statement not covered" >            tooltip: localize(</span>
 <span class="cstat-no" title="statement not covered" >                'Evaluates a condition against the genuine ticks the running feed delivered. Place it inside Purchase conditions to gate automated trade execution, or on a Register Virtual Hook block to filter that hook’s events. Missing data never passes.'</span>
 <span class="cstat-no" title="statement not covered" >            ),</span>
@@ -917,7 +931,7 @@ window.Blockly.Blocks.vhook_result = {
 <span class="cstat-no" title="statement not covered" >            args0: [{ type: 'field_dropdown', name: 'FIELD', options: RESULT_OPTIONS }],</span>
 <span class="cstat-no" title="statement not covered" >            output: 'String',</span>
 <span class="cstat-no" title="statement not covered" >            outputShape: window.Blockly.OUTPUT_SHAPE_ROUND,</span>
-<span class="cstat-no" title="statement not covered" >            ...COLOURS,</span>
+<span class="cstat-no" title="statement not covered" >            ...colours(),</span>
 <span class="cstat-no" title="statement not covered" >            tooltip: localize(</span>
 <span class="cstat-no" title="statement not covered" >                'A validated value from the hook event that is being handled (numbers arrive as text). Empty when the hook runtime has no event yet.'</span>
 <span class="cstat-no" title="statement not covered" >            ),</span>
@@ -937,7 +951,11 @@ window.Blockly.Blocks.vhook_result = {
 };
 &nbsp;
 const generator = window.Blockly.JavaScript.javascriptGenerator;
-const literal = value =&gt; JSON.stringify(String(value));
+const literal = value =&gt;
+    `'${String(value<span class="branch-0 cbranch-no" title="branch not covered" > ?? '')</span>
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r?\n/g, ' ')}'`;
 &nbsp;
 const canvasDriven = block =&gt; {
     if (block.type === 'vhook_register' || block.type === 'vhook_listener') <span class="branch-0 cbranch-no" title="branch not covered" >return true;</span>
@@ -953,12 +971,12 @@ generator.forBlock.vhook_register = block =&gt;
 generator.forBlock.vhook_listener = block =&gt;
     `/* When Virtual Hook ${literal(block.getFieldValue<span class="branch-0 cbranch-no" title="branch not covered" >?.('</span>HOOK')<span class="branch-0 cbranch-no" title="branch not covered" > ?? '')</span>} fires — executed by the virtual hook runtime */\n`;
 &nbsp;
-generator.forBlock.vhook_trigger = <span class="fstat-no" title="function not covered" >block =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (canvasDriven(block)) return `/* Trigger Virtual Hook — executed by the virtual hook runtime */\n`;</span>
-<span class="cstat-no" title="statement not covered" >    const name = literal(block.getFieldValue('NAME'));</span>
-<span class="cstat-no" title="statement not covered" >    const data = generator.valueToCode(block, 'DATA', generator.ORDER_ATOMIC) || "''";</span>
-<span class="cstat-no" title="statement not covered" >    return `Bot.vhookTrigger(${name}, ${data});\n`;</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+generator.forBlock.vhook_trigger = block =&gt; {
+    if (canvasDriven(block)) <span class="branch-0 cbranch-no" title="branch not covered" >return `/* Trigger Virtual Hook — executed by the virtual hook runtime */\n`;</span>
+    const name = literal(block.getFieldValue('NAME'));
+    const data = generator.valueToCode(block, 'DATA', generator.ORDER_ATOMIC)<span class="branch-0 cbranch-no" title="branch not covered" > || "''";</span>
+    return `Bot.vhookTrigger(${name}, ${data});\n`;
+};
 &nbsp;
 generator.forBlock.vhook_condition = block =&gt; {
     if (canvasDriven(block)) <span class="branch-0 cbranch-no" title="branch not covered" >return ['false', generator.ORDER_ATOMIC];</span>
@@ -976,7 +994,7 @@ generator.forBlock.vhook_result = block =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-20T20:47:35.103Z
+                at 2026-10-20T21:08:40.503Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

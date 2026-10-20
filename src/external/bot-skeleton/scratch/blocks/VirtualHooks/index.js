@@ -19,11 +19,13 @@
 import { localize } from '@deriv-com/translations';
 import { modifyContextMenu } from '../../utils';
 
-const COLOURS = {
-    colour: '#6d28d9',
-    colourSecondary: '#7c3aed',
-    colourTertiary: '#c4b5fd',
-};
+// Same palette as the digit blocks (`blocks/Digits/`), so these look like every other trading
+// block. `Colours` is only populated once Blockly initialises, so read it when a block is built.
+const colours = () => ({
+    colour: window.Blockly.Colours.Base.colour,
+    colourSecondary: window.Blockly.Colours.Base.colourSecondary,
+    colourTertiary: window.Blockly.Colours.Base.colourTertiary,
+});
 
 const EVENT_OPTIONS = [
     ['New tick', 'tick'],
@@ -107,7 +109,7 @@ window.Blockly.Blocks.vhook_register = {
             args4: [{ type: 'input_value', name: 'CONDITION', check: 'Boolean' }],
             previousStatement: null,
             nextStatement: null,
-            ...COLOURS,
+            ...colours(),
             tooltip: localize(
                 'Registers a named hook. Nothing runs when the workspace loads or the bot starts — only when the event you chose actually occurs. Leave the market empty to listen on the market the bot trades. A duplicate hook name is rejected before the run so one event cannot run twice.'
             ),
@@ -139,7 +141,7 @@ window.Blockly.Blocks.vhook_listener = {
             message1: localize('do {{ action }}', { action: '%1' }),
             args1: [{ type: 'input_statement', name: 'DO' }],
             nextStatement: null,
-            ...COLOURS,
+            ...colours(),
             tooltip: localize(
                 'Runs the connected blocks, in order, when the named hook fires. It does not run when the workspace loads, when you press Run, or when unrelated hooks fire. Multiple listeners on one hook run in canvas order.'
             ),
@@ -170,7 +172,7 @@ window.Blockly.Blocks.vhook_trigger = {
             args1: [{ type: 'input_value', name: 'DATA', check: 'String' }],
             previousStatement: null,
             nextStatement: null,
-            ...COLOURS,
+            ...colours(),
             tooltip: localize(
                 'Deliberately fires a registered hook. An unknown or disabled hook is reported instead of firing, and a hook can never trigger itself or recurse past four levels.'
             ),
@@ -217,7 +219,7 @@ window.Blockly.Blocks.vhook_condition = {
             inputsInline: false,
             output: 'Boolean',
             outputShape: window.Blockly.OUTPUT_SHAPE_HEXAGONAL,
-            ...COLOURS,
+            ...colours(),
             tooltip: localize(
                 'Evaluates a condition against the genuine ticks the running feed delivered. Place it inside Purchase conditions to gate automated trade execution, or on a Register Virtual Hook block to filter that hook’s events. Missing data never passes.'
             ),
@@ -248,7 +250,7 @@ window.Blockly.Blocks.vhook_result = {
             args0: [{ type: 'field_dropdown', name: 'FIELD', options: RESULT_OPTIONS }],
             output: 'String',
             outputShape: window.Blockly.OUTPUT_SHAPE_ROUND,
-            ...COLOURS,
+            ...colours(),
             tooltip: localize(
                 'A validated value from the hook event that is being handled (numbers arrive as text). Empty when the hook runtime has no event yet.'
             ),

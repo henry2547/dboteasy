@@ -314,8 +314,10 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
 An event-driven hook language for the Bot Builder: a registered hook runs its listener blocks only
 when its event genuinely happens on the live feed, and a hook never buys.
 - **Blocks** — `scratch/blocks/VirtualHooks/index.js` registers `vhook_register`, `vhook_listener`,
-  `vhook_condition`, `vhook_trigger` and `vhook_result` and adds them to the toolbox under the
-  `virtual_hooks` category (`toolbox-items.tsx`). Registration and listener blocks generate a comment
+  `vhook_condition`, `vhook_trigger` and `vhook_result` and lists them in the toolbox's
+  **Purchase conditions** category (`toolbox-items.tsx`) — there is no separate palette group, and the
+  blocks take `Blockly.Colours.Base`, the same palette as the digit blocks. Registration and listener
+  blocks generate a comment
   only (the runtime drives them from the tick stream); a condition, result or trigger reached by the
   generated program emits `Bot.vhookCondition(id)`, `Bot.vhookResult(id, field)` or
   `Bot.vhookTrigger(name, data)` — those are exposed in `BotInterface.js` next to the observer calls.
