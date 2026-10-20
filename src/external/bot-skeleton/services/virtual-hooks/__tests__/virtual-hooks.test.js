@@ -64,7 +64,7 @@ describe('virtual hook runtime', () => {
         const { manager, journal } = managerWith();
         manager.attach(
             program({
-                definitions: [definition('a'), definition('b')],
+                definitions: [definition('a'), definition('b', { event: 'contract_settled' })],
                 listeners: [
                     { id: 'la', hook: 'a', body: 'p1', order: 0 },
                     { id: 'lb', hook: 'b', body: 'p3', order: 1 },
@@ -355,7 +355,16 @@ describe('virtual hook canvas reader', () => {
         }
     }
 
-    const workspace = blocks => ({ getAllBlocks: () => blocks });
+    // Blockly's getAllBlocks(false) returns every block, nested input blocks included.
+    const flatten = (blocks, seen = new Set()) =>
+        blocks.flatMap(block => {
+            if (!block || seen.has(block)) return [];
+            seen.add(block);
+            const children = [...Object.values(block.inputs ?? {}), block.nextBlock].filter(Boolean);
+            return [block, ...flatten(children, seen)];
+        });
+
+    const workspace = blocks => ({ getAllBlocks: () => flatten(blocks) });
 
     it('reads a valid hook, its condition and its listener chain', () => {
         const listener_body = new FakeBlock({ id: 'print', type: 'text_print', inputs: { TEXT: new FakeBlock({ id: 'txt', type: 'text', fields: { TEXT: 'tick' } }) } });

@@ -143,16 +143,18 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **59** for the two original templates, **63** for the two-digit and rare-nine ones and **67** for
-  `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  **59** for the plain Over/Under and Even/Odd templates, **63** for every template with an extra digit
+  filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`, `under5_nine_rare`,
+  `over4_five_hot`) and **67** for `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
   that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
-- **Free Bots library (twelve templates).** `templates.ts` describes every asset in `src/xml/`; the first
+- **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
   two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7, Even/Odd) and a second
   entry gate built from
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
-  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares) and `under7_rare_nine`
-  (`obs_and` over `obs_min_sample` + `obs_freq_below`). Those observer blocks sit NESTED inside the
+  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares), `under7_rare_nine` /
+  `under5_nine_rare` (`obs_and` over `obs_min_sample` + `obs_freq_below`) and `over4_five_hot`
+  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). Those observer blocks sit NESTED inside the
   `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
   then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
   gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`
@@ -299,6 +301,44 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
+
+## Virtual Hooks in the Bot Builder
+An event-driven hook language for the Bot Builder: a registered hook runs its listener blocks only
+when its event genuinely happens on the live feed, and a hook never buys.
+- **Blocks** — `scratch/blocks/VirtualHooks/index.js` registers `vhook_register`, `vhook_listener`,
+  `vhook_condition`, `vhook_trigger` and `vhook_result` and adds them to the toolbox under the
+  `virtual_hooks` category (`toolbox-items.tsx`). Registration and listener blocks generate a comment
+  only (the runtime drives them from the tick stream); a condition, result or trigger reached by the
+  generated program emits `Bot.vhookCondition(id)`, `Bot.vhookResult(id, field)` or
+  `Bot.vhookTrigger(name, data)` — those are exposed in `BotInterface.js` next to the observer calls.
+  Every block needs a generator, or Run fails with
+  `JavaScript generator does not know how to generate code for block type "vhook_…"`.
+- **Runtime** — `services/virtual-hooks/` is a bounded reader of the canvas, not a second strategy
+  engine: `virtual-hook-program.js` flattens the hook blocks and their chains once per Run (and
+  rejects a duplicate hook name, an unknown listener, an unsupported event and any `purchase` /
+  `sell_at_market` inside a listener), `virtual-hook-executor.js` walks plain node data with a step
+  budget and no `eval`, `virtual-hook-conditions.js` evaluates the nine condition types, and
+  `virtual-hook-manager.js` dispatches. `index.js` exposes it as the `virtualHookRuntime` singleton.
+- **One tick stream.** `trade/Ticks.js` hands every genuine tick to `virtualHookRuntime.feedTick()`
+  from inside the existing subscription, so hooks open no WebSocket and invent no data. `dbot.js`
+  attaches a fresh manager right before the program is generated and detaches it in `stopBot` /
+  `terminateBot`. A condition read through `getSnapshot()` or `conditionOfBlock()` fails closed while
+  the feed is stale (`feedHealth`), so a Virtual Hook Condition placed in Purchase conditions is the
+  documented way to gate a real trade.
+- **Concurrency is per hook:** `sequential` queues events and drops the newest once the queue is
+  full, `skip` counts an event that arrives while the hook runs, `queue` drops the oldest pending
+  event. A trigger chain is cut at `maxDepth`, and Stop cancels a running listener at its next
+  statement (a `timeout` awaiting its sleep is cancelled, not completed).
+- **Monitor** — `pages/bot-builder/virtual-hooks/virtual-hook-monitor.tsx`, mounted by
+  `bot-builder.tsx`. It re-reads `virtualHookRuntime.getSnapshot()` on an interval (only while open
+  and while the bot runs), so tick frequency never re-renders React; it shows registered hooks, the
+  feed state, executions and errors, and can enable/disable a hook.
+- **Verification** — `docker compose exec web npx jest src/external/bot-skeleton/services/virtual-hooks`
+  (24 tests: runtime dispatch/conditions/cancellation/queueing, the canvas reader and one generator
+  per block, against a fake clock, a stub Blockly and a fake workspace whose `getAllBlocks()` must
+  return nested blocks like the real one). No shipped Free Bots template uses a hook block yet, so
+  `src/pages/free-bots` only pins the digit templates; Run itself is login-gated, so a live dispatch
+  is verified by hand.
 
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in

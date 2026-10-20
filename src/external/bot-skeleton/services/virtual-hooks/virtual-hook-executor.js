@@ -74,6 +74,8 @@ const walkSequence = async (startId, tools, budget) => {
         budget.steps += 1;
 
         const flow = await runStatement(node, tools, budget);
+        // A stop during an await (a timeout, a trigger) must not run another statement in this chain.
+        if (tools.isCancelled()) return { stopped: 'cancelled', steps: budget.steps };
         if (flow === 'stop') return { stopped: 'stop', steps: budget.steps };
         id = node.next;
     }

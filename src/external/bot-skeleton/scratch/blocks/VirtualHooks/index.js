@@ -268,7 +268,11 @@ window.Blockly.Blocks.vhook_result = {
 };
 
 const generator = window.Blockly.JavaScript.javascriptGenerator;
-const literal = value => JSON.stringify(String(value));
+const literal = value =>
+    `'${String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r?\n/g, ' ')}'`;
 
 const canvasDriven = block => {
     if (block.type === 'vhook_register' || block.type === 'vhook_listener') return true;

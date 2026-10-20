@@ -123,6 +123,7 @@ export class VirtualHookManager {
                 triggerCount: 0,
                 skippedCount: 0,
                 droppedCount: 0,
+                queueDepth: 0,
                 lastEventAt: null,
                 lastEventType: null,
                 lastReason: null,
@@ -171,6 +172,7 @@ export class VirtualHookManager {
         this.queues.clear();
         this.states.forEach(state => {
             state.running = false;
+            state.queueDepth = 0;
             if (state.state === 'queued') state.state = 'idle';
         });
         if (wasActive && !silent) this.journal(`Virtual hooks stopped: ${reason}. No further events will run.`);
@@ -196,7 +198,10 @@ export class VirtualHookManager {
         }
         state.enabled = Boolean(enabled);
         state.state = state.enabled ? 'idle' : 'disabled';
-        if (!state.enabled) this.queues.delete(name);
+        if (!state.enabled) {
+            this.queues.delete(name);
+            state.queueDepth = 0;
+        }
         this.journal(`Virtual hook "${name}" ${state.enabled ? 'enabled' : 'disabled'}.`);
         return true;
     }
@@ -420,6 +425,7 @@ export class VirtualHookManager {
             }
             queue.push({ event, parentId, depth });
             this.queues.set(name, queue);
+            state.queueDepth = queue.length;
             state.state = 'queued';
             return true;
         }
@@ -541,8 +547,8 @@ export class VirtualHookManager {
                     step('Listener stopped', `Sequence ended early (${outcome.stopped}).`, 'error');
                 }
             }
-            step('Purchase not requested', 'Virtual hooks never buy; a Purchase block in Purchase conditions decides that.', 'ok');
             if (execution.state !== 'cancelled') {
+                step('Purchase not requested', 'Virtual hooks never buy; a Purchase block in Purchase conditions decides that.', 'ok');
                 execution.state = 'completed';
                 execution.result = this.describeExecution(name, event);
                 state.lastResult = execution.result;
@@ -579,9 +585,11 @@ export class VirtualHookManager {
         const queue = this.queues.get(name) ?? [];
         if (!this.active || !queue.length) {
             if (!queue.length) this.queues.delete(name);
+            state.queueDepth = 0;
             return;
         }
         const next = queue.shift();
+        state.queueDepth = queue.length;
         if (!queue.length) this.queues.delete(name);
         state.state = 'queued';
         this.runHook(name, next.event, next.parentId, next.depth);
@@ -735,7 +743,7 @@ export class VirtualHookManager {
                     triggerCount: state.triggerCount,
                     skippedCount: state.skippedCount,
                     droppedCount: state.droppedCount,
-                    queueDepth: (this.queues.get(state.definition.name) ?? []).length,
+                    queueDepth: state.queueDepth,
                     lastEventAt: state.lastEventAt,
                     lastEventType: state.lastEventType,
                     lastReason: state.lastReason,
