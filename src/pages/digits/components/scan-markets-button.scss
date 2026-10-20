@@ -93,6 +93,53 @@
         }
     }
 
+    /* Live scan progress — the numbers come from the running scan. */
+    &__progress {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        align-items: flex-start;
+        margin-top: 0.8rem;
+    }
+
+    &__track {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--general-section-1);
+
+        &--indeterminate .digits-scan__bar {
+            width: 35%;
+            animation: digits-scan-indeterminate 1.2s ease-in-out infinite;
+        }
+    }
+
+    &__bar {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--brand-primary);
+        transition: width 220ms ease;
+    }
+
+    &__cancel {
+        padding: 0.6rem 1.1rem;
+        border: 1px solid var(--general-main-3);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.15rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--brand-primary);
+            color: var(--brand-primary);
+        }
+    }
+
     &__recommendation {
         margin: 0.8rem 0;
         font-size: 1.2rem;
@@ -108,4 +155,14 @@
     }
 
     /* The result rows themselves are `.scanner-bot` cards (free-bots/components). */
+}
+
+@keyframes digits-scan-indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(320%);
+    }
 }

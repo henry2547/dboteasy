@@ -93,6 +93,9 @@ const config: Config = {
     moduleNameMapper: {
         '\\.(css|less|scss)$': '<rootDir>/__mocks__/styleMock.js',
         '\\.(gif|ttf|eot|svg)$': '<rootDir>/__mocks__/fileMock.js',
+        // Free Bot templates import raw XML (rsbuild loads it with raw-loader), so
+        // tests get the same string-shaped stub instead of an unresolvable module.
+        '\\.xml$': '<rootDir>/__mocks__/fileMock.js',
         'react-dom/server': '<rootDir>/__mocks__/react-dom-server.js',
         '@deriv-com/translations': '<rootDir>/__mocks__/translation.mock.js',
         '@deriv-com/ui': derivComUiDir,

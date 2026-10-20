@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
-import { formatPercent } from '../format';
-import type { MarketScan } from '../scan-markets';
+import { formatCount, formatDuration, formatPercent } from '../format';
+import type { MarketScan, MarketScanFailure, ScanProgress, ScanSummary } from '../scan-markets';
 import type { MarketSymbol } from '../types';
 import './scan-markets-button.scss';
 
 interface ScanMarketsButtonProps {
     isScanning: boolean;
     results: MarketScan[];
+    summary: ScanSummary | null;
+    progress: ScanProgress | null;
+    failures: MarketScanFailure[];
     error: string | null;
     selectedMarket: MarketSymbol | null;
     onScan: () => void;
+    onCancel: () => void;
     onPick: (market: MarketSymbol) => void;
 }
 
@@ -26,21 +30,29 @@ const PANEL_MAX_WIDTH = 400;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max));
 
 /**
- * Floating button that scans every volatility market and hands back the market
- * with the most orderly digits to trade on. Each ranked row also carries the
- * Free Bot that matches its Over 1 / Under 8 setup, with a Load Bot button that
- * opens that template in the Bot Builder on the scanned market.
+ * Floating button that scans every eligible volatility market and hands back
+ * the market with the most orderly digits to trade on. Each ranked row also
+ * carries the Free Bot that matches its Over 1 / Under 8 setup, with a Load Bot
+ * button that opens that template in the Bot Builder on the scanned market.
  *
  * It is mounted app-wide (not inside a tab) and can be dragged anywhere on the
  * screen in any direction; the results panel flips below the button when it is
  * parked in the top half of the viewport.
+ *
+ * The scan itself runs in `useDigitsLab` — this button only reflects its real
+ * progress and summary, so a second tap while a scan is running is ignored and
+ * a running scan can be cancelled from here.
  */
 export default function ScanMarketsButton({
     isScanning,
     results,
+    summary,
+    progress,
+    failures,
     error,
     selectedMarket,
     onScan,
+    onCancel,
     onPick,
 }: ScanMarketsButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -83,6 +95,11 @@ export default function ScanMarketsButton({
         window.addEventListener('resize', handle_resize);
         return () => window.removeEventListener('resize', handle_resize);
     }, [clamp_position]);
+
+    // A scan started from the dashboard opens the panel so progress is visible.
+    useEffect(() => {
+        if (isScanning) setIsOpen(true);
+    }, [isScanning]);
 
     const handleScan = () => {
         setIsOpen(true);
@@ -140,6 +157,9 @@ export default function ScanMarketsButton({
     };
 
     const best = results[0] ?? null;
+    const total = progress?.marketsTotal ?? summary?.totalMarkets ?? 0;
+    const completed = progress?.marketsCompleted ?? 0;
+    const percent = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
     const panel_width = Math.min(PANEL_MAX_WIDTH, viewport.width - EDGE * 2);
     const panel_below = position ? position.top < viewport.height / 2 : false;
     const panel_style = position
@@ -192,8 +212,38 @@ export default function ScanMarketsButton({
                         </button>
                     </div>
 
-                    {isScanning && <p className='digits-scan__note'>Scanning every volatility market…</p>}
-                    {!isScanning && error && <p className='digits-scan__note digits-scan__note--error'>{error}</p>}
+                    {isScanning && (
+                        <div className='digits-scan__progress'>
+                            <div
+                                className={
+                                    'digits-scan__track' + (total > 0 ? '' : ' digits-scan__track--indeterminate')
+                                }
+                                role='progressbar'
+                                aria-label='Scan progress'
+                                aria-valuemin={0}
+                                aria-valuemax={total > 0 ? total : undefined}
+                                aria-valuenow={total > 0 ? completed : undefined}
+                            >
+                                <span className='digits-scan__bar' style={total > 0 ? { width: `${percent}%` } : undefined} />
+                            </div>
+                            <p className='digits-scan__note'>
+                                {total > 0 ? `${completed} of ${total} markets read` : 'Discovering markets…'}
+                                {progress?.currentMarket ? ` · reading ${progress.currentMarket}` : ''}
+                            </p>
+                            <button type='button' className='digits-scan__cancel' onClick={onCancel}>
+                                Cancel scan
+                            </button>
+                        </div>
+                    )}
+
+                    {!isScanning && error && (
+                        <>
+                            <p className='digits-scan__note digits-scan__note--error'>{error}</p>
+                            <button type='button' className='digits-scan__cancel' onClick={handleScan}>
+                                Retry scan
+                            </button>
+                        </>
+                    )}
 
                     {!isScanning && !error && results.length > 0 && (
                         <>
@@ -201,6 +251,15 @@ export default function ScanMarketsButton({
                                 Trade <strong>{best?.market.displayName}</strong> — score {best?.score}/100, best rule{' '}
                                 {best?.bestRuleLabel} ({formatPercent(best?.edge, 0)}).
                             </p>
+                            {summary && (
+                                <p className='digits-scan__note'>
+                                    {formatCount(summary.scannedMarkets)} of {formatCount(summary.totalMarkets)} markets
+                                    scanned in {formatDuration(summary.durationMs)} · {formatCount(summary.qualifiedSetups)}{' '}
+                                    qualifying
+                                    {summary.cancelled ? ' · scan cancelled' : ''}
+                                    {failures.length > 0 ? ` · ${formatCount(failures.length)} not included` : ''}
+                                </p>
+                            )}
                             <ul className='digits-scan__list'>
                                 {results.slice(0, 8).map(result => (
                                     <li key={result.market.apiSymbol}>
@@ -217,7 +276,11 @@ export default function ScanMarketsButton({
                     )}
 
                     {!isScanning && !error && results.length === 0 && (
-                        <p className='digits-scan__note'>Tap Scan to rank the volatility markets.</p>
+                        <p className='digits-scan__note'>
+                            {summary
+                                ? 'No market returned a usable sample. The full list of reasons is on the Digits dashboard.'
+                                : 'Tap Scan to rank every eligible volatility market.'}
+                        </p>
                     )}
                 </div>
             )}
@@ -233,7 +296,13 @@ export default function ScanMarketsButton({
                 disabled={isScanning}
                 aria-label='Scan all volatility markets (drag to move)'
             >
-                {isScanning ? 'Scanning…' : 'Scan markets'}
+                {isScanning
+                    ? total > 0
+                        ? `Scanning ${completed}/${total}…`
+                        : 'Scanning…'
+                    : error
+                      ? 'Retry scan'
+                      : 'Scan markets'}
             </button>
         </div>
     );
