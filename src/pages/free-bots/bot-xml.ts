@@ -31,6 +31,7 @@ export interface FreeBotXmlSettings {
     stake: string | null;
     entryOperator: string | null;
     triggerDigit: string | null;
+    entryParity: string | null;
     multiplier: string | null;
     takeProfit: string | null;
     stopLoss: string | null;
@@ -68,6 +69,7 @@ const EMPTY_SETTINGS: FreeBotXmlSettings = {
     stake: null,
     entryOperator: null,
     triggerDigit: null,
+    entryParity: null,
     multiplier: null,
     takeProfit: null,
     stopLoss: null,
@@ -131,6 +133,7 @@ function readSettings(doc: Document): FreeBotXmlSettings {
         stake: valueField(tradeoptions, 'AMOUNT'),
         entryOperator: entry?.operator ?? null,
         triggerDigit: entry?.trigger ?? null,
+        entryParity: entry?.parity ?? null,
         multiplier,
         takeProfit: findThreshold(after, 'GTE') ?? null,
         stopLoss: findThreshold(after, 'LTE') ?? null,
@@ -138,13 +141,19 @@ function readSettings(doc: Document): FreeBotXmlSettings {
 }
 
 interface EntryCondition {
-    operator: string;
-    trigger: string;
+    operator: string | null;
+    trigger: string | null;
+    /** `even` / `odd` when the purchase is gated by the Even/Odd digit block. */
+    parity: string | null;
     purchaseContract: string | null;
     hasPurchase: boolean;
 }
 
-/** The `if <last digit> <op> <digit> then purchase <contract>` entry block. */
+/**
+ * The entry gate that wraps the purchase: either the classic
+ * `if <last digit> <op> <digit> then purchase <contract>`, or the Even/Odd form
+ * where the `digits_even_odd` digit block supplies the condition.
+ */
 export function findEntryCondition(doc: Document): EntryCondition | null {
     const beforePurchase = blocksOfType(doc, 'before_purchase')[0];
     if (!beforePurchase) return null;
@@ -162,10 +171,30 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
         return {
             operator,
             trigger,
+            parity: null,
             purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
             hasPurchase: !!purchase,
         };
     }
+
+    const parityBlocks = blocksOfType(beforePurchase, 'digits_even_odd');
+    for (const parityBlock of parityBlocks) {
+        const parity = fieldValue(parityBlock, 'PARITY');
+        if (!parity) continue;
+
+        const controlsIf = parityBlock.parentElement?.parentElement ?? null;
+        const purchase = controlsIf?.querySelector('statement[name="DO0"] block[type="purchase"]') ?? null;
+        if (!purchase) continue;
+
+        return {
+            operator: null,
+            trigger: null,
+            parity,
+            purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
+            hasPurchase: true,
+        };
+    }
+
     return null;
 }
 
@@ -293,14 +322,15 @@ export function inspectFreeBotXml(
     });
     if (!hasMarket) errors.push('The template has no market symbol.');
 
-    const tradeTypeOk = settings.tradeTypeCategory === 'digits' && settings.tradeType === 'overunder';
+    const expectedTradeType = template.tradeType ?? 'overunder';
+    const tradeTypeOk = settings.tradeTypeCategory === 'digits' && settings.tradeType === expectedTradeType;
     checks.push({
         id: 'trade-type',
-        label: 'Digit Over/Under trade type',
+        label: 'Digit trade type',
         passed: tradeTypeOk,
-        detail: `${settings.tradeTypeCategory ?? '—'} / ${settings.tradeType ?? '—'}`,
+        detail: `${settings.tradeTypeCategory ?? '—'} / ${settings.tradeType ?? '—'} (expected ${expectedTradeType})`,
     });
-    if (!tradeTypeOk) errors.push('The template is not a Digit Over/Under bot.');
+    if (!tradeTypeOk) errors.push(`Expected the ${expectedTradeType} digit trade type but the XML says ${settings.tradeType ?? 'nothing'}.`);
 
     const contractOk = settings.contractType === template.contractType;
     checks.push({
@@ -311,14 +341,27 @@ export function inspectFreeBotXml(
     });
     if (!contractOk) errors.push(`Expected contract type ${template.contractType} but the XML says ${settings.contractType ?? 'nothing'}.`);
 
-    const predictionOk = settings.prediction !== null && Number(settings.prediction) === template.prediction;
+    // Over/Under carries a barrier digit; Even/Odd carries none, so an absent
+    // prediction is the correct reading for a parity template.
+    const expectsPrediction = template.prediction !== null;
+    const predictionOk = expectsPrediction
+        ? settings.prediction !== null && Number(settings.prediction) === template.prediction
+        : settings.prediction === null;
     checks.push({
         id: 'prediction',
-        label: 'Prediction / barrier',
+        label: expectsPrediction ? 'Prediction / barrier' : 'Prediction / barrier (none for Even/Odd)',
         passed: predictionOk,
-        detail: `${settings.prediction ?? '—'} (expected ${template.prediction})`,
+        detail: expectsPrediction
+            ? `${settings.prediction ?? '—'} (expected ${template.prediction})`
+            : `${settings.prediction ?? 'none'} (expected none)`,
     });
-    if (!predictionOk) errors.push(`Expected prediction ${template.prediction} but the XML says ${settings.prediction ?? 'nothing'}.`);
+    if (!predictionOk) {
+        errors.push(
+            expectsPrediction
+                ? `Expected prediction ${template.prediction} but the XML says ${settings.prediction ?? 'nothing'}.`
+                : `An Even/Odd template must not carry a prediction, but the XML says ${settings.prediction ?? 'nothing'}.`
+        );
+    }
 
     const durationOk = settings.durationType === 't' && Number(settings.duration) === template.durationTicks;
     checks.push({
@@ -339,23 +382,27 @@ export function inspectFreeBotXml(
     if (!stakeOk) errors.push(`Expected an initial stake of ${template.stake} but the XML says ${settings.stake ?? 'nothing'}.`);
 
     const entry = findEntryCondition(doc);
+    const expectsParity = !!template.entryParity;
     const entryOk =
         !!entry &&
-        entry.operator === template.entryOperator &&
-        Number(entry.trigger) === template.triggerDigit &&
         entry.hasPurchase &&
-        entry.purchaseContract === template.contractType;
+        entry.purchaseContract === template.contractType &&
+        (expectsParity
+            ? entry.parity === template.entryParity
+            : entry.operator === template.entryOperator && Number(entry.trigger) === template.triggerDigit);
     checks.push({
         id: 'entry-condition',
         label: 'Entry condition',
         passed: entryOk,
         detail: entry
-            ? `Last digit ${entry.operator} ${entry.trigger} → purchase ${entry.purchaseContract ?? '—'}`
-            : 'No "last digit" entry condition found in the purchase conditions.',
+            ? `${entry.parity ? `Last digit ${entry.parity}` : `Last digit ${entry.operator} ${entry.trigger}`} → purchase ${entry.purchaseContract ?? '—'}`
+            : 'No digit entry condition found around the purchase block.',
     });
     if (!entryOk) {
         errors.push(
-            `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${template.contractType}".`
+            expectsParity
+                ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${template.contractType}".`
+                : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${template.contractType}".`
         );
     }
 

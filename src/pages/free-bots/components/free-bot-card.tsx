@@ -35,7 +35,12 @@ export default function FreeBotCard({
 
     const rows: [string, string][] = [
         ['Strategy', template.strategyLabel],
-        ['Contract', `${template.contractType} · prediction ${template.prediction}`],
+        [
+            'Contract',
+            template.prediction !== null
+                ? `${template.contractType} · prediction ${template.prediction}`
+                : `${template.contractType} · ${template.entryParity ?? 'parity'} digits`,
+        ],
         ['Duration', `${template.durationTicks} tick`],
         ['Default market in the XML', `${template.defaultMarket} — replaced by the market you pick`],
         ['Initial stake', `${template.stake} USD`],
