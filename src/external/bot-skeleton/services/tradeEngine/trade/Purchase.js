@@ -82,8 +82,6 @@ export default Engine =>
                     delayIndex++
                 ).then(onSuccess);
             }
-            // Accumulators only: every other trade is placed against a quoted proposal above,
-            // because the options endpoint rejects the legacy `buy: '1' + parameters` message.
             const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions);
             const action = () => api_base.api.send(trade_option);
 
