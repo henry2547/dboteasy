@@ -16,3 +16,4 @@ import './Logic';
 import './Math';
 import './Observer';
 import './Text';
+import './VirtualHooks';

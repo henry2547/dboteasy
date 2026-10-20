@@ -1,5 +1,6 @@
 import { observer as globalObserver } from '../../../utils/observer';
 import { observerRuntime } from '../../observer';
+import { virtualHookRuntime } from '../../virtual-hooks';
 import { createDetails } from '../utils/helpers';
 
 const getBotInterface = tradeEngine => {
@@ -27,6 +28,11 @@ const getBotInterface = tradeEngine => {
         observerValue: (id, fallback) => observerRuntime.valueOfBlock(id, fallback),
         observerCondition: id => observerRuntime.conditionOfBlock(id),
         observerStatement: id => observerRuntime.runStatement(id),
+        // Virtual Hook blocks reached by the generated program: a condition (for example inside
+        // Purchase conditions) is evaluated on the genuine tick the program trades on.
+        vhookCondition: id => virtualHookRuntime.conditionOfBlock(id),
+        vhookResult: (id, field) => virtualHookRuntime.resultOfBlock(id, field),
+        vhookTrigger: (name, data) => virtualHookRuntime.triggerFromProgram(name, data),
     };
 };
 

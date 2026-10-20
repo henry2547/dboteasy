@@ -6,6 +6,7 @@ import { getLast } from '../../../utils/binary-utils';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { observerRuntime } from '../../observer';
+import { virtualHookRuntime } from '../../virtual-hooks';
 import { getDirection, getLastDigit } from '../utils/helpers';
 import { expectPositiveInteger } from '../utils/sanitize';
 import * as constants from './state/constants';
@@ -31,6 +32,13 @@ export default Engine =>
                     const { epoch } = lastTick;
                     // Observer blocks observe this same genuine tick stream — no separate feed.
                     observerRuntime.feedTick({
+                        symbol,
+                        price: lastTick.quote,
+                        epoch,
+                        pip_size: this.getPipSize(),
+                    });
+                    // The same genuine tick drives tick-triggered virtual hooks.
+                    virtualHookRuntime.feedTick({
                         symbol,
                         price: lastTick.quote,
                         epoch,
