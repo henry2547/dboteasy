@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
 import { formatPercent } from '../format';
 import type { MarketScan } from '../scan-markets';
 import type { MarketSymbol } from '../types';
@@ -14,7 +15,9 @@ interface ScanMarketsButtonProps {
 
 /**
  * Floating button that scans every volatility market and hands back the market
- * with the most orderly digits to trade on.
+ * with the most orderly digits to trade on. Each ranked row also carries the
+ * Free Bot that matches its Over 1 / Under 8 setup, with a Load Bot button that
+ * opens that template in the Bot Builder on the scanned market.
  */
 export default function ScanMarketsButton({
     isScanning,
@@ -65,22 +68,12 @@ export default function ScanMarketsButton({
                             <ul className='digits-scan__list'>
                                 {results.slice(0, 8).map(result => (
                                     <li key={result.market.apiSymbol}>
-                                        <button
-                                            type='button'
-                                            className={
-                                                'digits-scan__item' +
-                                                (selectedMarket?.apiSymbol === result.market.apiSymbol
-                                                    ? ' digits-scan__item--active'
-                                                    : '')
-                                            }
-                                            onClick={() => handlePick(result.market)}
-                                        >
-                                            <span className='digits-scan__item-name'>{result.market.displayName}</span>
-                                            <span className='digits-scan__item-meta'>
-                                                score {result.score} · {result.bestRuleLabel} ·{' '}
-                                                {result.digits.length} ticks
-                                            </span>
-                                        </button>
+                                        <ScannerBotResult
+                                            result={result}
+                                            selected={selectedMarket?.apiSymbol === result.market.apiSymbol}
+                                            onPick={() => handlePick(result.market)}
+                                            onLoaded={() => setIsOpen(false)}
+                                        />
                                     </li>
                                 ))}
                             </ul>

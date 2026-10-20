@@ -259,8 +259,8 @@
     }
 
     &__panel {
-        width: min(34rem, calc(100vw - 3.2rem));
-        max-height: 60vh;
+        width: min(40rem, calc(100vw - 2.4rem));
+        max-height: 62vh;
         overflow-y: auto;
         padding: 1.2rem;
         border-radius: 12px;
@@ -315,31 +315,5 @@
         gap: 0.5rem;
     }
 
-    &__item {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-        width: 100%;
-        text-align: left;
-        padding: 0.7rem 0.9rem;
-        border-radius: 8px;
-        border: 1px solid var(--general-main-3);
-        background: var(--general-section-1);
-        cursor: pointer;
-
-        &--active {
-            border-color: var(--brand-primary);
-            box-shadow: inset 3px 0 0 var(--brand-primary);
-        }
-    }
-
-    &__item-name {
-        font-size: 1.2rem;
-        font-weight: 600;
-    }
-
-    &__item-meta {
-        font-size: 1.05rem;
-        color: var(--text-less-prominent);
-    }
+    /* The result rows themselves are `.scanner-bot` cards (free-bots/components). */
 }

@@ -26,6 +26,8 @@ export interface MarketScan {
     score: number;
     edge: number;
     bestRuleLabel: string;
+    /** When this market's ticks were read — shown next to a bot's signal status. */
+    scannedAt: number;
 }
 
 function openClient(client: DerivPublicWebSocketClient): Promise<void> {
@@ -125,6 +127,7 @@ function scoreMarket(market: MarketSymbol, digits: number[]): MarketScan {
         score: Math.round(floorScore * 0.45 + balanceScore * 0.2 + edgeScore * 0.35),
         edge: best?.confidence ?? 0,
         bestRuleLabel: best?.label ?? '—',
+        scannedAt: Date.now(),
     };
 }
 

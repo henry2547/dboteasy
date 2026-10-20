@@ -102,6 +102,18 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
 - **Scanner:** `scan-markets.ts` opens its OWN short-lived public WebSocket (never disturbs the live
   subscription) and ranks volatility markets. Remember `ticks_history` needs `subscribe: 1`; the scan
   sends `forget` straight after each request.
+- **Scanner → Load Bot:** every ranked row renders
+  `src/pages/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
+  template through `matchFreeBotSetup` (`free-bots/scanner-match.ts`), so a row can only ever load the
+  strategy it displayed; the button is enabled for any market that supports Digit Over/Under, and an
+  unconfirmed setup keeps its conditions, reason and a warning visible instead of being hidden. Loading
+  goes through `useFreeBotLoader().loadBot({ marketSource: 'scanner' })`, which re-targets the XML, waits
+  for the live workspace, checks the market/contract it reports, then switches to the Bot Builder tab —
+  the panel closes only when that load reports `loaded` (`botLoaderStore.status`). `MarketScan` carries
+  `scannedAt` so each row can show its scan time.
+  Verify: open `#id-digits`, press **Scan markets**, then **Load … bot** on any row — expect the Bot
+  Builder tab to open with that market in `trade_definition_market` and the matching
+  `DIGITOVER`/`DIGITUNDER` + prediction. `docker compose exec web npx jest src/pages/free-bots`.
 - **Statistics from raw digits:** `calculateStatisticsFromDigits` in `statistics.ts` is the digits-only
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab
