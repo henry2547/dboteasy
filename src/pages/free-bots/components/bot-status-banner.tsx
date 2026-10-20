@@ -83,7 +83,8 @@ const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) =
                 <div>
                     <dt>Strategy</dt>
                     <dd>
-                        {bot.strategyLabel} · {bot.contractType} · prediction {bot.prediction}
+                        {bot.strategyLabel} · {bot.contractType}
+                        {bot.prediction !== null ? ` · prediction ${bot.prediction}` : ' · parity contract'}
                     </dd>
                 </div>
                 <div>

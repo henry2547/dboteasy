@@ -21,6 +21,8 @@ jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
+jest.mock('@/xml/even_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/odd_entry_every_time.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml } from '../bot-xml';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from '../templates';
@@ -76,17 +78,42 @@ describe('Free Bots templates', () => {
         expect(report.ok).toBe(true);
         expect(report.settings.symbol).toBe(template.defaultMarket);
         expect(report.settings.tradeTypeCategory).toBe('digits');
-        expect(report.settings.tradeType).toBe('overunder');
+        expect(report.settings.tradeType).toBe(template.tradeType ?? 'overunder');
         expect(report.settings.contractType).toBe(template.contractType);
-        expect(report.settings.prediction).toBe(String(template.prediction));
-        expect(report.settings.entryOperator).toBe(template.entryOperator);
-        expect(report.settings.triggerDigit).toBe(String(template.triggerDigit));
         expect(report.variables.some(name => name.startsWith('freebot:'))).toBe(true);
+
+        if (template.entryParity) {
+            // Even/Odd: gated by parity, so no barrier digit at all.
+            expect(report.settings.prediction).toBeNull();
+            expect(report.settings.entryParity).toBe(template.entryParity);
+        } else {
+            expect(report.settings.prediction).toBe(String(template.prediction));
+            expect(report.settings.entryOperator).toBe(template.entryOperator);
+            expect(report.settings.triggerDigit).toBe(String(template.triggerDigit));
+        }
     });
 
     it.each(FREE_BOT_TEMPLATES)('$name states its purchase and restart conditions', template => {
         expect(template.buyCondition.length).toBeGreaterThan(20);
         expect(template.restartCondition.length).toBeGreaterThan(20);
+    });
+
+    it('the Even/Odd templates buy on parity with the digit blocks', () => {
+        const parityTemplates = FREE_BOT_TEMPLATES.filter(template => !!template.entryParity);
+
+        expect(parityTemplates.map(template => template.id)).toEqual([
+            'even_entry_every_time',
+            'odd_entry_every_time',
+        ]);
+        parityTemplates.forEach(template => {
+            const report = inspectFreeBotXml(assetOf(template), template, isKnown);
+            expect(report.ok).toBe(true);
+            expect(report.blockTypes).toContain('digits_even_odd');
+            expect(report.settings.entryParity).toBe(template.entryParity);
+            expect(report.settings.prediction).toBeNull();
+            expect(report.settings.contractType).toBe(template.contractType);
+            expect(report.settings.tradeType).toBe('evenodd');
+        });
     });
 
     it('the observer-gated templates really carry observer blocks', () => {
@@ -122,6 +149,6 @@ describe('Free Bots templates', () => {
         expect(report.errors).toEqual([]);
         expect(report.settings.symbol).toBe('R_100');
         expect(report.settings.contractType).toBe(template.contractType);
-        expect(report.settings.prediction).toBe(String(template.prediction));
+        expect(report.settings.prediction).toBe(template.prediction === null ? null : String(template.prediction));
     });
 });

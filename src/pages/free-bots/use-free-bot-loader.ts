@@ -237,9 +237,15 @@ export function useFreeBotLoader() {
                     return;
                 }
 
-                if (Number(facts.prediction) !== template.prediction) {
+                // An Even/Odd template has no barrier, so the workspace must report none.
+                const predictionMatches =
+                    template.prediction === null
+                        ? facts.prediction === null || facts.prediction === ''
+                        : Number(facts.prediction) === template.prediction;
+
+                if (!predictionMatches) {
                     botLoaderStore.failLoad(
-                        `The Bot Builder reports prediction ${facts.prediction ?? '—'}, but ${template.name} uses ${template.prediction}. The workspace was left unchanged — nothing was traded.`
+                        `The Bot Builder reports prediction ${facts.prediction ?? '—'}, but ${template.name} uses ${template.prediction ?? 'no barrier (Even/Odd)'}. The workspace was left unchanged — nothing was traded.`
                     );
                     return;
                 }

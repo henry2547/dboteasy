@@ -27,7 +27,8 @@ export interface LoadedBot {
     sourceFile: string;
     strategyLabel: string;
     contractType: string;
-    prediction: number;
+    /** Barrier digit for Over/Under, `null` for an Even/Odd template. */
+    prediction: number | null;
     marketSource: 'scanner' | 'library';
     market: LoadedBotMarket;
     /** Why the market can (or cannot) trade Digit Over/Under. */

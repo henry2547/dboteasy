@@ -153,7 +153,12 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
 
     makeDirectPurchaseDecision() {
         const { has_payout_block, is_basis_payout } = checkBlocksForProposalRequest();
-        this.is_proposal_subscription_required = has_payout_block || is_basis_payout;
+        // Buy only from a quoted proposal. The options endpoint rejects the legacy
+        // `{ buy: '1', price, parameters }` message with "Invalid input provided", so the
+        // quote → buy sequence is the default for every digit trade. Accumulators keep their
+        // own proposal subscription (`requestAccumulatorStats`) and their direct purchase.
+        const is_accumulator = (this.tradeOptions.contractTypes ?? []).includes('ACCU');
+        this.is_proposal_subscription_required = !is_accumulator || has_payout_block || is_basis_payout;
 
         if (this.is_proposal_subscription_required) {
             this.makeProposals({ ...this.options, ...this.tradeOptions });

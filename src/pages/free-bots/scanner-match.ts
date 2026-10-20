@@ -163,6 +163,12 @@ function toSetup(draft: SetupDraft): FreeBotSetup | null {
     const template = freeBotById(templateId);
     if (!template) return null;
 
+    // The scanner only ever matches the two Over/Under templates, which always
+    // carry a barrier digit — the library's Even/Odd templates never reach here.
+    const { contractType, prediction, triggerDigit } = template;
+    if (contractType !== 'DIGITOVER' && contractType !== 'DIGITUNDER') return null;
+    if (prediction === null || triggerDigit === null) return null;
+
     const triggerLabel =
         draft.strategy === 'over1' ? 'Last digit ≤ 1 (0 or 1)' : 'Last digit ≥ 8 (8 or 9)';
     const failed = draft.conditions.filter(condition => !condition.passed);
@@ -177,9 +183,9 @@ function toSetup(draft: SetupDraft): FreeBotSetup | null {
         templateId,
         strategy: draft.strategy,
         strategyLabel: draft.strategy === 'over1' ? 'Over 1' : 'Under 8',
-        contractType: template.contractType,
-        prediction: template.prediction,
-        triggerDigit: template.triggerDigit,
+        contractType,
+        prediction,
+        triggerDigit,
         triggerLabel,
         ready: draft.ready,
         armed: draft.armed,
