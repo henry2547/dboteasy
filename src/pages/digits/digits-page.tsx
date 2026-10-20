@@ -5,7 +5,6 @@ import DigitGrid from './components/digit-grid';
 import LabEnginesSection from './components/lab-engines-section';
 import MarketConditionsPanel from './components/market-conditions-panel';
 import MarketSelector from './components/market-selector';
-import ScanMarketsButton from './components/scan-markets-button';
 import StrategyPanel from './components/strategy-panel';
 import TickPanel from './components/tick-panel';
 import { useDigitsLabContext } from './digits-lab-context';
@@ -142,15 +141,6 @@ export default function DigitsPage() {
             <BacktestPanel results={lab.backtests} />
 
             <LabEnginesSection engines={engines} />
-
-            <ScanMarketsButton
-                isScanning={lab.isScanning}
-                results={lab.scanResults}
-                error={lab.scanError}
-                selectedMarket={lab.selectedMarket}
-                onScan={lab.scanMarkets}
-                onPick={lab.selectMarket}
-            />
 
             <p className='digits-disclaimer'>
                 Unofficial, educational tool reading Deriv&apos;s public market-data feed. No login, no trading, no

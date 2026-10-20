@@ -11,6 +11,7 @@ import RadioGroup from '@/components/shared_ui/radio-group';
 import Text from '@/components/shared_ui/text';
 import ThemedScrollbars from '@/components/shared_ui/themed-scrollbars';
 import { config, save_types } from '@/external/bot-skeleton';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import {
     DerivLightGoogleDriveIcon,
@@ -186,7 +187,7 @@ const SaveModal = observer(() => {
     const { active_tab } = dashboard;
 
     useEffect(() => {
-        if (active_tab === 1) {
+        if (active_tab === DBOT_TABS.BOT_BUILDER) {
             updateBotName(dashboard_strategies?.[0]?.name ?? '');
         }
     }, [active_tab, dashboard_strategies, updateBotName]);
