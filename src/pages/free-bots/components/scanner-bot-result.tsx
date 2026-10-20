@@ -61,19 +61,20 @@ const ScannerBotResult = observer(({ result, selected, onPick, onLoaded }: Scann
           : 'No setup';
     const statusTone = !setup || !setup.ready ? 'idle' : setup.armed ? 'ok' : 'waiting';
 
-    // A market the scanner ranked is loadable even when not every condition
-    // holds: the templates enter on their own digit rule, and the conditions
-    // above stay visible so an unconfirmed setup is never presented as a match.
+    // Only a confirmed setup may load: a row whose conditions do not hold is
+    // shown with its evidence but never forced onto a template by its score.
     const blockedReason = !template
         ? 'Not enough scanned ticks to choose a template.'
-        : !support.supported
-          ? support.reason
-          : loader.isRunning
-            ? 'A bot is already running — stop it before loading another one.'
-            : loader.loading
-              ? 'Another bot is still loading.'
-              : '';
-    const canLoad = !!template && support.supported && !loader.loading && !loader.isRunning;
+        : !setup.ready
+          ? 'The scanner has not confirmed an Over 1 or Under 8 setup on this market — no matching template to load.'
+          : !support.supported
+            ? support.reason
+            : loader.isRunning
+              ? 'A bot is already running — stop it before loading another one.'
+              : loader.loading
+                ? 'Another bot is still loading.'
+                : '';
+    const canLoad = !!template && setup.ready && support.supported && !loader.loading && !loader.isRunning;
 
     const handleLoad = () => {
         if (!template) return;
@@ -139,8 +140,8 @@ const ScannerBotResult = observer(({ result, selected, onPick, onLoaded }: Scann
 
                     {!setup.ready && (
                         <p className='scanner-bot__notice'>
-                            Loading is allowed, but the scanner has not confirmed this setup — check the conditions above
-                            first.
+                            Load Bot is disabled: this market does not currently match either shipped template. The
+                            conditions above are evidence only, not a prediction of the next tick.
                         </p>
                     )}
 

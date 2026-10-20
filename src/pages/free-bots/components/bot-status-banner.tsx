@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import { useApiBase } from '@/hooks/useApiBase';
 import { useFreeBotLoader } from '../use-free-bot-loader';
+import '../free-bots.scss';
 
 interface BotStatusBannerProps {
     /** `overlay` floats over the Bot Builder canvas, `panel` sits in the page. */
@@ -7,24 +10,61 @@ interface BotStatusBannerProps {
 }
 
 /**
- * The loaded-bot banner. Every line is read from the live load state and from
- * the run panel — the status never claims more than the app can prove, and the
- * bot only runs when the user presses Start bot.
+ * The loaded-bot banner. Every line is read from the live load state, the
+ * header's authorized account and the run panel — the status never claims more
+ * than the app can prove, the bot only runs when the user presses Start bot,
+ * and a real-money start needs a second, explicit confirmation.
  */
 const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) => {
     const { bot, validateBot, startBot, stopBot, clearBot, isRunning, validated, startError } = useFreeBotLoader();
+    const { activeLoginid } = useApiBase();
+    const [confirmingReal, setConfirmingReal] = useState(false);
+
+    // A new load, a stop or a fresh start cancels a pending confirmation, so a
+    // real-money start can never be completed by a stale click.
+    useEffect(() => {
+        setConfirmingReal(false);
+    }, [bot?.templateId, bot?.loadedAt, isRunning]);
 
     if (!bot) return null;
 
+    const liveAccount: 'Demo' | 'Real' | 'Not signed in' = activeLoginid
+        ? activeLoginid.startsWith('VR')
+          ? 'Demo'
+          : 'Real'
+        : 'Not signed in';
+    const accountChanged = !!bot.loginid && !!activeLoginid && bot.loginid !== activeLoginid;
+
+    const hasValidationErrors = !bot.errorMessage && bot.validationErrors.length > 0;
     const status = bot.errorMessage
         ? 'Not ready — see the problems below'
-        : isRunning
-          ? 'Running — confirmed by the execution engine'
-          : validated
-            ? 'Validated — press Start bot to trade'
-            : 'Ready to validate';
+        : hasValidationErrors
+          ? 'Validation failed — see the problems below'
+          : isRunning
+            ? 'Running — confirmed by the execution engine'
+            : validated
+              ? 'Validated — press Start bot to trade'
+              : 'Ready to validate';
 
-    const statusTone = bot.errorMessage ? 'error' : isRunning ? 'live' : validated ? 'ok' : 'idle';
+    const statusTone = bot.errorMessage || hasValidationErrors ? 'error' : isRunning ? 'live' : validated ? 'ok' : 'idle';
+
+    const handleStart = () => {
+        if (liveAccount === 'Real' && !confirmingReal) {
+            setConfirmingReal(true);
+            return;
+        }
+        setConfirmingReal(false);
+        startBot();
+    };
+
+    const startLabel = liveAccount === 'Real' ? 'Start bot on real account' : 'Start bot';
+    const startTitle = !validated
+        ? 'Validate the bot successfully before starting it'
+        : isRunning
+          ? 'This bot is already running'
+          : liveAccount === 'Real'
+            ? 'This opens a real-money session on your authorized account'
+            : 'Start the bot — this places trades on the authorized Demo account';
 
     return (
         <section className={`bot-banner bot-banner--${variant}`} aria-label='Loaded bot'>
@@ -49,8 +89,14 @@ const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) =
                 <div>
                     <dt>Account</dt>
                     <dd>
-                        {bot.accountMode}
-                        {bot.loginid ? ` · ${bot.loginid}` : ''}
+                        {liveAccount}
+                        {activeLoginid ? ` · ${activeLoginid}` : ''}
+                        {accountChanged && (
+                            <span className='bot-banner__account-warning'>
+                                {' '}
+                                — changed since load ({bot.loginid}); validate again
+                            </span>
+                        )}
                     </dd>
                 </div>
                 <div>
@@ -83,6 +129,27 @@ const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) =
             )}
             {startError && <p className='bot-banner__error'>{startError}</p>}
 
+            {confirmingReal && !isRunning && (
+                <div className='bot-banner__confirm' role='alertdialog' aria-label='Confirm real account start'>
+                    <p className='bot-banner__confirm-text'>
+                        <strong>Real account {activeLoginid || '—'}</strong> — starting this bot places real-money trades
+                        with the loaded settings. Demo is the safe first test.
+                    </p>
+                    <div className='bot-banner__confirm-actions'>
+                        <button
+                            type='button'
+                            className='free-bots-button free-bots-button--danger'
+                            onClick={handleStart}
+                        >
+                            Confirm real-account start
+                        </button>
+                        <button type='button' className='free-bots-button' onClick={() => setConfirmingReal(false)}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className='bot-banner__actions'>
                 <button type='button' className='free-bots-button' onClick={validateBot}>
                     Validate bot
@@ -90,15 +157,11 @@ const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) =
                 <button
                     type='button'
                     className='free-bots-button free-bots-button--primary'
-                    onClick={startBot}
-                    disabled={!validated || isRunning}
-                    title={
-                        validated
-                            ? 'Start the bot — this places trades on the authorized account'
-                            : 'Validate the bot successfully before starting it'
-                    }
+                    onClick={handleStart}
+                    disabled={!validated || isRunning || confirmingReal}
+                    title={startTitle}
                 >
-                    Start bot
+                    {startLabel}
                 </button>
                 {isRunning && (
                     <button type='button' className='free-bots-button free-bots-button--danger' onClick={stopBot}>

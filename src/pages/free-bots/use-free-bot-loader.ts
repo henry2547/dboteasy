@@ -200,7 +200,7 @@ export function useFreeBotLoader() {
                     return;
                 }
 
-                await loadIntoWorkspace({
+                const loaded = await loadIntoWorkspace({
                     block_string: patched.xml,
                     file_name: template.name,
                     workspace,
@@ -210,6 +210,12 @@ export function useFreeBotLoader() {
                     showIncompatibleStrategyDialog: false,
                     show_snackbar: true,
                 });
+                if (loaded && typeof loaded === 'object' && 'error' in loaded && loaded.error) {
+                    botLoaderStore.failLoad(
+                        `The Bot Builder rejected ${template.name}: ${String(loaded.error)} Nothing was traded.`
+                    );
+                    return;
+                }
 
                 const facts = readWorkspaceFacts();
                 if (!facts) {
@@ -227,6 +233,20 @@ export function useFreeBotLoader() {
                 if (facts.contractType !== template.contractType) {
                     botLoaderStore.failLoad(
                         `The Bot Builder reports contract type ${facts.contractType ?? '—'}, but ${template.name} is ${template.contractType}.`
+                    );
+                    return;
+                }
+
+                if (Number(facts.prediction) !== template.prediction) {
+                    botLoaderStore.failLoad(
+                        `The Bot Builder reports prediction ${facts.prediction ?? '—'}, but ${template.name} uses ${template.prediction}. The workspace was left unchanged — nothing was traded.`
+                    );
+                    return;
+                }
+
+                if (facts.blockCount !== patchedReport.blockCount) {
+                    botLoaderStore.failLoad(
+                        `The Bot Builder holds ${facts.blockCount} block(s) after loading ${template.name}, but the template has ${patchedReport.blockCount}. Stale blocks from a previous bot may still be on the canvas — nothing was traded.`
                     );
                     return;
                 }
@@ -295,6 +315,23 @@ export function useFreeBotLoader() {
                 : 'Not signed in — log in with Deriv (Demo is recommended for first runs).',
         });
         if (!accountOk) errors.push('Log in with your Deriv account before running a bot.');
+
+        const accountChanged = !!bot.loginid && !!account.loginid && bot.loginid !== account.loginid;
+        checks.push({
+            id: 'active-account',
+            label: 'Loaded account is the active account',
+            passed: !accountChanged,
+            detail: accountChanged
+                ? `Loaded on ${bot.loginid}, but ${account.loginid} is active now.`
+                : account.loginid
+                  ? `${account.loginid} is the active account.`
+                  : 'No active account yet.',
+        });
+        if (accountChanged) {
+            errors.push(
+                `The active account changed from ${bot.loginid} to ${account.loginid} after this bot was loaded — reload it before starting so its market and settings belong to the account you are trading.`
+            );
+        }
 
         botLoaderStore.setValidation(checks, errors, report);
     }, [store]);

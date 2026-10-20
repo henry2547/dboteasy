@@ -105,15 +105,29 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
 - **Scanner → Load Bot:** every ranked row renders
   `src/pages/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
   template through `matchFreeBotSetup` (`free-bots/scanner-match.ts`), so a row can only ever load the
-  strategy it displayed; the button is enabled for any market that supports Digit Over/Under, and an
-  unconfirmed setup keeps its conditions, reason and a warning visible instead of being hidden. Loading
-  goes through `useFreeBotLoader().loadBot({ marketSource: 'scanner' })`, which re-targets the XML, waits
-  for the live workspace, checks the market/contract it reports, then switches to the Bot Builder tab —
-  the panel closes only when that load reports `loaded` (`botLoaderStore.status`). `MarketScan` carries
-  `scannedAt` so each row can show its scan time.
-  Verify: open `#id-digits`, press **Scan markets**, then **Load … bot** on any row — expect the Bot
-  Builder tab to open with that market in `trade_definition_market` and the matching
-  `DIGITOVER`/`DIGITUNDER` + prediction. `docker compose exec web npx jest src/pages/free-bots`.
+  strategy it displayed; **Load Bot is disabled unless all three setup conditions hold** (an unconfirmed
+  row keeps its conditions, reason, evidence and the disabled-reason visible instead of being forced
+  onto a template by its score). Loading goes through
+  `useFreeBotLoader().loadBot({ marketSource: 'scanner' })`, which re-targets the XML, waits for the
+  live workspace, checks the market/contract/prediction **and block count** it reports, then switches to
+  the Bot Builder tab — the panel closes only when that load reports `loaded`
+  (`botLoaderStore.status`). `MarketScan` carries `scannedAt` so each row can show its scan time.
+  Verify: open `#id-digits`, press **Scan markets**, then **Load … bot** on a row whose conditions are
+  all ✓ — expect the Bot Builder tab to open with that symbol in `trade_definition_market` and the
+  matching `DIGITOVER`/`DIGITUNDER` + prediction; rows with ✗ conditions have the button disabled.
+  `docker compose exec web npx jest src/pages/free-bots`.
+- **Loaded-bot banner (Bot Builder):** `BotStatusBanner` (`free-bots/components/bot-status-banner.tsx`)
+  renders as an overlay whenever the Bot Builder tab is active. It reads the live
+  `botLoaderStore`, the header's authorized account (`useApiBase`) and `runPanel.is_running` — never a
+  simulated message. Validate re-reads the **workspace** XML (so canvas edits are re-checked), requires
+  the loaded/active account not to have changed, and Start stays disabled until validation passes.
+  A real account needs a second, explicit **Confirm real-account start** click; Demo starts directly.
+  The banner never claims "Running" until `runPanel.is_running` is true.
+- **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
+  (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
+  **59** for both templates. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
+  that formula in sync if a template gains blocks.
 - **Statistics from raw digits:** `calculateStatisticsFromDigits` in `statistics.ts` is the digits-only
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab

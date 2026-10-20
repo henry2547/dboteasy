@@ -248,6 +248,14 @@ export function inspectFreeBotXml(
     // Every block the running Bot Builder can generate code for — including the
     // shadow blocks that carry the stake, duration and prediction values.
     const blockElements = Array.from(doc.querySelectorAll('block[type], shadow[type]'));
+    // Blockly's `getAllBlocks()` reports shadows too, except a shadow replaced by
+    // a real block in the same input (the stake's `variables_get` shadows the
+    // number input). That is the count the live workspace must match after a
+    // load, so a stale canvas is caught instead of being called valid.
+    const replacedShadows = Array.from(doc.querySelectorAll('value')).filter(value => {
+        const children = Array.from(value.children).map(child => child.tagName.toLowerCase());
+        return children.includes('block') && children.includes('shadow');
+    }).length;
     const blockTypes = Array.from(new Set(blockElements.map(block => block.getAttribute('type') as string))).sort();
     const unsupportedTypes = blockTypes.filter(type => !isBlockTypeKnown(type));
     const typesOk = unsupportedTypes.length === 0;
@@ -397,7 +405,7 @@ export function inspectFreeBotXml(
         errors,
         warnings,
         checks,
-        blockCount: blockElements.length,
+        blockCount: blockElements.length - replacedShadows,
         blockTypes,
         unsupportedTypes,
         variables: declared.names,

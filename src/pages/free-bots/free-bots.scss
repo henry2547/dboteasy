@@ -376,6 +376,33 @@
         color: var(--status-danger);
     }
 
+    &__account-warning {
+        color: var(--brand-warning);
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    &__confirm {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        padding: 0.9rem 1rem;
+        border-radius: 10px;
+        border: 1px solid var(--status-danger);
+        background: var(--general-main-1);
+    }
+
+    &__confirm-text {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    &__confirm-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
     &__actions {
         display: flex;
         flex-wrap: wrap;

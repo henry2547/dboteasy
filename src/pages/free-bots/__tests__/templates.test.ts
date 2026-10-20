@@ -72,6 +72,14 @@ describe('Free Bots templates', () => {
         expect(report.variables.some(name => name.startsWith('freebot:'))).toBe(true);
     });
 
+    it('counts only the blocks Blockly will hold on the canvas', () => {
+        // 53 real blocks + 7 shadows − 1 shadow replaced by the stake's
+        // `variables_get` = 59. This exact number is what the loader compares
+        // the live workspace against, so a stale canvas cannot look valid.
+        const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
+        expect(report.blockCount).toBe(59);
+    });
+
     it.each(FREE_BOT_TEMPLATES)('$name keeps its logic when the market is swapped', template => {
         const patched = applyMarketToXml(assetOf(template), {
             symbol: 'R_100',
