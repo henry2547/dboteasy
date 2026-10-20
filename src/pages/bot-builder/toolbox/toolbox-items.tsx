@@ -433,10 +433,12 @@ export const ToolboxItems = () =>
                 <Category name={localize('Tick and candle analysis')} id='tick_analysis'>
                     <Block type='tick_analysis' />
                     <Block type='tick' />
+                    <Block type='tick_string' />
                     <Block type='last_digit' />
                     <Block type='stat' />
                     <Block type='stat_list' />
                     <Block type='ticks' />
+                    <Block type='ticks_string' />
                     <Block type='lastDigitList' />
                     <Block type='check_direction' />
                     <Block type='is_candle_black' />
@@ -475,6 +477,7 @@ export const ToolboxItems = () =>
                 <Category name={localize('Stats')} id='stats'>
                     <Block type='balance' />
                     <Block type='total_profit' />
+                    <Block type='total_profit_string' />
                     <Block type='total_runs' />
                 </Category>
             </Category>

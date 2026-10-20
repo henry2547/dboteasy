@@ -147,8 +147,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
   that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
-- **Free Bots library (six templates).** `templates.ts` describes every asset in `src/xml/`; the first
-  two are the uploaded files, the other four are derived from them and add a second entry gate built from
+- **Free Bots library (twelve templates).** `templates.ts` describes every asset in `src/xml/`; the first
+  two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7, Even/Odd) and a second
+  entry gate built from
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
   `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares) and `under7_rare_nine`
   (`obs_and` over `obs_min_sample` + `obs_freq_below`). Those observer blocks sit NESTED inside the
@@ -158,6 +159,16 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
   the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
   round, or every observer-gated template fails the loader inspection.
+- **The stake must be initialised in "Run once at start".** `Bot.start()` is called by
+  `BinaryBotPrivateStart` (dbot.js) at the top of every trade loop, *before* `before_purchase` runs, and
+  the generator reads the `AMOUNT` input into `amount` right there. Every template keeps its stake in the
+  `freebot:stake` variable, so the `variables_set` chain that seeds stake/profit/stop lives in the trade
+  definition's `INITIALIZATION` statement (id `<template>-init`). Putting that chain in `before_purchase`
+  instead leaves `amount` `undefined` for the first quote — `Number(undefined)` → `NaN` → `null` on the
+  wire — and Deriv answers the first proposal with `InputValidationFailed` / "Invalid input provided", so
+  the bot stops before it ever trades. `inspectFreeBotXml`'s `stake-at-start` check now rejects a template
+  that reads a variable in the trade options without setting it in `INITIALIZATION`; the unit test
+  `only set inside before_purchase` pins it.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
   card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.

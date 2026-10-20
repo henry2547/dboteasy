@@ -13,6 +13,10 @@ jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
+jest.mock('@/xml/over2_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/odd_entry_every_time.xml', () => '', { virtual: true });
@@ -63,6 +67,25 @@ describe('inspectFreeBotXml', () => {
 
         expect(report.ok).toBe(false);
         expect(report.errors.join(' ')).toContain('Entry condition mismatch');
+    });
+
+    it('accepts a stake that is initialised before the first trade', () => {
+        const report = inspectFreeBotXml(xmlOf(), over1, isKnown);
+        const check = report.checks.find(item => item.id === 'stake-at-start');
+
+        expect(report.ok).toBe(true);
+        expect(check?.passed).toBe(true);
+    });
+
+    it('fails a stake that is only set inside before_purchase', () => {
+        // `Bot.start()` reads the amount before `before_purchase` ever runs, so a
+        // stake set there is undefined when Deriv is asked for the first quote.
+        const xml = xmlOf().replace('<statement name="INITIALIZATION">', '<statement name="NOT_RUN_AT_START">');
+        const report = inspectFreeBotXml(xml, over1, isKnown);
+        const check = report.checks.find(item => item.id === 'stake-at-start');
+
+        expect(check?.passed).toBe(false);
+        expect(report.errors.join(' ')).toContain('freebot-stake');
     });
 
     it('fails a template whose variable references do not resolve', () => {

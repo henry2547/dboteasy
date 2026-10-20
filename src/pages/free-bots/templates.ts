@@ -18,7 +18,11 @@ import evenEntryEveryTimeXml from '@/xml/even_entry_every_time.xml';
 import oddEntryEveryTimeXml from '@/xml/odd_entry_every_time.xml';
 import over1EntryEveryTimeXml from '@/xml/over1_entry_every_time.xml';
 import over1TwoLowDigitsXml from '@/xml/over1_two_low_digits.xml';
+import over2EntryEveryTimeXml from '@/xml/over2_entry_every_time.xml';
 import over2ThreeLowDigitsXml from '@/xml/over2_three_low_digits.xml';
+import over3EntryEveryTimeXml from '@/xml/over3_entry_every_time.xml';
+import under6EntryEveryTimeXml from '@/xml/under6_entry_every_time.xml';
+import under7EntryEveryTimeXml from '@/xml/under7_entry_every_time.xml';
 import under7RareNineXml from '@/xml/under7_rare_nine.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
@@ -26,6 +30,10 @@ import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 export type FreeBotId =
     | 'over1_entry_every_time'
     | 'under8_entry_every_time'
+    | 'over2_entry_every_time'
+    | 'over3_entry_every_time'
+    | 'under7_entry_every_time'
+    | 'under6_entry_every_time'
     | 'over1_two_low_digits'
     | 'under8_two_high_digits'
     | 'over2_three_low_digits'
@@ -33,7 +41,7 @@ export type FreeBotId =
     | 'even_entry_every_time'
     | 'odd_entry_every_time';
 
-export type FreeBotStrategy = 'over1' | 'under8' | 'over2' | 'under7' | 'even' | 'odd';
+export type FreeBotStrategy = 'over1' | 'under8' | 'over2' | 'under7' | 'over3' | 'under6' | 'even' | 'odd';
 
 export type FreeBotContractType = 'DIGITOVER' | 'DIGITUNDER' | 'DIGITEVEN' | 'DIGITODD';
 
@@ -127,6 +135,114 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         triggerDigit: 8,
         entryRule: 'Last digit is greater than or equal to 8 (8 or 9)',
         buyCondition: 'Every tick whose last digit is 8 or 9 — no extra filter, so it buys often.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Standard digit blocks only',
+    },
+    {
+        id: 'over2_entry_every_time',
+        name: 'Over 2 — Entry Every Time',
+        sourceFile: 'Derived from Over 1 with Entry every time.xml',
+        asset: 'over2_entry_every_time.xml',
+        strategy: 'over2',
+        strategyLabel: 'Digit Over',
+        contractType: 'DIGITOVER',
+        prediction: 2,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: 'LTE',
+        triggerDigit: 2,
+        entryRule: 'Last digit is less than or equal to 2 (0, 1 or 2)',
+        buyCondition:
+            'Every tick whose last digit is 0, 1 or 2 — no extra filter, so it buys on roughly three of every ten ticks.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again immediately until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Standard digit blocks only',
+    },
+    {
+        id: 'over3_entry_every_time',
+        name: 'Over 3 — Entry Every Time',
+        sourceFile: 'Derived from Over 1 with Entry every time.xml',
+        asset: 'over3_entry_every_time.xml',
+        strategy: 'over3',
+        strategyLabel: 'Digit Over',
+        contractType: 'DIGITOVER',
+        prediction: 3,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: 'LTE',
+        triggerDigit: 3,
+        entryRule: 'Last digit is less than or equal to 3 (0, 1, 2 or 3)',
+        buyCondition:
+            'Every tick whose last digit is 0, 1, 2 or 3 — no extra filter, so it buys on roughly four of every ten ticks.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again immediately until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Standard digit blocks only',
+    },
+    {
+        id: 'under7_entry_every_time',
+        name: 'Under 7 — Entry Every Time',
+        sourceFile: 'Derived from Under 8 with Entry every time.xml',
+        asset: 'under7_entry_every_time.xml',
+        strategy: 'under7',
+        strategyLabel: 'Digit Under',
+        contractType: 'DIGITUNDER',
+        prediction: 7,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 2,
+        entryOperator: 'GTE',
+        triggerDigit: 7,
+        entryRule: 'Last digit is greater than or equal to 7 (7, 8 or 9)',
+        buyCondition:
+            'Every tick whose last digit is 7, 8 or 9 — no extra filter, so it buys on roughly three of every ten ticks.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Standard digit blocks only',
+    },
+    {
+        id: 'under6_entry_every_time',
+        name: 'Under 6 — Entry Every Time',
+        sourceFile: 'Derived from Under 8 with Entry every time.xml',
+        asset: 'under6_entry_every_time.xml',
+        strategy: 'under6',
+        strategyLabel: 'Digit Under',
+        contractType: 'DIGITUNDER',
+        prediction: 6,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 2,
+        entryOperator: 'GTE',
+        triggerDigit: 6,
+        entryRule: 'Last digit is greater than or equal to 6 (6, 7, 8 or 9)',
+        buyCondition:
+            'Every tick whose last digit is 6, 7, 8 or 9 — no extra filter, so it buys on roughly four of every ten ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
@@ -305,6 +421,10 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
 const FREE_BOT_XML: Record<FreeBotId, string> = {
     over1_entry_every_time: over1EntryEveryTimeXml,
     under8_entry_every_time: under8EntryEveryTimeXml,
+    over2_entry_every_time: over2EntryEveryTimeXml,
+    over3_entry_every_time: over3EntryEveryTimeXml,
+    under7_entry_every_time: under7EntryEveryTimeXml,
+    under6_entry_every_time: under6EntryEveryTimeXml,
     over1_two_low_digits: over1TwoLowDigitsXml,
     under8_two_high_digits: under8TwoHighDigitsXml,
     over2_three_low_digits: over2ThreeLowDigitsXml,
