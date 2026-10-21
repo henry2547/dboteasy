@@ -162,14 +162,6 @@ export const ToolboxItems = () =>
             <Category id='purchase_conditions' name={localize('Purchase conditions')}>
                 <Block type='before_purchase' />
                 <Block type='purchase' />
-                {/* Virtual Hook blocks live here, with the trading blocks they belong to: a condition or
-                    trigger placed in the Purchase conditions stack gates the Purchase block on the live
-                    hook data instead of firing a hook. They are styled like the digit blocks. */}
-                <Block type='vhook_condition' />
-                <Block type='vhook_trigger' />
-                <Block type='vhook_register' />
-                <Block type='vhook_listener' />
-                <Block type='vhook_result' />
             </Category>
             <Category id='sell_conditions' name={localize('Sell conditions (optional)')}>
                 <Block type='during_purchase' />

@@ -310,46 +310,6 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
 
-## Virtual Hooks in the Bot Builder
-An event-driven hook language for the Bot Builder: a registered hook runs its listener blocks only
-when its event genuinely happens on the live feed, and a hook never buys.
-- **Blocks** — `scratch/blocks/VirtualHooks/index.js` registers `vhook_register`, `vhook_listener`,
-  `vhook_condition`, `vhook_trigger` and `vhook_result` and lists them in the toolbox's
-  **Purchase conditions** category (`toolbox-items.tsx`) — there is no separate palette group, and the
-  blocks take `Blockly.Colours.Base`, the same palette as the digit blocks. Registration and listener
-  blocks generate a comment
-  only (the runtime drives them from the tick stream); a condition, result or trigger reached by the
-  generated program emits `Bot.vhookCondition(id)`, `Bot.vhookResult(id, field)` or
-  `Bot.vhookTrigger(name, data)` — those are exposed in `BotInterface.js` next to the observer calls.
-  Every block needs a generator, or Run fails with
-  `JavaScript generator does not know how to generate code for block type "vhook_…"`.
-- **Runtime** — `services/virtual-hooks/` is a bounded reader of the canvas, not a second strategy
-  engine: `virtual-hook-program.js` flattens the hook blocks and their chains once per Run (and
-  rejects a duplicate hook name, an unknown listener, an unsupported event and any `purchase` /
-  `sell_at_market` inside a listener), `virtual-hook-executor.js` walks plain node data with a step
-  budget and no `eval`, `virtual-hook-conditions.js` evaluates the nine condition types, and
-  `virtual-hook-manager.js` dispatches. `index.js` exposes it as the `virtualHookRuntime` singleton.
-- **One tick stream.** `trade/Ticks.js` hands every genuine tick to `virtualHookRuntime.feedTick()`
-  from inside the existing subscription, so hooks open no WebSocket and invent no data. `dbot.js`
-  attaches a fresh manager right before the program is generated and detaches it in `stopBot` /
-  `terminateBot`. A condition read through `getSnapshot()` or `conditionOfBlock()` fails closed while
-  the feed is stale (`feedHealth`), so a Virtual Hook Condition placed in Purchase conditions is the
-  documented way to gate a real trade.
-- **Concurrency is per hook:** `sequential` queues events and drops the newest once the queue is
-  full, `skip` counts an event that arrives while the hook runs, `queue` drops the oldest pending
-  event. A trigger chain is cut at `maxDepth`, and Stop cancels a running listener at its next
-  statement (a `timeout` awaiting its sleep is cancelled, not completed).
-- **Monitor** — `pages/bot-builder/virtual-hooks/virtual-hook-monitor.tsx`, mounted by
-  `bot-builder.tsx`. It re-reads `virtualHookRuntime.getSnapshot()` on an interval (only while open
-  and while the bot runs), so tick frequency never re-renders React; it shows registered hooks, the
-  feed state, executions and errors, and can enable/disable a hook.
-- **Verification** — `docker compose exec web npx jest src/external/bot-skeleton/services/virtual-hooks`
-  (24 tests: runtime dispatch/conditions/cancellation/queueing, the canvas reader and one generator
-  per block, against a fake clock, a stub Blockly and a fake workspace whose `getAllBlocks()` must
-  return nested blocks like the real one). No shipped Free Bots template uses a hook block yet, so
-  `src/pages/free-bots` only pins the digit templates; Run itself is login-gated, so a live dispatch
-  is verified by hand.
-
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
 `AiBotProvider` or lazy-loads `AiBotPage`, and `DBOT_TABS` / `TAB_IDS` / the `hash` array in

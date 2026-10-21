@@ -3,7 +3,6 @@ import { config } from '../constants/config';
 import { api_base } from '../services/api/api-base';
 import ApiHelpers from '../services/api/api-helpers';
 import { observerRuntime } from '../services/observer';
-import { virtualHookRuntime } from '../services/virtual-hooks';
 import Interpreter from '../services/tradeEngine/utils/interpreter';
 import { compareXml, observer as globalObserver } from '../utils';
 import { getSavedWorkspaces, saveWorkspaceToRecent } from '../utils/local-storage';
@@ -281,7 +280,6 @@ class DBot {
             // The observer session must exist before the code is generated: the generated loop
             // asks it whether an entry has been signalled.
             this.startObserverSession();
-            this.startVirtualHookSession();
             const code = this.generateCode();
             if (!this.interpreter?.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
 
@@ -381,17 +379,6 @@ class DBot {
     }
 
     /**
-     * Registers the virtual hooks for the current canvas. A canvas with no hook blocks gets no
-     * session at all, so the bot behaves exactly as it did before.
-     */
-    startVirtualHookSession() {
-        virtualHookRuntime.attach({
-            workspace: this.workspace,
-            symbol: this.symbol,
-        });
-    }
-
-    /**
      * Starts the observer session for the current canvas. A canvas with no observer blocks gets no
      * session at all, so the bot behaves exactly as it did before.
      */
@@ -413,8 +400,6 @@ class DBot {
 
         this.is_bot_running = false;
         observerRuntime.detach('Bot stopped');
-        // Hooks must stop dispatching immediately, before the interpreter teardown below.
-        virtualHookRuntime.detach('Bot stopped');
 
         // The interpreter only exists once a workspace has been initialised, so a stop
         // request that arrives before that (or after a failed run) has nothing to stop.
@@ -447,7 +432,6 @@ class DBot {
      */
     async terminateBot() {
         observerRuntime.detach('Session terminated');
-        virtualHookRuntime.detach('Session terminated');
         if (this.interpreter) {
             await this.interpreter.terminateSession();
             this.interpreter = null;

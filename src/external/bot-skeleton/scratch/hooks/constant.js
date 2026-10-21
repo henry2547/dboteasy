@@ -20,7 +20,6 @@ window.Blockly.Categories = {
     Candle: 'candle',
     Miscellaneous: 'miscellaneous',
     Loop: 'loops',
-    Virtual_Hooks: 'virtual_hooks',
 };
 window.Blockly.OUTPUT_SHAPE_HEXAGONAL = 1;
 window.Blockly.OUTPUT_SHAPE_ROUND = 2;
