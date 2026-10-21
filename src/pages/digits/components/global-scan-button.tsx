@@ -12,9 +12,13 @@ export default function GlobalScanButton() {
         <ScanMarketsButton
             isScanning={lab.isScanning}
             results={lab.scanResults}
+            summary={lab.scanSummary}
+            progress={lab.scanProgress}
+            failures={lab.scanFailures}
             error={lab.scanError}
             selectedMarket={lab.selectedMarket}
             onScan={lab.scanMarkets}
+            onCancel={lab.cancelScan}
             onPick={lab.selectMarket}
         />
     );

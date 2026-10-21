@@ -57,6 +57,14 @@ changes. React consumers must ignore non-transitions — otherwise every incomin
 the "connected" handler and re-selects the market, which invalidates the request in flight and
 the lab sits on an empty feed. `use-digits-lab.ts` guards with `lastStatusRef`.
 
+### Symbol preload failures are non-fatal
+`api_base.init()` preloads `active_symbols` fire-and-forget (10 s timeout). A slow or failed fetch
+must stay a `console.warn`, never an uncaught promise rejection: the promise is stored on
+`api_base.active_symbols_promise`, so every assignment site attaches a rejection handler, and
+`ActiveSymbols.retrieveActiveSymbols()` catches a rejected shared promise and falls through to its
+single fresh-fetch retry. The dashboard and Digits page read the public feed independently and keep
+working while the bot-side symbol list is empty.
+
 ## Branding: logo and splash
 - `public/logo.png` is the brand mark. `brand.config.json` -> `platform.logo_path` must point at it
   (`"/logo.png"`); `getLogoCandidates()` returns nothing when `logo_path` is `null`, so dropping the
@@ -143,16 +151,18 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **59** for the two original templates, **63** for the two-digit and rare-nine ones and **67** for
-  `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  **59** for the plain Over/Under and Even/Odd templates, **63** for every template with an extra digit
+  filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`, `under5_nine_rare`,
+  `over4_five_hot`) and **67** for `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
   that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
-- **Free Bots library (twelve templates).** `templates.ts` describes every asset in `src/xml/`; the first
+- **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
   two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7, Even/Odd) and a second
   entry gate built from
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
-  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares) and `under7_rare_nine`
-  (`obs_and` over `obs_min_sample` + `obs_freq_below`). Those observer blocks sit NESTED inside the
+  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares), `under7_rare_nine` /
+  `under5_nine_rare` (`obs_and` over `obs_min_sample` + `obs_freq_below`) and `over4_five_hot`
+  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). Those observer blocks sit NESTED inside the
   `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
   then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
   gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`

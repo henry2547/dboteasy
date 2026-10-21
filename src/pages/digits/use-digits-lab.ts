@@ -10,7 +10,7 @@ import { runBacktests } from './backtest';
 import { DerivPublicWebSocketClient, type DerivMessage } from './deriv-public-ws';
 import { filterDigitMarkets, groupMarkets, normalizeActiveSymbols, pickDefaultMarket } from './markets';
 import { UNRESOLVED_PRECISION, extractLastDigit, formatQuote, resolvePrecision } from './precision';
-import { scanDigitMarkets, type MarketScan } from './scan-markets';
+import { scanDigitMarkets, type MarketScan, type ScanProgress, type ScanReport } from './scan-markets';
 import { DEFAULT_BARRIERS, calculateBarrierStats, calculateDigitStatistics, digitSequence } from './statistics';
 import { computeAdaptiveSignals, computeRulePerformance } from './strategies';
 import type { ConnectionState, ConnectionStatus, MarketSymbol, NormalizedTick, PrecisionState } from './types';
@@ -91,7 +91,8 @@ export function useDigitsLab() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [precision, setPrecision] = useState<PrecisionState>(UNRESOLVED_PRECISION);
     const [isScanning, setIsScanning] = useState(false);
-    const [scanResults, setScanResults] = useState<MarketScan[]>([]);
+    const [scanReport, setScanReport] = useState<ScanReport | null>(null);
+    const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
     const [scanError, setScanError] = useState<string | null>(null);
 
     const clientRef = useRef<DerivPublicWebSocketClient | null>(null);
@@ -109,6 +110,10 @@ export function useDigitsLab() {
     const seenKeysRef = useRef(new Set<string>());
     const lastHistoryKeyRef = useRef<string | null>(null);
     const autoSelectedRef = useRef(false);
+    /** Set while a scan is running — the duplicate-scan guard and its cancel handle. */
+    const scanAbortRef = useRef<AbortController | null>(null);
+    /** Bumped per scan so a finished scan can never overwrite a newer one's state. */
+    const scanIdRef = useRef(0);
 
     const recomputePrecision = useCallback((): PrecisionState => {
         const next = resolvePrecision({
@@ -170,23 +175,64 @@ export function useDigitsLab() {
     }, []);
 
     /**
-     * Scans every volatility market on a separate short-lived connection and
-     * ranks them by how orderly their digits are. Never touches the live feed.
+     * Scans every eligible volatility market on a separate short-lived
+     * connection and ranks them by how orderly their digits are. Never touches
+     * the live feed.
+     *
+     * Guarded twice: a second call while a scan is running returns immediately
+     * (no duplicate scans), and a scan that finishes after a newer one started
+     * cannot publish its report (no stale results overwriting fresh ones).
      */
     const scanMarkets = useCallback(async () => {
+        if (scanAbortRef.current) return [] as MarketScan[];
+
+        const controller = new AbortController();
+        scanAbortRef.current = controller;
+        const scanId = scanIdRef.current + 1;
+        scanIdRef.current = scanId;
+
         setIsScanning(true);
         setScanError(null);
+        setScanProgress(null);
+
         try {
-            const results = await scanDigitMarkets();
-            setScanResults(results);
-            if (results.length === 0) setScanError('No volatility market returned usable ticks.');
-            return results;
+            const report = await scanDigitMarkets({
+                signal: controller.signal,
+                onProgress: progress => {
+                    if (scanIdRef.current === scanId) setScanProgress(progress);
+                },
+            });
+
+            if (scanIdRef.current !== scanId) return report.results; // a newer scan owns the screen
+
+            setScanReport(report);
+            if (report.summary.cancelled) {
+                setScanError(null);
+            } else if (report.results.length === 0) {
+                setScanError(
+                    report.failures.length > 0
+                        ? `No market returned a usable sample. First problem: ${report.failures[0].reason}`
+                        : 'No volatility market returned usable ticks.'
+                );
+            } else if (report.summary.failedMarkets > 0) {
+                setScanError(null);
+            }
+            return report.results;
         } catch (error) {
-            setScanError((error as Error).message || 'The market scan failed.');
+            if (scanIdRef.current === scanId) setScanError((error as Error).message || 'The market scan failed.');
             return [] as MarketScan[];
         } finally {
-            setIsScanning(false);
+            if (scanAbortRef.current === controller) scanAbortRef.current = null;
+            if (scanIdRef.current === scanId) {
+                setIsScanning(false);
+                setScanProgress(null);
+            }
         }
+    }, []);
+
+    /** Cancels the running scan; its results are discarded, not published. */
+    const cancelScan = useCallback(() => {
+        scanAbortRef.current?.abort();
     }, []);
 
     const handleMessage = useCallback(
@@ -362,6 +408,8 @@ export function useDigitsLab() {
     const signals = useMemo(() => computeAdaptiveSignals(digits), [digits]);
     const backtests = useMemo(() => runBacktests(digits), [digits]);
     const marketGroups = useMemo(() => groupMarkets(markets), [markets]);
+    const scanResults = useMemo(() => scanReport?.results ?? [], [scanReport]);
+    const scanFailures = useMemo(() => scanReport?.failures ?? [], [scanReport]);
 
     const currentTick = ticks.length > 0 ? ticks[ticks.length - 1] : null;
     const previousTick = ticks.length > 1 ? ticks[ticks.length - 2] : null;
@@ -398,7 +446,12 @@ export function useDigitsLab() {
         refreshMarkets,
         isScanning,
         scanResults,
+        scanFailures,
+        scanSummary: scanReport?.summary ?? null,
+        scanProgress,
+        hasScanned: scanReport !== null,
         scanError,
         scanMarkets,
+        cancelScan,
     };
 }

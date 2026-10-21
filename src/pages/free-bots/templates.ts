@@ -24,6 +24,8 @@ import over3EntryEveryTimeXml from '@/xml/over3_entry_every_time.xml';
 import under6EntryEveryTimeXml from '@/xml/under6_entry_every_time.xml';
 import under7EntryEveryTimeXml from '@/xml/under7_entry_every_time.xml';
 import under7RareNineXml from '@/xml/under7_rare_nine.xml';
+import under5NineRareXml from '@/xml/under5_nine_rare.xml';
+import over4FiveHotXml from '@/xml/over4_five_hot.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 
@@ -38,10 +40,22 @@ export type FreeBotId =
     | 'under8_two_high_digits'
     | 'over2_three_low_digits'
     | 'under7_rare_nine'
+    | 'under5_nine_rare'
+    | 'over4_five_hot'
     | 'even_entry_every_time'
     | 'odd_entry_every_time';
 
-export type FreeBotStrategy = 'over1' | 'under8' | 'over2' | 'under7' | 'over3' | 'under6' | 'even' | 'odd';
+export type FreeBotStrategy =
+    | 'over1'
+    | 'under8'
+    | 'over2'
+    | 'under7'
+    | 'over3'
+    | 'under6'
+    | 'under5'
+    | 'over4'
+    | 'even'
+    | 'odd';
 
 export type FreeBotContractType = 'DIGITOVER' | 'DIGITUNDER' | 'DIGITEVEN' | 'DIGITODD';
 
@@ -359,6 +373,60 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND',
     },
     {
+        id: 'under5_nine_rare',
+        name: 'Under 5 — Only When 9 Is Rare',
+        sourceFile: 'Derived from Under 8 with Entry every time.xml',
+        asset: 'under5_nine_rare.xml',
+        strategy: 'under5',
+        strategyLabel: 'Digit Under',
+        contractType: 'DIGITUNDER',
+        prediction: 5,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 2,
+        entryOperator: 'LTE',
+        triggerDigit: 4,
+        entryRule: 'Last digit ≤ 4 · at least 100 ticks observed · digit 9 under 10% of the window',
+        buyCondition:
+            'The last digit is 0–4, this run has already seen 100 genuine ticks, and digit 9 took less than 10% of the analysis window — Check Minimum Sample Size and Digit Frequency Below filter the entry. Under 5 wins on 0–4, so the 9 filter only skips entries taken while 9 is unusually common.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND',
+    },
+    {
+        id: 'over4_five_hot',
+        name: 'Over 4 — Only When 5 Is Hot',
+        sourceFile: 'Derived from Over 1 with Entry every time.xml',
+        asset: 'over4_five_hot.xml',
+        strategy: 'over4',
+        strategyLabel: 'Digit Over',
+        contractType: 'DIGITOVER',
+        prediction: 4,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: 'GTE',
+        triggerDigit: 5,
+        entryRule: 'Last digit ≥ 5 · at least 100 ticks observed · digit 5 above 12% of the window',
+        buyCondition:
+            'The last digit is 5–9, this run has already seen 100 genuine ticks, and digit 5 took more than 12% of the analysis window — Check Minimum Sample Size and Digit Frequency Above. Over 4 wins on 5–9, and 5 is one of those winning digits.',
+        afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
+            MARTINGALE_STOP +
+            '.',
+        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Above · AND',
+    },
+    {
         id: 'even_entry_every_time',
         name: 'Even — Entry Every Time',
         sourceFile: 'Derived from Over 1 with Entry every time.xml',
@@ -429,6 +497,8 @@ const FREE_BOT_XML: Record<FreeBotId, string> = {
     under8_two_high_digits: under8TwoHighDigitsXml,
     over2_three_low_digits: over2ThreeLowDigitsXml,
     under7_rare_nine: under7RareNineXml,
+    under5_nine_rare: under5NineRareXml,
+    over4_five_hot: over4FiveHotXml,
     even_entry_every_time: evenEntryEveryTimeXml,
     odd_entry_every_time: oddEntryEveryTimeXml,
 };
