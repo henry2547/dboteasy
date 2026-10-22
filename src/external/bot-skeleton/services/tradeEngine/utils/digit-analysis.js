@@ -71,6 +71,99 @@ export const transitionCount = (digits, from, to) => {
 };
 
 /**
+ * How many of the newest ticks in a row ended in a digit above — or at or above — `threshold`.
+ *
+ * The run is the tail of the real tick sequence, so an intervening digit below the threshold stops
+ * the count (6, 5, 9 reports 1, not 2). A threshold that is not a whole digit reports 0: nothing can
+ * be measured, and an absent measurement must never look like a satisfied condition.
+ */
+export const highDigitRun = (digits, threshold, mode = 'at_or_above') => {
+    const list = toDigitList(digits);
+    const wanted = Number(threshold);
+    if (!Number.isInteger(wanted)) return 0;
+    const qualifies = mode === 'above' ? digit => digit > wanted : digit => digit >= wanted;
+
+    let run = 0;
+    for (let index = list.length - 1; index >= 0; index -= 1) {
+        if (!qualifies(list[index])) break;
+        run += 1;
+    }
+    return run;
+};
+
+/** Occurrence count of every digit inside the newest `sample` ticks. */
+const digitCounts = (digits, sample) => {
+    const counts = new Array(10).fill(0);
+    lastDigitsOfSample(digits, sample).forEach(digit => {
+        counts[digit] += 1;
+    });
+    return counts;
+};
+
+/**
+ * The digit that appeared most (hottest) or least (coldest) often in the newest `sample` ticks —
+ * ties choose the lower digit, the same rule as the Digits page's green/red bar.
+ */
+export const hotColdDigit = (digits, sample, mode = 'hottest') => {
+    const counts = digitCounts(digits, sample);
+    const wants_coldest = mode === 'coldest';
+    return counts.reduce(
+        (best, count, digit) =>
+            wants_coldest ? (count < counts[best] ? digit : best) : count > counts[best] ? digit : best,
+        0
+    );
+};
+
+/**
+ * Where a digit's bar stands: `hottest` (green), `coldest` (red), `neutral` (neither) or `unknown`
+ * when there is no tick to measure. `unknown` is deliberately distinct from `neutral` — a bar that
+ * cannot be read must never be treated as an absent/neutral one.
+ */
+export const digitBarState = (digits, digit, sample) => {
+    const window = lastDigitsOfSample(digits, sample);
+    if (window.length === 0) return 'unknown';
+
+    const wanted = Number(digit);
+    if (!Number.isInteger(wanted) || wanted < 0 || wanted > 9) return 'unknown';
+
+    if (wanted === hotColdDigit(window, window.length, 'hottest')) return 'hottest';
+    if (wanted === hotColdDigit(window, window.length, 'coldest')) return 'coldest';
+    return 'neutral';
+};
+
+/** True only when the digit's bar is genuinely neutral: present, and neither hottest nor coldest. */
+export const isDigitBarNeutral = (digits, digit, sample) => digitBarState(digits, digit, sample) === 'neutral';
+
+/** A digit's share of the newest `sample` ticks, in percent. 0 when the window is empty. */
+export const digitShare = (digits, digit, sample) => {
+    const window = lastDigitsOfSample(digits, sample);
+    if (!window.length) return 0;
+    const wanted = Number(digit);
+    return (window.filter(value => value === wanted).length / window.length) * 100;
+};
+
+/**
+ * True when every digit in `wanted` is strictly below `percent` of the newest `sample` ticks.
+ *
+ * Strictly below: a digit sitting exactly on the threshold does not pass, and an empty window
+ * reports false (undecided) rather than a share that was never measured.
+ */
+export const areDigitsBelowShare = (digits, wanted, percent, sample) => {
+    const window = lastDigitsOfSample(digits, sample);
+    if (!window.length) return false;
+
+    const threshold = Number(percent);
+    if (!Number.isFinite(threshold)) return false;
+
+    const list = (Array.isArray(wanted) ? wanted : [wanted]).map(value => Number(value));
+    if (!list.length || list.some(digit => !Number.isInteger(digit) || digit < 0 || digit > 9)) return false;
+
+    // Compared as counts (hits × 100 against percent × window) so a digit sitting exactly on the
+    // threshold cannot slip through on a floating-point rounding error.
+    return list.every(digit => window.filter(value => value === digit).length * 100 < threshold * window.length);
+};
+
+/**
  * Share of ticks whose digit equals the previous tick's digit, in percent. The first tick has no
  * predecessor, so a window below two ticks has nothing to measure and reports 0.
  */

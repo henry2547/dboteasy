@@ -8,7 +8,10 @@ import { api_base } from '../../api/api-base';
 import { observerRuntime } from '../../observer';
 import { getDirection, getLastDigit } from '../utils/helpers';
 import {
+    areDigitsBelowShare,
+    digitBarState,
     digitGap,
+    highDigitRun,
     lastDigitsOfSample,
     longestDigitRun,
     parityShare,
@@ -246,6 +249,43 @@ export default Engine =>
         getDigitRepeatShare(sample) {
             return new Promise(resolve =>
                 this.getLastDigitList().then(digits => resolve(repeatShare(digits, sample)))
+            );
+        }
+
+        /**
+         * True when the newest `count` ticks in a row all ended in a digit above — or at or above —
+         * `digit`. The run is read from the real tick sequence, so any other digit in between stops it.
+         */
+        areLastDigitsHigh(digit, count, mode) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const wanted = Math.max(1, Number(count) || 1);
+                    resolve(highDigitRun(digits, digit, mode) >= wanted);
+                })
+            );
+        }
+
+        /**
+         * True only when the digit's bar is neutral — the digit genuinely has neither the green
+         * (hottest) nor the red (coldest) bar of the last `sample` ticks. No ticks to read means
+         * `unknown`, which answers false, never neutral.
+         */
+        isDigitBarNeutral(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    resolve(digitBarState(digits, digit, size) === 'neutral');
+                })
+            );
+        }
+
+        /** True when every digit in `digits_to_check` is strictly below `percent` of the window. */
+        areDigitSharesBelow(digits_to_check, percent, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 1000);
+                    resolve(areDigitsBelowShare(digits, digits_to_check, percent, size));
+                })
             );
         }
 
