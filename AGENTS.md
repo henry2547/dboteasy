@@ -151,12 +151,15 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **59** for the plain Over/Under and Even/Odd templates, **63** for every template with an extra digit
-  filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`, `under5_nine_rare`,
-  `over4_five_hot`), **67** for `over2_three_low_digits` and **155** for the two-leg
-  `over1_under6_recovery`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  **66** for the plain Over/Under templates, **63** for Even/Odd, **77** for every template with an
+  extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
+  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **145** for the two-leg
+  `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
+  duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
+  repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
+  `-3`, …). `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
-  that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
+  that formula in sync if a template gains blocks (the unit test pins 66 for the first template only).
 - **Free Bots library (fifteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
   two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7, Even/Odd) and a second
   entry gate built from
@@ -186,15 +189,12 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   neutral reads, sample 100). The Under 6 leg is its own step of the before-purchase stack, chained
   AFTER the Over 1 gate and never as its ELSE — an ELSE only runs when the newest digit is below 5, so a
   7, 8 or 9 could never reach the recovery. It only runs while `freebot:recovery` is set: three ticks in
-  a row at or above 6 plus the same neutral gate, and it never enters on a 9 (`last digit ≤ 8`). When
+  a row at or above 6 plus the same neutral gate, and a 9 on the newest tick counts like 6, 7 and 8 —
+  the leg buys `DIGITUNDER` on it. When
   that run is not met the leg does not buy — it logs a `notify` block (warn, silent) with
   `Recovery waiting · last digit N` (a `text_join` over the `freebot:notice` text variable), so a waiting
   recovery is visible in the journal. A loss lifts the stake ×2 and arms that
-  recovery; a win resets the stake to 10, clears the recovery and returns the bot to Over 1. A digit 9
-  seen after the first contract has settled stops the whole run through `bot_stop` →
-  `Bot.sessionStop('Digit 9 — exit spot, stopping')`, the run-panel Stop path.
-  Setting `freebot:stop` alone would NOT stop it: that flag is only read in `after_purchase`, and the
-  generated `while (watch('before'))` loop would spin forever without ever buying a contract.
+  recovery; a win resets the stake to 10, clears the recovery and returns the bot to Over 1.
 - **The stake must be initialised in "Run once at start".** `Bot.start()` is called by
   `BinaryBotPrivateStart` (dbot.js) at the top of every trade loop, *before* `before_purchase` runs, and
   the generator reads the `AMOUNT` input into `amount` right there. Every template keeps its stake in the
@@ -205,6 +205,12 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   the bot stops before it ever trades. `inspectFreeBotXml`'s `stake-at-start` check now rejects a template
   that reads a variable in the trade options without setting it in `INITIALIZATION`; the unit test
   `only set inside before_purchase` pins it.
+- **Every template journals the ticks it skips.** Each `before_purchase` entry gate carries an `ELSE`
+  that builds `Waiting · last digit N` with `text_join` into `freebot:notice` and logs it through
+  `notify` (info, silent); the observer-gated templates carry the same `ELSE` on their inner gate too, so
+  a failing digit filter and a failing observer filter both show up. Every template therefore declares
+  the `freebot:notice` variable, and `over1_under6_recovery` guards its Over 1 notice with
+  `not freebot:recovery` so the two legs never log twice on one tick.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
   card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.

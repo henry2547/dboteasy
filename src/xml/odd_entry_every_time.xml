@@ -1,5 +1,6 @@
 <xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true">
   <variables>
+    <variable type="" id="freebot-notice" islocal="false" iscloud="false">freebot:notice</variable>
     <variable type="" id="freebot-stake" islocal="false" iscloud="false">freebot:stake</variable>
     <variable type="" id="freebot-profit" islocal="false" iscloud="false">freebot:profit</variable>
     <variable type="" id="freebot-won" islocal="false" iscloud="false">freebot:won</variable>
@@ -117,7 +118,7 @@
   </block>
   <block type="before_purchase" id="freebot-odd-before-purchase" x="0" y="740">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-odd-entry">
+      <block type="controls_if" id="freebot-odd-entry"><mutation else="1"></mutation>
         <value name="IF0">
           <block type="digits_even_odd" id="freebot-odd-entry-parity">
             <field name="PARITY">odd</field>
@@ -126,6 +127,44 @@
         <statement name="DO0">
           <block type="purchase" id="freebot-odd-purchase">
             <field name="PURCHASE_LIST">DIGITODD</field>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="text_join" id="freebot-odd-entry-wait-notice">
+            <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+            <statement name="STACK">
+              <block type="text_statement" id="freebot-odd-entry-wait-notice-label">
+                <value name="TEXT">
+                  <shadow type="text" id="freebot-odd-entry-wait-notice-label-text">
+                    <field name="TEXT">Waiting · last digit</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="freebot-odd-entry-wait-notice-digit">
+                    <value name="TEXT">
+                      <shadow type="text" id="freebot-odd-entry-wait-notice-digit-text">
+                        <field name="TEXT"></field>
+                      </shadow>
+                      <block type="last_digit" id="freebot-odd-entry-wait-notice-last-digit"></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="freebot-odd-entry-wait-notify">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="freebot-odd-entry-wait-notify-text">
+                    <field name="TEXT">Waiting · last digit</field>
+                  </shadow>
+                  <block type="variables_get" id="freebot-odd-entry-wait-notify-read">
+                    <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                  </block>
+                </value>
+              </block>
+            </next>
           </block>
         </statement>
       </block>
@@ -159,7 +198,7 @@
               </block>
             </value>
             <next>
-              <block type="controls_if" id="freebot-odd-take-profit">
+              <block type="controls_if" id="freebot-odd-take-profit"><mutation else="1"></mutation>
                 <value name="IF0">
                   <block type="logic_compare" id="freebot-odd-take-profit-compare">
                     <field name="OP">GTE</field>
@@ -186,7 +225,7 @@
                   </block>
                 </statement>
                 <next>
-                  <block type="controls_if" id="freebot-odd-stop-loss">
+                  <block type="controls_if" id="freebot-odd-stop-loss"><mutation else="1"></mutation>
                     <value name="IF0">
                       <block type="logic_compare" id="freebot-odd-stop-loss-compare">
                         <field name="OP">LTE</field>

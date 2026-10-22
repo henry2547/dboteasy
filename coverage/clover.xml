@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1792709441913" clover="3.2.0">
-  <project timestamp="1792709441914" name="All files">
-    <metrics statements="3286" coveredstatements="3154" conditionals="440" coveredconditionals="318" methods="79" coveredmethods="67" elements="3805" coveredelements="3539" complexity="0" loc="3286" ncloc="3286" packages="4" files="8" classes="8"/>
+<coverage generated="1792713027416" clover="3.2.0">
+  <project timestamp="1792713027416" name="All files">
+    <metrics statements="3288" coveredstatements="3156" conditionals="440" coveredconditionals="318" methods="79" coveredmethods="67" elements="3807" coveredelements="3541" complexity="0" loc="3288" ncloc="3288" packages="4" files="8" classes="8"/>
     <package name="external.bot-skeleton.scratch.blocks.Observer">
       <metrics statements="813" coveredstatements="813" conditionals="43" coveredconditionals="38" methods="10" coveredmethods="7"/>
       <file name="observer-catalog.js" path="/app/src/external/bot-skeleton/scratch/blocks/Observer/observer-catalog.js">
@@ -1014,7 +1014,7 @@
       </file>
     </package>
     <package name="pages.free-bots">
-      <metrics statements="2243" coveredstatements="2184" conditionals="352" coveredconditionals="249" methods="58" coveredmethods="55"/>
+      <metrics statements="2245" coveredstatements="2186" conditionals="352" coveredconditionals="249" methods="58" coveredmethods="55"/>
       <file name="bot-loader-store.ts" path="/app/src/pages/free-bots/bot-loader-store.ts">
         <metrics statements="175" coveredstatements="175" conditionals="26" coveredconditionals="18" methods="11" coveredmethods="11"/>
         <line num="1" count="1" type="stmt"/>
@@ -1285,11 +1285,11 @@
         <line num="88" count="1040" type="stmt"/>
         <line num="89" count="1040" type="stmt"/>
         <line num="90" count="1" type="stmt"/>
-        <line num="91" count="1073" type="cond" truecount="1" falsecount="0"/>
-        <line num="92" count="1073" type="cond" truecount="0" falsecount="1"/>
-        <line num="93" count="1073" type="stmt"/>
-        <line num="94" count="1073" type="cond" truecount="0" falsecount="1"/>
-        <line num="95" count="1073" type="stmt"/>
+        <line num="91" count="1079" type="cond" truecount="1" falsecount="0"/>
+        <line num="92" count="1079" type="cond" truecount="0" falsecount="1"/>
+        <line num="93" count="1079" type="stmt"/>
+        <line num="94" count="1079" type="cond" truecount="0" falsecount="1"/>
+        <line num="95" count="1079" type="stmt"/>
         <line num="96" count="1" type="stmt"/>
         <line num="97" count="264" type="cond" truecount="1" falsecount="0"/>
         <line num="98" count="264" type="cond" truecount="0" falsecount="1"/>
@@ -1445,10 +1445,10 @@
         <line num="248" count="116" type="cond" truecount="0" falsecount="1"/>
         <line num="249" count="116" type="stmt"/>
         <line num="250" count="116" type="cond" truecount="1" falsecount="0"/>
-        <line num="251" count="254" type="cond" truecount="2" falsecount="0"/>
-        <line num="252" count="254" type="cond" truecount="1" falsecount="0"/>
-        <line num="253" count="254" type="cond" truecount="1" falsecount="0"/>
-        <line num="254" count="254" type="stmt"/>
+        <line num="251" count="260" type="cond" truecount="2" falsecount="0"/>
+        <line num="252" count="260" type="cond" truecount="1" falsecount="0"/>
+        <line num="253" count="260" type="cond" truecount="1" falsecount="0"/>
+        <line num="254" count="260" type="stmt"/>
         <line num="255" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="256" count="0" type="stmt"/>
         <line num="257" count="1" type="stmt"/>
@@ -1467,10 +1467,10 @@
         <line num="270" count="58" type="stmt"/>
         <line num="271" count="58" type="stmt"/>
         <line num="272" count="58" type="cond" truecount="1" falsecount="0"/>
-        <line num="273" count="310" type="stmt"/>
-        <line num="274" count="310" type="stmt"/>
-        <line num="275" count="310" type="stmt"/>
-        <line num="276" count="310" type="stmt"/>
+        <line num="273" count="360" type="stmt"/>
+        <line num="274" count="360" type="stmt"/>
+        <line num="275" count="360" type="stmt"/>
+        <line num="276" count="360" type="stmt"/>
         <line num="277" count="58" type="stmt"/>
         <line num="278" count="58" type="stmt"/>
         <line num="279" count="58" type="stmt"/>
@@ -1478,8 +1478,8 @@
         <line num="281" count="58" type="cond" truecount="1" falsecount="0"/>
         <line num="282" count="58" type="stmt"/>
         <line num="283" count="58" type="cond" truecount="1" falsecount="0"/>
-        <line num="284" count="1189" type="stmt"/>
-        <line num="285" count="1189" type="stmt"/>
+        <line num="284" count="1334" type="stmt"/>
+        <line num="285" count="1334" type="stmt"/>
         <line num="286" count="58" type="stmt"/>
         <line num="287" count="58" type="stmt"/>
         <line num="288" count="58" type="stmt"/>
@@ -1524,8 +1524,8 @@
         <line num="327" count="58" type="stmt"/>
         <line num="328" count="58" type="stmt"/>
         <line num="329" count="58" type="cond" truecount="1" falsecount="0"/>
-        <line num="330" count="2122" type="cond" truecount="1" falsecount="0"/>
-        <line num="331" count="2122" type="cond" truecount="1" falsecount="0"/>
+        <line num="330" count="2347" type="cond" truecount="1" falsecount="0"/>
+        <line num="331" count="2347" type="cond" truecount="1" falsecount="0"/>
         <line num="332" count="58" type="stmt"/>
         <line num="333" count="58" type="cond" truecount="1" falsecount="0"/>
         <line num="334" count="58" type="cond" truecount="1" falsecount="0"/>
@@ -2658,7 +2658,7 @@
         <line num="231" count="6" type="stmt"/>
       </file>
       <file name="templates.ts" path="/app/src/pages/free-bots/templates.ts">
-        <metrics statements="613" coveredstatements="610" conditionals="8" coveredconditionals="5" methods="3" coveredmethods="2"/>
+        <metrics statements="615" coveredstatements="612" conditionals="8" coveredconditionals="5" methods="3" coveredmethods="2"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
@@ -3255,23 +3255,25 @@
         <line num="594" count="1" type="stmt"/>
         <line num="595" count="1" type="stmt"/>
         <line num="596" count="1" type="stmt"/>
-        <line num="597" count="8" type="cond" truecount="1" falsecount="0"/>
-        <line num="598" count="8" type="stmt"/>
+        <line num="597" count="1" type="stmt"/>
+        <line num="598" count="1" type="stmt"/>
         <line num="599" count="8" type="cond" truecount="1" falsecount="0"/>
-        <line num="600" count="8" type="cond" truecount="2" falsecount="1"/>
-        <line num="601" count="8" type="stmt"/>
-        <line num="602" count="1" type="stmt"/>
-        <line num="603" count="0" type="stmt"/>
-        <line num="604" count="0" type="stmt"/>
+        <line num="600" count="8" type="stmt"/>
+        <line num="601" count="8" type="cond" truecount="1" falsecount="0"/>
+        <line num="602" count="8" type="cond" truecount="2" falsecount="1"/>
+        <line num="603" count="8" type="stmt"/>
+        <line num="604" count="1" type="stmt"/>
         <line num="605" count="0" type="stmt"/>
-        <line num="606" count="1" type="stmt"/>
-        <line num="607" count="1" type="stmt"/>
+        <line num="606" count="0" type="stmt"/>
+        <line num="607" count="0" type="stmt"/>
         <line num="608" count="1" type="stmt"/>
         <line num="609" count="1" type="stmt"/>
         <line num="610" count="1" type="stmt"/>
-        <line num="611" count="10" type="cond" truecount="1" falsecount="0"/>
-        <line num="612" count="10" type="cond" truecount="0" falsecount="2"/>
-        <line num="613" count="10" type="stmt"/>
+        <line num="611" count="1" type="stmt"/>
+        <line num="612" count="1" type="stmt"/>
+        <line num="613" count="10" type="cond" truecount="1" falsecount="0"/>
+        <line num="614" count="10" type="cond" truecount="0" falsecount="2"/>
+        <line num="615" count="10" type="stmt"/>
       </file>
     </package>
     <package name="utils">
