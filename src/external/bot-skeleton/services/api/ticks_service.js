@@ -91,9 +91,16 @@ export default class TicksService {
         });
     }
 
+    /**
+     * Subscribes a listener to a market's tick stream.
+     *
+     * `quiet` is for a caller that handles the failure itself (the market scan skips the market and
+     * reports why): without it a single market that cannot be subscribed would be emitted as a fatal
+     * run error and end the bot, even though the scan can simply move on to the next market.
+     */
     monitor(options) {
         return new Promise((resolve, reject) => {
-            const { symbol, granularity, callback } = options;
+            const { symbol, granularity, callback, quiet } = options;
 
             const type = getType(granularity);
 
@@ -110,7 +117,7 @@ export default class TicksService {
                     resolve(key);
                 })
                 .catch(e => {
-                    globalObserver.emit('Error', e);
+                    if (!quiet) globalObserver.emit('Error', e);
                     this.ticks_history_promise = null;
                     api_base.toggleRunButton(false);
                     reject(e);
@@ -159,14 +166,29 @@ export default class TicksService {
         }
     }
 
+    /**
+     * Forgets the API subscription behind a symbol whose last listener has gone.
+     *
+     * Only that symbol's entries are released. Wiping the whole map (as this used to) left the
+     * server-side `ticks` subscription of every visited market alive while losing the id needed to
+     * forget it, so each "Switch active market" step leaked one subscription until the API started
+     * refusing requests.
+     */
     unsubscribeAllAndSubscribeListeners(symbol) {
+        if (!api_base?.api) return Promise.resolve();
+
         const ohlcSubscriptions = this.subscriptions.getIn(['ohlc', symbol]);
+        const tick_subscription = this.subscriptions.getIn(['tick', symbol]);
+        const subscriptions = [
+            ...(ohlcSubscriptions ? Array.from(ohlcSubscriptions.values()) : []),
+            ...(tick_subscription ? [tick_subscription] : []),
+        ].filter(Boolean);
 
-        const subscription = [...(ohlcSubscriptions ? Array.from(ohlcSubscriptions.values()) : [])];
+        this.subscriptions = this.subscriptions.deleteIn(['ohlc', symbol]).deleteIn(['tick', symbol]);
 
-        Promise.all(subscription.map(id => doUntilDone(() => api_base.api.forget(id))));
-
-        this.subscriptions = new Map();
+        return Promise.all(subscriptions.map(id => doUntilDone(() => api_base.api.forget(id)))).catch(error => {
+            console.warn('Could not forget the subscription for', symbol, error);
+        });
     }
 
     updateTicksAndCallListeners(symbol, ticks) {

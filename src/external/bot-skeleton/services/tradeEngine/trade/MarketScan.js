@@ -33,6 +33,7 @@ import {
     TICK_READY_TIMEOUT_MS,
     createMarketScanState,
     describeMarket,
+    describeMarketFailure,
     discoverEligibleMarkets,
     isMarketTradable,
     resolveSwitchLimit,
@@ -191,7 +192,7 @@ export default Engine =>
             } catch (error) {
                 return this.transitionScanState(
                     MARKET_SCAN_STATES.DATA_UNAVAILABLE,
-                    error?.message || 'The market list could not be loaded.'
+                    describeMarketFailure(error, 'The market list could not be loaded.')
                 );
             }
 
@@ -242,10 +243,10 @@ export default Engine =>
             scan.entry_found = true;
             scan.frozen = true;
             scan.active_symbol = scan.active_symbol || this.symbol;
-            scan.active_display = scan.active_display || describeMarket(this.findPoolMarket(scan.active_symbol));
+            scan.active_display = scan.active_display || describeMarket(this.findScanMarket(scan.active_symbol));
             return this.transitionScanState(
                 MARKET_SCAN_STATES.ENTRY_FOUND,
-                `Entry condition met on ${describeMarket(this.findPoolMarket(scan.active_symbol))} — market frozen for this entry.`
+                `Entry condition met on ${describeMarket(this.findScanMarket(scan.active_symbol))} — market frozen for this entry.`
             );
         }
 
@@ -448,29 +449,60 @@ export default Engine =>
             );
         }
 
-        findPoolMarket(symbol) {
+        /**
+         * The scan's own pool entry for a symbol.
+         *
+         * Deliberately not named `findPoolMarket`: the market-intelligence engine reads its own,
+         * separately discovered pool under that name and sits outside this engine, so it would
+         * shadow this lookup and leave the scan reporting an empty market name.
+         */
+        findScanMarket(symbol) {
             const scan = this.getScanState();
             return scan.eligible.find(market => market.apiSymbol === symbol) || null;
         }
 
-        /** Moves the trade engine's real tick subscription (and its symbol) to the new market. */
+        /**
+         * Moves the trade engine's real tick subscription (and its symbol) to the new market.
+         *
+         * A market that cannot be subscribed is a market the scan skips, not a run-ending error: the
+         * subscription is made quietly and its API reason is returned, so the run log names the market
+         * and why it was left out instead of the app's generic "An error occurred" fallback.
+         */
         async subscribeToMarket(symbol) {
             const previous_symbol = this.symbol;
             try {
-                await this.watchTicks(symbol);
+                await this.watchTicks(symbol, { quiet: true });
             } catch (error) {
-                return { ok: false, reason: error?.message || 'The market feed could not be subscribed' };
+                return { ok: false, reason: describeMarketFailure(error, 'The market feed could not be subscribed') };
             }
 
             if (this.symbol !== symbol) {
                 return { ok: false, reason: 'The market feed did not accept the subscription' };
             }
 
-            // Proposals, purchases and contract updates follow the selected market from here on.
-            if (this.options) this.options.symbol = symbol;
-
+            this.syncTradeToMarket(symbol);
             await this.forgetMarketTicks(previous_symbol);
             return { ok: true };
+        }
+
+        /**
+         * Points the trade options and the proposal templates at the market the scan just selected.
+         * Without this the next purchase would still quote the market the bot started on, so a switch
+         * could buy on a market whose ticks the strategy never analysed.
+         */
+        syncTradeToMarket(symbol) {
+            if (this.options) this.options.symbol = symbol;
+            if (!this.tradeOptions) return;
+
+            this.tradeOptions.symbol = symbol;
+            if (!this.is_proposal_subscription_required) return;
+
+            // The previous market's option is deliberately dropped: `makeProposals` only rebuilds the
+            // templates (and the purchase reference) when it sees a new trade option, and the symbol
+            // itself is not one of the compared keys.
+            this.trade_option = null;
+            this.makeProposals({ ...this.options, ...this.tradeOptions });
+            this.checkProposalReady?.();
         }
 
         /**
@@ -512,7 +544,7 @@ export default Engine =>
             try {
                 ticks = await ticksService.request({ symbol });
             } catch (error) {
-                return { ready: false, reason: 'Tick history could not be loaded' };
+                return { ready: false, reason: describeMarketFailure(error, 'Tick history could not be loaded') };
             }
 
             if (!Array.isArray(ticks) || ticks.length < MIN_TICK_HISTORY) {
@@ -532,7 +564,7 @@ export default Engine =>
                 try {
                     latest = await ticksService.request({ symbol });
                 } catch (error) {
-                    return { ready: false, reason: 'The market feed stopped responding' };
+                    return { ready: false, reason: describeMarketFailure(error, 'The market feed stopped responding') };
                 }
 
                 if (lastEpochOf(latest) > baseline_epoch) {

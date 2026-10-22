@@ -32,6 +32,7 @@ import {
 } from '../utils/market-intelligence';
 import {
     MIN_TICK_HISTORY,
+    describeMarketFailure,
     discoverEligibleMarkets,
     isMarketTradable,
     supportsContractTypes,
@@ -130,7 +131,7 @@ export default Engine =>
             try {
                 pool = await discoverEligibleMarkets();
             } catch (error) {
-                const reason = error?.message || 'The market list could not be loaded from the Deriv API';
+                const reason = describeMarketFailure(error, 'The market list could not be loaded from the Deriv API');
                 state.discovery = { at: started_at, category, min_history, markets: [], reason, error: true };
                 this.publishMarketIntelligence();
                 journal(`Market intelligence: market discovery failed — ${reason}`, 'warn');

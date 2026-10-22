@@ -28,7 +28,9 @@ export const handleBackendError = (error: BackendError): string => {
     }
 
     // Handle code_args format specifically for parameter replacement
-    let details = error.details;
+    // The API's own message travels with the lookup so a code this build has no wording for still
+    // reports what the API said, instead of the generic "An error occurred. Please try again.".
+    let details = error.message ? { ...error.details, message: error.message } : error.details;
     if (error.details?.code_args && Array.isArray(error.details.code_args)) {
         // Convert code_args array to parameter object for easier processing
         const code_args = error.details.code_args;
