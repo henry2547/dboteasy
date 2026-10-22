@@ -208,6 +208,14 @@ export const ToolboxItems = () =>
                     </Value>
                 </Block>
                 <Block type='digits_streak' />
+                <Block type='switch_active_market'>
+                    <Field name='ORDER'>sequential</Field>
+                    <Value name='MAX_SWITCHES'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>4</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
             </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they

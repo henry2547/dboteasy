@@ -16,6 +16,7 @@ import Purchase from './Purchase';
 import Sell from './Sell';
 import Ticks from './Ticks';
 import Total from './Total';
+import MarketScan from './MarketScan';
 
 const watchBefore = store =>
     watchScope({
@@ -62,7 +63,9 @@ const watchScope = ({ store, stopScope, passScope, passFlag }) => {
     });
 };
 
-export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {}))))))) {
+export default class TradeEngine extends MarketScan(
+    Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))
+) {
     constructor($scope) {
         super();
         this.observer = $scope.observer;
@@ -75,6 +78,9 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         this.subscription_id_for_accumulators = null;
         this.is_proposal_requested_for_accumulators = false;
         this.store = createStore(rootReducer, applyMiddleware(thunk));
+        // Publishes the idle scan state, so the monitoring panel starts from a real snapshot
+        // instead of waiting for the first switch.
+        this.publishIdleScan();
     }
 
     init(...args) {

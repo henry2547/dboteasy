@@ -400,6 +400,9 @@ class DBot {
 
         this.is_bot_running = false;
         observerRuntime.detach('Bot stopped');
+        // A market scan must stop with the bot: it reports itself as stopped, so the monitoring
+        // panel never keeps showing a search that is no longer running.
+        this.interpreter?.bot?.tradeEngine?.marketScanStop?.('Stopped by the user.');
 
         // The interpreter only exists once a workspace has been initialised, so a stop
         // request that arrives before that (or after a failed run) has nothing to stop.
@@ -432,6 +435,7 @@ class DBot {
      */
     async terminateBot() {
         observerRuntime.detach('Session terminated');
+        this.interpreter?.bot?.tradeEngine?.marketScanStop?.('Session terminated.');
         if (this.interpreter) {
             await this.interpreter.terminateSession();
             this.interpreter = null;
