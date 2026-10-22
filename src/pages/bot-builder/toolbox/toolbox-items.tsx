@@ -343,6 +343,45 @@ export const ToolboxItems = () =>
                 <Block type='learn_report' />
                 <Block type='learn_reset' />
             </Category>
+            {/* Execution reads: what the engine really bought, what it settled last, and what is
+                still open. Every value comes from the trades this run actually made. */}
+            <Category id='trading_execution' name={localize('Trading & Execution')}>
+                <Block type='exec_last_result' />
+                <Block type='exec_last_profit' />
+                <Block type='exec_session_profit' />
+                <Block type='exec_session_trades' />
+                <Block type='exec_open_contracts' />
+                <Block type='exec_has_open_contract' />
+                <Block type='exec_wait_settlement' />
+            </Category>
+            {/* Bot control: stop through the same path as the Stop button, and a session trade cap. */}
+            <Category id='bot_control' name={localize('Bot Control')}>
+                <Block type='bot_stop'>
+                    <Value name='REASON'>
+                        <Shadow type='text'>
+                            <Field name='TEXT'>Session limit reached</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='bot_trade_limit_reached'>
+                    <Value name='LIMIT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>10</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+            </Category>
+            {/* Reporting: one measured summary line, and a note in the run log. */}
+            <Category id='session_reporting' name={localize('Reporting')}>
+                <Block type='report_session' />
+                <Block type='report_journal'>
+                    <Value name='MESSAGE'>
+                        <Shadow type='text'>
+                            <Field name='TEXT'>Entry skipped</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+            </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they
                 were migrated from. Each item drags the block onto the canvas with its defaults. */}

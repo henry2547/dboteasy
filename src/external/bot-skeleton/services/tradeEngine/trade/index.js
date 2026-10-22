@@ -19,6 +19,7 @@ import Total from './Total';
 import MarketIntelligence from './MarketIntelligence';
 import MarketScan from './MarketScan';
 import RiskManagement from './RiskManagement';
+import SessionControl from './SessionControl';
 import StrategyLearning from './StrategyLearning';
 
 const watchBefore = store =>
@@ -68,9 +69,11 @@ const watchScope = ({ store, stopScope, passScope, passFlag }) => {
 
 // `MarketIntelligence` wraps `MarketScan`, so readiness, ranking and cooldowns can read the scan
 // state (`getScanState`, `isTickSubscriptionActive`, …) the market switch already maintains.
-export default class TradeEngine extends StrategyLearning(
-    RiskManagement(
-        MarketIntelligence(MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))))
+export default class TradeEngine extends SessionControl(
+    StrategyLearning(
+        RiskManagement(
+            MarketIntelligence(MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))))
+        )
     )
 ) {
     constructor($scope) {

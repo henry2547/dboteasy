@@ -355,6 +355,51 @@ actually performed, from contracts the engine really settled. It never simulates
   errors. Real per-strategy numbers need settled contracts, so they are verified by hand with a Demo
   account (Run is login-gated).
 
+## Trading & Execution, Bot Control and Reporting blocks (Bot Builder)
+The last three engine-backed palette categories. They read what the trade engine already did and
+never trade, size a stake or stop a session on their own initiative.
+- Blocks: `scratch/blocks/Trading Execution/`, `scratch/blocks/Bot Control/` and
+  `scratch/blocks/Reporting/` (folder names carry the space, like the other engine folders), imported
+  by `blocks/index.js`. Category constants: `window.Blockly.Categories.Trading_Execution` /
+  `Bot_Control` / `Session_Reporting` in `scratch/hooks/constant.js`; palette entries in
+  `toolbox-items.tsx` (`trading_execution`, `bot_control`, `session_reporting`).
+- Eleven blocks: `exec_last_result`, `exec_last_profit`, `exec_session_profit`, `exec_session_trades`,
+  `exec_open_contracts`, `exec_has_open_contract`, `exec_wait_settlement` (the only statement with a
+  promise), `bot_stop`, `bot_trade_limit_reached`, `report_session` and `report_journal`.
+- Rules are pure functions in `services/tradeEngine/utils/session-control.js` (tested by
+  `utils/__tests__/session-control.test.js`). A contract is counted when the engine bought it; a
+  result exists only after settlement, and flat contracts (`profit === 0`) count as losses — the same
+  rule as the statistics panel. `exec_last_result` answers `''` before the first settlement, and
+  `sessionSummary` says "no contracts taken yet" instead of printing zeros as a measured result.
+- `trade/SessionControl.js` is the outermost trade-engine mixin in `trade/index.js`. It records from
+  the existing hooks — `recordSessionEntry()` next to `recordRiskEntry` in `Purchase.js`,
+  `recordSessionSettlement({ profit, stake })` next to `recordLearningSettlement` in `Total.js` — and
+  `statistics.clear` resets it.
+- **It does not keep its own open-contract counter.** `sessionOpenContracts()` reads `this.contractId`,
+  the id the engine is actually holding, so a settled or abandoned contract can never leave a phantom
+  blocking position. `exec_wait_settlement` resolves on the engine's own settlement (`contractId`
+  cleared or scope `STOP`), never on a timer, and resolves `false` immediately when nothing is open.
+- **Stopping goes through the existing path.** `stopBotWithReason` emits `bot.stop_button_click` — the
+  same event the run panel's Stop button emits — so the open contract is still allowed to settle, the
+  subscriptions are cleared and the UI reports a normal stop. It is one-shot per session, and the
+  reason is journalled through `ui.log.notify`.
+- Interface split: the synchronous reads live in `Interface/SessionControlInterface.js` (spread into
+  `getInterface()` like the risk surface); the one promise is exported as
+  `getSessionControlAsyncInterface` and wrapped with `createAsync` in `utils/interpreter.js` — mixing
+  a sync value into that promise map would suspend the interpreter on a non-promise.
+- A trade limit of `0` or less means "not set" and never stops a session; `report_journal` writes text
+  verbatim at info/warn/error, and an unknown level falls back to info.
+- Verify: `docker compose exec web npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__`
+  (79 tests) plus
+  `npx jest src/external/bot-skeleton/services/observer/__tests__/observer-generation.test.js`
+  (every block in the tree has a generator). In the palette the three categories list the eleven blocks;
+  a scratch workspace containing them generates `Bot.sessionWaitForSettlement()`,
+  `Bot.sessionStop(…)`, `Bot.sessionJournal(…, "warn")`, `Bot.sessionLastResult()`,
+  `Bot.sessionLastProfit()`, `Bot.sessionProfit()`, `Bot.sessionTradesTaken()`,
+  `Bot.sessionOpenContracts()`, `Bot.sessionHasOpenContract()`, `Bot.sessionTradeLimitReached(3)` and
+  `Bot.sessionReport()` without console errors. Real settlement numbers need a logged-in account, so
+  the live path is verified by hand with a Demo account (Run is login-gated).
+
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
 `AiBotProvider` or lazy-loads `AiBotPage`, and `DBOT_TABS` / `TAB_IDS` / the `hash` array in

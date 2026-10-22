@@ -4,6 +4,7 @@ import getLearningInterface from './LearningInterface';
 import getMarketIntelligenceInterface from './MarketIntelligenceInterface';
 import getMarketScanInterface from './MarketScanInterface';
 import getRiskInterface from './RiskInterface';
+import getSessionControlInterface, { getSessionControlAsyncInterface } from './SessionControlInterface';
 import getTicksInterface from './TicksInterface';
 import getToolsInterface from './ToolsInterface';
 
@@ -32,7 +33,12 @@ const Interface = $scope => {
             // Strategy learning: per-label hit rates and streaks from contracts this session
             // really settled, readable synchronously inside an ordinary condition.
             ...getLearningInterface(tradeEngine),
+            // Session reads, the program's own stop request and journal notes — synchronous, so they
+            // work inside an ordinary condition or statement.
+            ...getSessionControlInterface(tradeEngine),
             getTicksInterface: getTicksInterface(tradeEngine),
+            // The one promise: the program suspends until the open contract settles.
+            getSessionControlAsyncInterface: getSessionControlAsyncInterface(tradeEngine),
             // Exposed as its own surface: every entry is a promise, wrapped as an async native
             // function by the interpreter (see utils/interpreter.js).
             getMarketScanInterface: getMarketScanInterface(tradeEngine),

@@ -100,6 +100,7 @@ const Interpreter = () => {
             getTicksInterface,
             getMarketScanInterface,
             getMarketIntelligenceInterface,
+            getSessionControlAsyncInterface,
             alert,
             prompt,
             sleep,
@@ -108,6 +109,7 @@ const Interpreter = () => {
         const ticks_interface = getTicksInterface;
         const market_scan_interface = getMarketScanInterface ?? {};
         const market_intelligence_interface = getMarketIntelligenceInterface ?? {};
+        const session_control_async_interface = getSessionControlAsyncInterface ?? {};
 
         js_interpreter.setProperty(scope, 'console', js_interpreter.nativeToPseudo(custom_console));
         js_interpreter.setProperty(scope, 'alert', js_interpreter.nativeToPseudo(alert));
@@ -133,6 +135,12 @@ const Interpreter = () => {
         // Market intelligence (discovery, readiness, ranking, cooldowns) is exposed the same way:
         // the generated program suspends while a pool is discovered or a contract list verified.
         Object.entries(market_intelligence_interface).forEach(([name, f]) =>
+            js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
+        );
+
+        // Waiting for a settlement suspends the generated program exactly like the market steps do:
+        // it resolves on the engine's own settlement, so the next block reads a settled contract.
+        Object.entries(session_control_async_interface).forEach(([name, f]) =>
             js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
         );
 

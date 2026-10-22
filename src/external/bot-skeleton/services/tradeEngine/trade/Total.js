@@ -59,6 +59,8 @@ export default Engine =>
             this.recordRiskSettlement?.({ profit, stake: buyPrice });
             // Attributes the same settlement to the strategy the program labelled for learning.
             this.recordLearningSettlement?.({ profit });
+            // Session counters and last result behind the execution and reporting blocks.
+            this.recordSessionSettlement?.({ profit, stake: buyPrice });
 
             info({
                 profit,
