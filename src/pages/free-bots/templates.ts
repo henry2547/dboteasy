@@ -14,6 +14,7 @@
  * `Digit Frequency Below`), which is why each card lists the blocks it uses.
  */
 
+import { multiMarketById } from './multi-market';
 import evenEntryEveryTimeXml from '@/xml/even_entry_every_time.xml';
 import oddEntryEveryTimeXml from '@/xml/odd_entry_every_time.xml';
 import over1EntryEveryTimeXml from '@/xml/over1_entry_every_time.xml';
@@ -29,7 +30,11 @@ import over4FiveHotXml from '@/xml/over4_five_hot.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 
+/** Generated multi-market templates carry a configuration-derived id. */
+export type MultiMarketBotId = `multi_market_${string}`;
+
 export type FreeBotId =
+    | MultiMarketBotId
     | 'over1_entry_every_time'
     | 'under8_entry_every_time'
     | 'over2_entry_every_time'
@@ -55,12 +60,23 @@ export type FreeBotStrategy =
     | 'under5'
     | 'over4'
     | 'even'
-    | 'odd';
+    | 'odd'
+    | 'matches'
+    | 'differs';
 
-export type FreeBotContractType = 'DIGITOVER' | 'DIGITUNDER' | 'DIGITEVEN' | 'DIGITODD';
+export type FreeBotContractType =
+    | 'DIGITOVER'
+    | 'DIGITUNDER'
+    | 'DIGITEVEN'
+    | 'DIGITODD'
+    | 'DIGITMATCH'
+    | 'DIGITDIFF';
 
-/** Digit trade type in the Bot Builder: Over/Under carries a prediction, Even/Odd a parity. */
-export type FreeBotTradeType = 'overunder' | 'evenodd';
+/**
+ * Digit trade type in the Bot Builder: Over/Under carries a prediction, Even/Odd a
+ * parity, Matches/Differs a target digit.
+ */
+export type FreeBotTradeType = 'overunder' | 'evenodd' | 'matchesdiffers';
 
 export type FreeBotParity = 'even' | 'odd';
 
@@ -71,6 +87,13 @@ export interface FreeBotTemplate {
     sourceFile: string;
     /** Asset under `src/xml/` that is loaded into the Bot Builder. */
     asset: string;
+    /**
+     * XML built in code instead of read from `src/xml/` — the Multi-Market Digit
+     * Entry Hunter templates generate their workspace from a validated config.
+     */
+    xml?: string;
+    /** True when the template scans and switches markets itself. */
+    marketScan?: boolean;
     strategy: FreeBotStrategy;
     /** Scanner/strategy label, e.g. "Digit Over". */
     strategyLabel: string;
@@ -486,7 +509,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
 ];
 
-const FREE_BOT_XML: Record<FreeBotId, string> = {
+const FREE_BOT_XML: Record<string, string> = {
     over1_entry_every_time: over1EntryEveryTimeXml,
     under8_entry_every_time: under8EntryEveryTimeXml,
     over2_entry_every_time: over2EntryEveryTimeXml,
@@ -504,6 +527,8 @@ const FREE_BOT_XML: Record<FreeBotId, string> = {
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {
+    const generated = multiMarketById(id);
+    if (generated) return generated;
     return FREE_BOT_TEMPLATES.find(template => template.id === id) ?? null;
 }
 
@@ -511,7 +536,10 @@ export function freeBotForStrategy(strategy: FreeBotStrategy | null | undefined)
     return FREE_BOT_TEMPLATES.find(template => template.strategy === strategy) ?? null;
 }
 
-/** The untouched template XML — the Free Bots asset is never edited in place. */
+/**
+ * The untouched template XML — the Free Bots asset is never edited in place. A
+ * generated template carries its own XML and never reads an asset.
+ */
 export function freeBotXml(template: FreeBotTemplate): string {
-    return FREE_BOT_XML[template.id] ?? '';
+    return template.xml ?? FREE_BOT_XML[template.id] ?? '';
 }
