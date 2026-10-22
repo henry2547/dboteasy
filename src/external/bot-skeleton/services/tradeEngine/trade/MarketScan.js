@@ -220,6 +220,8 @@ export default Engine =>
         async marketScanNext() {
             const scan = this.getScanState();
             if (scan.active_symbol) this.markAnalysed(scan.active_symbol);
+            // The entry condition did not pass on this market — recorded as evidence, not inferred.
+            this.recordMarketEvidence?.(scan.active_symbol, { entry_met: false });
             if (this.isMarketScanStopped()) {
                 return this.transitionScanState(MARKET_SCAN_STATES.STOPPED, 'Stopped by the user.');
             }
@@ -236,6 +238,7 @@ export default Engine =>
          */
         async marketScanLock() {
             const scan = this.getScanState();
+            this.recordMarketEvidence?.(scan.active_symbol, { entry_met: true });
             scan.entry_found = true;
             scan.frozen = true;
             scan.active_symbol = scan.active_symbol || this.symbol;
@@ -328,6 +331,24 @@ export default Engine =>
                     continue;
                 }
 
+                // A market the program has put in cooldown is skipped here, with its reason, and
+                // stays visible in the excluded-markets report. Only an explicit cooldown can do
+                // this: a data or account failure is refused by the cooldown block, so it can never
+                // be hidden behind one.
+                const cooling = this.cooldownFor?.(market.apiSymbol);
+                if (cooling?.cooling) {
+                    this.skipMarket(
+                        scan,
+                        market,
+                        `In cooldown — ${cooling.entry.reason}${
+                            cooling.entry.cycles_remaining
+                                ? `, ${cooling.entry.cycles_remaining} scan cycle(s) left`
+                                : ''
+                        }${cooling.entry.remaining_seconds ? `, ${cooling.entry.remaining_seconds}s left` : ''}`
+                    );
+                    continue;
+                }
+
                 const contract_check = await supportsContractTypes(
                     market.apiSymbol,
                     this.options?.contractTypes
@@ -356,6 +377,9 @@ export default Engine =>
                 scan.data_ready = true;
                 scan.tick_count = readiness.tick_count;
                 scan.switches += 1;
+
+                // The measurement this market genuinely produced becomes rankable evidence.
+                await this.recordScanEvidence?.(market.apiSymbol);
 
                 this.transitionScanState(
                     MARKET_SCAN_STATES.ANALYZING,
@@ -397,6 +421,8 @@ export default Engine =>
             // Entire pool analysed: begin another cycle if the limit still allows switches.
             scan.analysed = [];
             scan.cycles += 1;
+            // One scan cycle is complete: cycle-based market cooldowns advance by one here.
+            this.advanceMarketCooldowns?.();
             if (scan.order === MARKET_SCAN_ORDER.SEQUENTIAL) scan.cursor = 0;
             const next = pool[scan.cursor % pool.length];
             scan.cursor = (scan.cursor + 1) % pool.length;

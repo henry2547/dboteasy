@@ -17,6 +17,7 @@ window.Blockly.Categories = {
     Time: 'time',
     Tick_Analysis: 'technical_analysis',
     Digits: 'digits',
+    Market_Intelligence: 'market_intelligence',
     Candle: 'candle',
     Miscellaneous: 'miscellaneous',
     Loop: 'loops',

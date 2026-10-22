@@ -217,6 +217,45 @@ export const ToolboxItems = () =>
                     </Value>
                 </Block>
             </Category>
+            {/* Market intelligence: discovery, readiness, ranking and cooldowns. Every block reads
+                the app's own market-discovery service and the trade engine's own tick data. */}
+            <Category id='market_intelligence' name={localize('Market Intelligence')}>
+                <Block type='market_discover_eligible'>
+                    <Field name='CATEGORY'>all</Field>
+                    <Field name='VERIFY'>no</Field>
+                    <Value name='MIN_HISTORY'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>20</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='market_eligible_count' />
+                <Block type='market_readiness'>
+                    <Field name='SYMBOL'></Field>
+                </Block>
+                <Block type='market_readiness_report'>
+                    <Field name='SYMBOL'></Field>
+                </Block>
+                <Block type='market_rank'>
+                    <Field name='CRITERION'>readiness</Field>
+                    <Value name='MIN_SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>30</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='market_top_ranked' />
+                <Block type='market_cooldown'>
+                    <Field name='SYMBOL'></Field>
+                    <Field name='CYCLES'>1</Field>
+                    <Field name='MINUTES'>0</Field>
+                    <Field name='REASON'>Cooling down after the configured event</Field>
+                </Block>
+                <Block type='market_is_cooling'>
+                    <Field name='SYMBOL'></Field>
+                </Block>
+                <Block type='market_excluded_report' />
+            </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they
                 were migrated from. Each item drags the block onto the canvas with its defaults. */}

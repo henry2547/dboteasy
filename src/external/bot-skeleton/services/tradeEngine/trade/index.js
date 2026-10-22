@@ -16,6 +16,7 @@ import Purchase from './Purchase';
 import Sell from './Sell';
 import Ticks from './Ticks';
 import Total from './Total';
+import MarketIntelligence from './MarketIntelligence';
 import MarketScan from './MarketScan';
 
 const watchBefore = store =>
@@ -63,8 +64,10 @@ const watchScope = ({ store, stopScope, passScope, passFlag }) => {
     });
 };
 
-export default class TradeEngine extends MarketScan(
-    Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))
+// `MarketIntelligence` wraps `MarketScan`, so readiness, ranking and cooldowns can read the scan
+// state (`getScanState`, `isTickSubscriptionActive`, …) the market switch already maintains.
+export default class TradeEngine extends MarketIntelligence(
+    MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {}))))))))
 ) {
     constructor($scope) {
         super();

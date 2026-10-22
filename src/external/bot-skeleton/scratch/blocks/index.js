@@ -13,6 +13,7 @@ import './Binary/Tools/Time';
 import './Binary/Trade Definition';
 import './Digits';
 import './Logic';
+import './Market Intelligence';
 import './Math';
 import './Observer';
 import './Text';

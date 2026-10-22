@@ -1,5 +1,6 @@
 import TradeEngine from '../trade';
 import getBotInterface from './BotInterface';
+import getMarketIntelligenceInterface from './MarketIntelligenceInterface';
 import getMarketScanInterface from './MarketScanInterface';
 import getTicksInterface from './TicksInterface';
 import getToolsInterface from './ToolsInterface';
@@ -27,6 +28,9 @@ const Interface = $scope => {
             // Exposed as its own surface: every entry is a promise, wrapped as an async native
             // function by the interpreter (see utils/interpreter.js).
             getMarketScanInterface: getMarketScanInterface(tradeEngine),
+            // Same contract as the market scan: every entry is a promise, wrapped as an async
+            // native function by the interpreter (see utils/interpreter.js).
+            getMarketIntelligenceInterface: getMarketIntelligenceInterface(tradeEngine),
             watch: (...args) => tradeEngine.watch(...args),
             sleep: (...args) => sleep(observer, ...args),
             alert: (...args) => alert(...args), // eslint-disable-line no-alert
