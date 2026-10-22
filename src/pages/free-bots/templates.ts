@@ -12,6 +12,13 @@
  * and add an extra confirmation gate built from the Bot Builder's observer
  * blocks (`Read Digit N Ticks Ago`, `Check Minimum Sample Size`,
  * `Digit Frequency Below`), which is why each card lists the blocks it uses.
+ *
+ * `over1_under6_recovery` is the only two-leg template: its trade definition
+ * carries the `both` contract type, so its purchase conditions buy Over 1 in the
+ * primary branch and Under 6 in the recovery branch, with the shared prediction
+ * variable set per branch. Its extra gates come from the Digits analysis blocks
+ * (`Digits above in a row`, `Two digits below a share`, `Digit bar is neutral`)
+ * rather than the observer blocks.
  */
 
 import { multiMarketById } from './multi-market';
@@ -29,6 +36,7 @@ import under5NineRareXml from '@/xml/under5_nine_rare.xml';
 import over4FiveHotXml from '@/xml/over4_five_hot.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
+import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
 
 /** Generated multi-market templates carry a configuration-derived id. */
 export type MultiMarketBotId = `multi_market_${string}`;
@@ -48,7 +56,8 @@ export type FreeBotId =
     | 'under5_nine_rare'
     | 'over4_five_hot'
     | 'even_entry_every_time'
-    | 'odd_entry_every_time';
+    | 'odd_entry_every_time'
+    | 'over1_under6_recovery';
 
 export type FreeBotStrategy =
     | 'over1'
@@ -71,6 +80,22 @@ export type FreeBotContractType =
     | 'DIGITODD'
     | 'DIGITMATCH'
     | 'DIGITDIFF';
+
+/**
+ * Contract type written into the trade definition: the single contract a plain
+ * template trades, or `both` for a template whose purchase conditions choose
+ * between two legs (Over/Under) and set the barrier for each one.
+ */
+export type FreeBotTradeContractType = FreeBotContractType | 'both';
+
+/** The second leg of a two-contract template: what it buys, on which barrier and when. */
+export interface FreeBotRecoveryLeg {
+    contractType: FreeBotContractType;
+    /** Barrier the recovery leg trades on, set into the shared prediction variable. */
+    prediction: number;
+    /** Plain-language trigger, shown on the card as the recovery's "Buys when". */
+    trigger: string;
+}
 
 /**
  * Digit trade type in the Bot Builder: Over/Under carries a prediction, Even/Odd a
@@ -97,10 +122,19 @@ export interface FreeBotTemplate {
     strategy: FreeBotStrategy;
     /** Scanner/strategy label, e.g. "Digit Over". */
     strategyLabel: string;
-    contractType: FreeBotContractType;
+    /** Contract type in the trade definition — `both` when the template trades two legs. */
+    contractType: FreeBotTradeContractType;
+    /** Contract the entry condition buys; only needed when `contractType` is `both`. */
+    primaryContractType?: FreeBotContractType;
+    /** Second leg traded when the primary setup fails (see `FreeBotRecoveryLeg`). */
+    recoveryLeg?: FreeBotRecoveryLeg;
     /** Defaults to `overunder` when the template does not say. */
     tradeType?: FreeBotTradeType;
-    /** Barrier digit for Over/Under; `null` for an Even/Odd template. */
+    /**
+     * Barrier digit for the primary Over/Under entry; `null` for an Even/Odd
+     * template. A template with a recovery leg keeps this barrier in a variable,
+     * so the workspace reads it back as a block rather than a fixed number.
+     */
     prediction: number | null;
     /** Parity for an Even/Odd template; absent for Over/Under. */
     entryParity?: FreeBotParity;
@@ -507,6 +541,39 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             '.',
         blocksUsed: 'Standard digit blocks only',
     },
+    {
+        id: 'over1_under6_recovery',
+        name: 'Over 1 — Under 6 Recovery',
+        sourceFile: 'Derived from Over 1 with Entry every time.xml',
+        asset: 'over1_under6_recovery.xml',
+        strategy: 'over1',
+        strategyLabel: 'Digit Over / Under',
+        contractType: 'both',
+        primaryContractType: 'DIGITOVER',
+        recoveryLeg: {
+            contractType: 'DIGITUNDER',
+            prediction: 6,
+            trigger: 'three ticks in a row ended in 6, 7, 8 or 9 and the newest one is not 9',
+        },
+        prediction: 1,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: 'LTE',
+        triggerDigit: 1,
+        entryRule: 'Last digit ≤ 1 · digit 0 and digit 1 both under 10.3% of the last 1000 ticks',
+        buyCondition:
+            'Two Over 1 gates first: the newest digit is 0 or 1, and both digit 0 and digit 1 stayed under 10.3% of the last 1000 ticks. If the highest digit of three ticks in a row was 6–9 (each tick 6, 7, 8 or 9 — 6, 8, 7 counts, 6, 5, 9 does not) it buys the Under 6 recovery instead, unless the newest digit is 9: a 9 stops the recovery. In every case the newest digit of a run must be genuine — the shares gate fails until real ticks are loaded.',
+        afterPurchase:
+            'Win → stake back to 10 · Loss → stake × 1.5 · stops for good at +10, −20, after the third Over 1 run, or when a 9 ends a recovery',
+        restartCondition:
+            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10 and the run counter, a loss lifts the stake ×1.5. The three-run limit stops the bot once three Over 1 runs have settled, the recovery trade does not count as a run, and a digit 9 ends the recovery and hands the bot back to the Over 1 side.',
+        blocksUsed:
+            'Digits above in a row · Two digits below a share · Digit bar is neutral · AND',
+    },
 ];
 
 const FREE_BOT_XML: Record<string, string> = {
@@ -524,6 +591,7 @@ const FREE_BOT_XML: Record<string, string> = {
     over4_five_hot: over4FiveHotXml,
     even_entry_every_time: evenEntryEveryTimeXml,
     odd_entry_every_time: oddEntryEveryTimeXml,
+    over1_under6_recovery: over1Under6RecoveryXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {

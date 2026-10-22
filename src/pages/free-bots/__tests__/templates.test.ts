@@ -121,7 +121,9 @@ describe('Free Bots templates', () => {
     });
 
     it('the observer-gated templates really carry observer blocks', () => {
-        const gated = FREE_BOT_TEMPLATES.filter(template => template.blocksUsed !== 'Standard digit blocks only');
+        const gated = FREE_BOT_TEMPLATES.filter(template =>
+            /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed)
+        );
 
         expect(gated.length).toBeGreaterThanOrEqual(3);
         gated.forEach(template => {
@@ -129,6 +131,22 @@ describe('Free Bots templates', () => {
             expect(report.blockTypes.some(type => type.startsWith('obs_'))).toBe(true);
             expect(report.unsupportedTypes).toEqual([]);
         });
+    });
+
+    it('the two-leg template buys both contracts and sets its own barrier', () => {
+        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
+        const report = inspectFreeBotXml(assetOf(template), template, isKnown);
+
+        expect(report.ok).toBe(true);
+        expect(report.settings.contractType).toBe('both');
+        expect(report.settings.purchases).toEqual(['DIGITOVER', 'DIGITUNDER']);
+        // The barrier lives in a variable, so the workspace reports a block, not the primary digit.
+        expect(report.settings.dynamicPrediction).toBe(true);
+        expect(report.settings.prediction).toBe('1');
+        expect(report.blockTypes).toEqual(
+            expect.arrayContaining(['digits_high_run', 'digits_shares_below', 'digits_bar_neutral'])
+        );
+        expect(report.checks.find(check => check.id === 'recovery-leg')?.passed).toBe(true);
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
