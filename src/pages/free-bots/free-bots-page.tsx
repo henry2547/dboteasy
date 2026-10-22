@@ -90,9 +90,10 @@ const FreeBotsPage = observer(() => {
             <section className='free-bots__library'>
                 <h3 className='free-bots__section-title'>2. Load a bot</h3>
                 <div className='free-bots__grid'>
-                    {FREE_BOT_TEMPLATES.map(template => (
+                    {FREE_BOT_TEMPLATES.map((template, position) => (
                         <FreeBotCard
                             key={template.id}
+                            index={position + 1}
                             template={template}
                             market={selectedMarket}
                             support={support}

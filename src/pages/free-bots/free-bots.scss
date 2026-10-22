@@ -202,6 +202,27 @@
         cursor: pointer;
     }
 
+    /* The bot's number, so a user can name the bot they mean ("bot 8"). */
+    &__headline {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+    }
+
+    &__number {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 999px;
+        border: 1px solid var(--brand-primary);
+        color: var(--brand-primary);
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
     &__caret {
         flex: 0 0 auto;
         font-size: 1rem;

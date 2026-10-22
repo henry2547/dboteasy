@@ -198,7 +198,7 @@ export const ToolboxItems = () =>
                     <Field name='SECOND'>1</Field>
                     <Value name='PERCENT'>
                         <Shadow type='math_number'>
-                            <Field name='NUM'>10.3</Field>
+                            <Field name='NUM'>10.5</Field>
                         </Shadow>
                     </Value>
                     <Value name='SAMPLE'>

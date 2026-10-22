@@ -173,7 +173,7 @@
                 <field name="FIRST">0</field>
                 <field name="SECOND">1</field>
                 <value name="PERCENT">
-                  <shadow type="math_number"><field name="NUM">10.3</field></shadow>
+                  <shadow type="math_number"><field name="NUM">10.5</field></shadow>
                 </value>
                 <value name="SAMPLE">
                   <shadow type="math_number"><field name="NUM">1000</field></shadow>
@@ -278,15 +278,37 @@
                         <field name="BOOL">FALSE</field>
                       </block>
                     </value>
+                    <next>
+                      <block type="bot_stop" id="freebot-o1u6-p2-nine-stop-bot">
+                        <value name="REASON">
+                          <block type="text" id="freebot-o1u6-p2-nine-stop-reason">
+                            <field name="TEXT">Digit 9 during a recovery — stopping</field>
+                          </block>
+                        </value>
+                      </block>
+                    </next>
                   </block>
                 </statement>
                 <statement name="ELSE">
                   <block type="controls_if" id="freebot-o1u6-p2-neutral-gate">
                     <value name="IF0">
-                      <block type="digits_bar_neutral" id="freebot-o1u6-p2-neutral">
-                        <field name="DIGIT">6</field>
-                        <value name="SAMPLE">
-                          <shadow type="math_number"><field name="NUM">100</field></shadow>
+                      <block type="logic_operation" id="freebot-o1u6-p2-neutral-and">
+                        <field name="OP">AND</field>
+                        <value name="A">
+                          <block type="digits_bar_neutral" id="freebot-o1u6-p2-neutral-6">
+                            <field name="DIGIT">6</field>
+                            <value name="SAMPLE">
+                              <shadow type="math_number"><field name="NUM">100</field></shadow>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="digits_bar_neutral" id="freebot-o1u6-p2-neutral-5">
+                            <field name="DIGIT">5</field>
+                            <value name="SAMPLE">
+                              <shadow type="math_number"><field name="NUM">100</field></shadow>
+                            </value>
+                          </block>
                         </value>
                       </block>
                     </value>
@@ -371,6 +393,15 @@
                         <field name="NUM">0</field>
                       </block>
                     </value>
+                    <next>
+                      <block type="bot_stop" id="freebot-o1u6-nine-stop-bot">
+                        <value name="REASON">
+                          <block type="text" id="freebot-o1u6-nine-stop-reason">
+                            <field name="TEXT">Digit 9 during a recovery — stopping</field>
+                          </block>
+                        </value>
+                      </block>
+                    </next>
                   </block>
                 </next>
               </block>
