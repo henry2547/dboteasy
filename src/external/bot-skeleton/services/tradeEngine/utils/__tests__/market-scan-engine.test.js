@@ -1,3 +1,10 @@
+/**
+ * The two market blocks' engine paths, end to end inside the trade engine.
+ *
+ * `Switch active market` drives the scan state machine; `Find eligible markets` drives market
+ * discovery. Both read the app's own market-discovery service, so the API is mocked here and the
+ * assertions are on what the engine reports back to the generated program.
+ */
 jest.mock('../../../api/api-base', () => ({
     api_base: {
         is_running: true,
@@ -59,35 +66,52 @@ const makeScope = () => ({
     },
 });
 
-describe('repro: market blocks runtime', () => {
+const makeEngine = () => {
+    const engine = new TradeEngine(makeScope());
+    engine.options = { symbol: 'R_10', contractTypes: ['DIGITOVER'] };
+    return engine;
+};
+
+describe('switch active market block', () => {
     jest.setTimeout(40000);
 
-    it('switch active market scan runs', async () => {
-        const engine = new TradeEngine(makeScope());
-        engine.options = { symbol: 'R_10', contractTypes: ['DIGITOVER'] };
-        const out = [];
-        out.push(await engine.marketScanBegin({ order: 'sequential', max_switches: 2 }));
-        out.push(await engine.marketScanNext());
-        out.push(await engine.marketScanLock());
-        console.log(
-            'SCAN',
-            JSON.stringify(
-                out.map(r => ({ state: r && r.state, message: r && r.message, symbol: r && r.symbol })),
-                null,
-                1
-            )
-        );
+    it('selects a discovered volatility market and allows the strategy to analyse it', async () => {
+        const engine = makeEngine();
+
+        const status = await engine.marketScanBegin({ order: 'sequential', max_switches: 2 });
+
+        expect(status.state).toBe('ANALYZING');
+        expect(status.symbol).toBe('1HZ100V');
+        expect(status.display_name).toBe('1HZ100V Index');
+        expect(status.data_ready).toBe(true);
+        expect(status.total).toBe(1);
     });
 
-    it('find eligible markets runs', async () => {
-        const engine = new TradeEngine(makeScope());
-        engine.options = { symbol: 'R_10', contractTypes: ['DIGITOVER'] };
-        const res = await engine.marketIntelligenceDiscover({
+    it('names the market it freezes when the entry condition is met', async () => {
+        const engine = makeEngine();
+        await engine.marketScanBegin({ order: 'sequential', max_switches: 2 });
+
+        const locked = await engine.marketScanLock();
+
+        expect(locked.state).toBe('ENTRY_FOUND');
+        expect(locked.entry_found).toBe(true);
+        expect(locked.display_name).toBe('1HZ100V Index');
+        expect(engine.getScanState().message).toContain('1HZ100V Index (1HZ100V)');
+    });
+});
+
+describe('find eligible markets block', () => {
+    it('discovers the markets the bot may switch to', async () => {
+        const engine = makeEngine();
+
+        const result = await engine.marketIntelligenceDiscover({
             category: 'all',
             verify_contracts: true,
             min_history: 20,
         });
-        const count = await engine.marketIntelligenceEligibleCount();
-        console.log('DISCOVER', JSON.stringify({ res, count }));
+
+        expect(result.ok).toBe(true);
+        expect(result.count).toBe(1);
+        expect(await engine.marketIntelligenceEligibleCount()).toBe(1);
     });
 });

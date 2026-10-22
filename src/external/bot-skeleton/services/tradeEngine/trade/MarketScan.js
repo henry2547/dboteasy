@@ -243,10 +243,10 @@ export default Engine =>
             scan.entry_found = true;
             scan.frozen = true;
             scan.active_symbol = scan.active_symbol || this.symbol;
-            scan.active_display = scan.active_display || describeMarket(this.findPoolMarket(scan.active_symbol));
+            scan.active_display = scan.active_display || describeMarket(this.findScanMarket(scan.active_symbol));
             return this.transitionScanState(
                 MARKET_SCAN_STATES.ENTRY_FOUND,
-                `Entry condition met on ${describeMarket(this.findPoolMarket(scan.active_symbol))} — market frozen for this entry.`
+                `Entry condition met on ${describeMarket(this.findScanMarket(scan.active_symbol))} — market frozen for this entry.`
             );
         }
 
@@ -449,7 +449,14 @@ export default Engine =>
             );
         }
 
-        findPoolMarket(symbol) {
+        /**
+         * The scan's own pool entry for a symbol.
+         *
+         * Deliberately not named `findPoolMarket`: the market-intelligence engine reads its own,
+         * separately discovered pool under that name and sits outside this engine, so it would
+         * shadow this lookup and leave the scan reporting an empty market name.
+         */
+        findScanMarket(symbol) {
             const scan = this.getScanState();
             return scan.eligible.find(market => market.apiSymbol === symbol) || null;
         }
