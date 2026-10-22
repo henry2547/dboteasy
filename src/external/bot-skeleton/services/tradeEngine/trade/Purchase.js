@@ -27,6 +27,10 @@ export default Engine =>
                 });
 
                 this.contractId = buy.contract_id;
+
+                // The stake is exposed to risk until this contract settles.
+                this.recordRiskEntry?.(buy.buy_price);
+
                 this.store.dispatch(purchaseSuccessful());
 
                 if (this.is_proposal_subscription_required) {

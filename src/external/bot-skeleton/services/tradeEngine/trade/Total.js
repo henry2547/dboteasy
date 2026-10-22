@@ -55,6 +55,9 @@ export default Engine =>
 
             accountStat.totalPayout = getRoundedNumber(Number(accountStat.totalPayout) + Number(sellPrice), currency);
 
+            // Feeds the Risk Management blocks with the settlement this session really booked.
+            this.recordRiskSettlement?.({ profit, stake: buyPrice });
+
             info({
                 profit,
                 contract,

@@ -291,6 +291,30 @@ export const ToolboxItems = () =>
                 </Block>
                 <Block type='market_excluded_report' />
             </Category>
+            {/* Risk management: session guards measured from settled contracts, and stake sizing
+                from the authorised balance. Limits are opt-in (0 = off). */}
+            <Category id='risk_management' name={localize('Risk Management')}>
+                <Block type='risk_can_trade' />
+                <Block type='risk_block_reason' />
+                <Block type='risk_consecutive_losses' />
+                <Block type='risk_give_back' />
+                <Block type='risk_exposure' />
+                <Block type='risk_stake'>
+                    <Value name='RISK_PERCENT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>1</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='risk_set_limits'>
+                    <Field name='MAX_LOSSES'>3</Field>
+                    <Field name='MAX_GIVE_BACK'>0</Field>
+                    <Field name='MAX_EXPOSURE'>0</Field>
+                    <Field name='RISK_PERCENT'>1</Field>
+                </Block>
+                <Block type='risk_reset_session' />
+                <Block type='risk_report' />
+            </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they
                 were migrated from. Each item drags the block onto the canvas with its defaults. */}

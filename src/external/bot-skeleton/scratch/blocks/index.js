@@ -16,4 +16,5 @@ import './Logic';
 import './Market Intelligence';
 import './Math';
 import './Observer';
+import './Risk Management';
 import './Text';
