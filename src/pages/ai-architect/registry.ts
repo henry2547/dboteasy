@@ -258,35 +258,12 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         inputs: [value('SAMPLE', ['Number'])],
         requires: ['ticks'],
     }),
-    NUMBER_VALUE('digits_frequency_count', 'Digit count', 'digits', 'How many times the chosen digit appeared in the last N ticks.', {
-        fields: [dropdown('DIGIT', DIGITS)],
-        inputs: [value('SAMPLE', ['Number'])],
-        requires: ['ticks'],
-    }),
     NUMBER_VALUE('digits_hot_cold', 'Hottest / coldest digit', 'digits', 'The most or least frequent digit in the last N ticks.', {
         fields: [dropdown('MODE', ['hottest', 'coldest'])],
         inputs: [value('SAMPLE', ['Number'])],
         requires: ['ticks'],
     }),
     NUMBER_VALUE('digits_streak', 'Same-digit streak', 'digits', 'Ticks in a row with the same last digit.', { requires: ['ticks'] }),
-    NUMBER_VALUE('digits_gap', 'Digit gap', 'digits', 'Ticks since the chosen digit last appeared (-1 when it never did).', {
-        fields: [dropdown('DIGIT', DIGITS)],
-        requires: ['ticks'],
-    }),
-    NUMBER_VALUE('digits_longest_run', 'Longest run', 'digits', 'Longest run of the chosen digit in the last N ticks.', {
-        fields: [dropdown('DIGIT', DIGITS)],
-        inputs: [value('SAMPLE', ['Number'])],
-        requires: ['ticks'],
-    }),
-    NUMBER_VALUE('digits_parity_share', 'Parity share (%)', 'digits', 'Share of even or odd digits in the last N ticks.', {
-        fields: [dropdown('PARITY', ['even', 'odd'])],
-        inputs: [value('SAMPLE', ['Number'])],
-        requires: ['ticks'],
-    }),
-    NUMBER_VALUE('digits_repeat_share', 'Repeat share (%)', 'digits', 'Share of ticks repeating the previous digit in the last N ticks.', {
-        inputs: [value('SAMPLE', ['Number'])],
-        requires: ['ticks'],
-    }),
     cap({
         type: 'switch_active_market',
         displayName: 'Switch active market',

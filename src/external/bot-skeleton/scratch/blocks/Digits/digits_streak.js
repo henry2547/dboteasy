@@ -1,37 +1,15 @@
 import { localize } from '@deriv-com/translations';
-import { modifyContextMenu } from '../../utils';
+import { digitBlock, digitGenerator } from './digit-block';
 
-window.Blockly.Blocks.digits_streak = {
-    init() {
-        this.jsonInit(this.definition());
-    },
-    definition() {
-        return {
-            message0: localize('Ticks in a row with the same last digit'),
-            output: 'Number',
-            outputShape: window.Blockly.OUTPUT_SHAPE_ROUND,
-            colour: window.Blockly.Colours.Base.colour,
-            colourSecondary: window.Blockly.Colours.Base.colourSecondary,
-            colourTertiary: window.Blockly.Colours.Base.colourTertiary,
-            tooltip: localize('How many ticks in a row ended with the same last digit as the latest tick'),
-            category: window.Blockly.Categories.Digits,
-        };
-    },
-    meta() {
-        return {
-            display_name: localize('Digit streak'),
-            description: localize(
-                'Counts how many ticks in a row ended with the same last digit as the latest tick. A value of 1 means the newest tick is the start of a new run.'
-            ),
-            key_words: localize('digit streak run repeat consecutive same last'),
-        };
-    },
-    customContextMenu(menu) {
-        modifyContextMenu(menu);
-    },
-};
+window.Blockly.Blocks.digits_streak = digitBlock({
+    message: localize('Ticks in a row with the same last digit'),
+    output: 'Number',
+    tooltip: localize('How many ticks in a row ended with the same last digit as the newest tick'),
+    displayName: localize('Digit streak'),
+    description: localize(
+        'Counts the ticks in a row that ended with the same digit as the newest tick. 1 means the newest tick started a fresh run.'
+    ),
+    keyWords: localize('digit streak run repeat consecutive same last'),
+});
 
-window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_streak = () => [
-    'Bot.getDigitStreak()',
-    window.Blockly.JavaScript.javascriptGenerator.ORDER_ATOMIC,
-];
+window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_streak = digitGenerator(() => 'Bot.getDigitStreak()');

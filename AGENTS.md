@@ -206,28 +206,36 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `<label>. Evaluated only on a real market event; missing data is Inconclusive.` sentence. Adding a
   group to `GROUPS` shows it here automatically, but its "what it is / how to use it" copy needs an entry
   in that file's `GROUP_TEXT`.
-- **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
-  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold`,
-  `digits_streak`, plus the digit-analysis set `digits_gap`, `digits_longest_run`,
-  `digits_parity_share`, `digits_transition_count` and `digits_repeat_share`, live in
-  `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
-  category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
-  sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
-  `modifyContextMenu` from `../../../utils` breaks the whole dev build.
-- The count / hot-cold / streak blocks call `Bot.getDigitCount`, `Bot.getHotColdDigit(mode, sample)`
-  and `Bot.getDigitStreak()`. Those helpers live in `services/tradeEngine/trade/Ticks.js` and are
-  exposed through `services/tradeEngine/Interface/TicksInterface.js` — both files must be updated
-  together, or the generated code calls an undefined function.
-- **Digit analysis blocks** (`digits_gap`, `digits_longest_run`, `digits_parity_share`,
-  `digits_transition_count`, `digits_repeat_share`) call `Bot.getDigitGap(digit)`,
-  `Bot.getLongestDigitRun(digit, sample)`, `Bot.getDigitParityShare(parity, sample)`,
-  `Bot.getDigitTransitionCount(from, to, sample)` and `Bot.getDigitRepeatShare(sample)`. The rules
-  themselves are pure functions in `services/tradeEngine/utils/digit-analysis.js` (tested by
-  `utils/__tests__/digit-analysis.test.js`); `Ticks.js` only slices the sample from the engine's own
-  `getLastDigitList()` and wraps the result in a promise. A digit that never appeared reports gap
-  `-1` (never `0`, which means "the newest tick"), and an empty window reports a 0 share rather than
-  an invented one. `digits_gap` has no SAMPLE input on purpose: it reads the whole cached history, so
-  a digit last seen 300 ticks ago is not reported as "never".
+- **Blockly digit blocks (nine, in palette order):** `digits_over_under`, `digits_even_odd`,
+  `digits_matches_differs`, `digits_high_run`, `digits_shares_below`, `digits_frequency`,
+  `digits_hot_cold`, `digits_bar_neutral`, `digits_streak`, plus `switch_active_market` at the end.
+  The first five are the Boolean entry gates, the next three are the frequency readings they are
+  built on. They live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the
+  Bot Builder's "Digits" category (its Blocks-menu flyout lists them with an add button). Mind the
+  import depth: those files sit one level under `blocks/`, so shared helpers come from `../../utils`
+  — importing `modifyContextMenu` from `../../../utils` breaks the whole dev build.
+- **One helper for the boilerplate:** `Digits/digit-block.js` exports `digitBlock({message, args,
+  output, tooltip, displayName, description, keyWords})`, `digitGenerator(buildCall)` and
+  `sampleCode(block, socket, fallback)`. Each block file keeps its own literal
+  `window.Blockly.Blocks.<type> =` / `...forBlock.<type> =` assignment — the observer generator
+  coverage test scans for those literals, so a helper that hides the assignment would blind it.
+  Registering a new digit block therefore means: the file, its `import` in `Digits/index.js`, its
+  palette `<Block>` in `toolbox-items.tsx`, and (if the AI architect may place it) an entry in
+  `ai-architect/registry.ts`.
+- **Removed from the palette** (kept in the engine, no block): `digits_frequency_count`, `digits_gap`,
+  `digits_longest_run`, `digits_parity_share`, `digits_transition_count`, `digits_repeat_share`. Their
+  rules still live as pure functions in `services/tradeEngine/utils/digit-analysis.js` (tested by
+  `utils/__tests__/digit-analysis.test.js`) and their `Bot.*` reads still sit in `Ticks.js` /
+  `TicksInterface.js`; only the blocks and their registry entries are gone, so a saved workspace that
+  still contains one is reported as an unknown block instead of running.
+- The remaining blocks call `Bot.isLastDigitOver/Under/Matches/Differs/Parity`,
+  `Bot.getDigitFrequency(digit, sample)`, `Bot.getHotColdDigit(mode, sample)`,
+  `Bot.getDigitStreak()`, `Bot.areLastDigitsHigh(digit, count, mode)`,
+  `Bot.areDigitSharesBelow([first, second], percent, sample)` and
+  `Bot.isDigitBarNeutral(digit, sample)`. Those helpers live in
+  `services/tradeEngine/trade/Ticks.js` and are exposed through
+  `services/tradeEngine/Interface/TicksInterface.js` — both files must be updated together, or the
+  generated code calls an undefined function.
 - **Digit blocks guide:** the toolbar's `?` icon (`#db-toolbar__digit-help-button` in
   `toolbar/workspace-group.tsx`) opens `toolbar/digit-blocks-help.tsx`, a step-by-step modal for the
   digit blocks. Its stylesheet widens the shared dialog (`dc-dialog__dialog`) and makes

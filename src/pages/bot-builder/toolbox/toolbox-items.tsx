@@ -171,10 +171,11 @@ export const ToolboxItems = () =>
                 <Block type='after_purchase' />
                 <Block type='trade_again' />
             </Category>
+            {/* Digits: the entry gates first, then the frequency readings they are built on. */}
             <Category id='digits' name={localize('Digits')}>
                 <Block type='digits_over_under'>
                     <Field name='SIDE'>over</Field>
-                    <Field name='DIGIT'>2</Field>
+                    <Field name='DIGIT'>1</Field>
                 </Block>
                 <Block type='digits_even_odd'>
                     <Field name='PARITY'>even</Field>
@@ -183,15 +184,30 @@ export const ToolboxItems = () =>
                     <Field name='MODE'>matches</Field>
                     <Field name='DIGIT'>1</Field>
                 </Block>
-                <Block type='digits_frequency'>
-                    <Field name='DIGIT'>3</Field>
+                <Block type='digits_high_run'>
+                    <Value name='COUNT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>3</Field>
+                        </Shadow>
+                    </Value>
+                    <Field name='MODE'>at_or_above</Field>
+                    <Field name='DIGIT'>6</Field>
+                </Block>
+                <Block type='digits_shares_below'>
+                    <Field name='FIRST'>0</Field>
+                    <Field name='SECOND'>1</Field>
+                    <Value name='PERCENT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>10.3</Field>
+                        </Shadow>
+                    </Value>
                     <Value name='SAMPLE'>
                         <Shadow type='math_number'>
-                            <Field name='NUM'>100</Field>
+                            <Field name='NUM'>1000</Field>
                         </Shadow>
                     </Value>
                 </Block>
-                <Block type='digits_frequency_count'>
+                <Block type='digits_frequency'>
                     <Field name='DIGIT'>3</Field>
                     <Value name='SAMPLE'>
                         <Shadow type='math_number'>
@@ -207,42 +223,15 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                <Block type='digits_bar_neutral'>
+                    <Field name='DIGIT'>6</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
                 <Block type='digits_streak' />
-                <Block type='digits_gap'>
-                    <Field name='DIGIT'>1</Field>
-                </Block>
-                <Block type='digits_longest_run'>
-                    <Field name='DIGIT'>3</Field>
-                    <Value name='SAMPLE'>
-                        <Shadow type='math_number'>
-                            <Field name='NUM'>100</Field>
-                        </Shadow>
-                    </Value>
-                </Block>
-                <Block type='digits_parity_share'>
-                    <Field name='PARITY'>even</Field>
-                    <Value name='SAMPLE'>
-                        <Shadow type='math_number'>
-                            <Field name='NUM'>100</Field>
-                        </Shadow>
-                    </Value>
-                </Block>
-                <Block type='digits_transition_count'>
-                    <Field name='FROM_DIGIT'>1</Field>
-                    <Field name='TO_DIGIT'>2</Field>
-                    <Value name='SAMPLE'>
-                        <Shadow type='math_number'>
-                            <Field name='NUM'>100</Field>
-                        </Shadow>
-                    </Value>
-                </Block>
-                <Block type='digits_repeat_share'>
-                    <Value name='SAMPLE'>
-                        <Shadow type='math_number'>
-                            <Field name='NUM'>100</Field>
-                        </Shadow>
-                    </Value>
-                </Block>
                 <Block type='switch_active_market'>
                     <Field name='ORDER'>sequential</Field>
                     <Value name='MAX_SWITCHES'>

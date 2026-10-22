@@ -10,94 +10,52 @@ type TDigitBlocksHelp = {
 
 const NEW_BLOCKS = [
     {
-        name: localize('Digit frequency count'),
-        summary: localize('How many times a digit showed up in the recent ticks.'),
+        name: localize('High digits in a row'),
+        summary: localize('Several ticks in a row that all ended at or above the digit you pick.'),
         steps: [
-            localize('Drag “Times digit … appeared in last … ticks” from Blocks menu → Digits onto the canvas.'),
-            localize('Pick the digit (0–9) and set the sample, for example 100 ticks.'),
-            localize('It returns a whole number: how many of those ticks ended in that digit. About 10 is normal for 100 ticks.'),
-            localize('Compare it in a condition, for example: Digit frequency count of 3 < 7 means that digit is running cold.'),
+            localize('Drag “Last … digits all at or above …” from Blocks menu → Digits onto the canvas.'),
+            localize('Set how many ticks must qualify — 3 for the Over 1 / Under 6 setup — and the digit, 6 for “at or above 6”.'),
+            localize('Every one of those ticks must qualify: 6, 8, 7 passes, while 6, 5, 9 fails because the 5 breaks the run.'),
+            localize('Use it as the recovery trigger that starts the Under 6 leg.'),
         ],
     },
     {
-        name: localize('Hottest / coldest digit'),
-        summary: localize('The digit that appeared most, or least, often in the recent ticks.'),
+        name: localize('Two digits below a share'),
+        summary: localize('Two digits that are both running colder than a percentage of the window.'),
         steps: [
-            localize('Drag “Hottest / coldest digit in last … ticks” onto the canvas.'),
-            localize('Choose Hottest or Coldest, then set the sample, for example 100 ticks.'),
-            localize('It returns that digit from 0 to 9. Hottest is the one that showed up most, coldest the one that showed up least.'),
-            localize('Feed it into another digit block or store it in a variable to trade the current leader or laggard.'),
+            localize('Drag “Digits … + … both under … %, last … ticks” onto the canvas.'),
+            localize('Pick the two digits — 0 and 1 for the Over 1 setup — the share, 10.3%, and the window, 1000 ticks.'),
+            localize('Both digits must be strictly below that percentage; a digit sitting exactly on it fails.'),
+            localize('Use it so the bot only buys Over 1 while the two lowest digits are genuinely cold.'),
         ],
     },
     {
-        name: localize('Digit gap'),
-        summary: localize('How many ticks have passed since a digit last showed up.'),
+        name: localize('Neutral digit bar'),
+        summary: localize('A digit that carries neither the green (hottest) nor the red (coldest) bar.'),
         steps: [
-            localize('Drag “Ticks since digit … last appeared” onto the canvas and pick the digit.'),
-            localize('It returns a count: 0 means the newest tick ended in that digit, 2 means it was two ticks ago.'),
-            localize('A value of -1 means the digit has not appeared in the ticks loaded so far — it is not the same as a gap of 0.'),
-            localize('Use it in a condition, for example: Digit gap of 5 > 30 → the digit has been away for a while.'),
-        ],
-    },
-    {
-        name: localize('Longest digit run'),
-        summary: localize('The longest run a digit ever managed inside the sample.'),
-        steps: [
-            localize('Drag “Longest run of digit … in last … ticks” onto the canvas.'),
-            localize('Pick the digit and set the sample, for example 100 ticks.'),
-            localize('It returns the biggest number of ticks in a row that ended in that digit. 0 means it never repeated.'),
-        ],
-    },
-    {
-        name: localize('Digit parity share'),
-        summary: localize('How lopsided the sample is between even and odd digits.'),
-        steps: [
-            localize('Drag “Share (%) of … digits in last … ticks” and choose even or odd.'),
-            localize('It returns a percentage of the sample. 50% is balanced; far above or below is lopsided.'),
-            localize('Compare it, for example: Share of even digits > 55 → trade Even only while the sample leans that way.'),
-        ],
-    },
-    {
-        name: localize('Digit transition count'),
-        summary: localize('How often one digit followed another on the next tick.'),
-        steps: [
-            localize('Drag “Times digit … was followed by … in last … ticks” onto the canvas.'),
-            localize('Pick both digits and set the sample.'),
-            localize('It counts only pairs that sit next to each other in the tick history, so 0 means the pair never happened in the sample.'),
-        ],
-    },
-    {
-        name: localize('Digit repeat share'),
-        summary: localize('How often a tick repeated the previous tick’s digit.'),
-        steps: [
-            localize('Drag “Share (%) of ticks that repeated the previous digit” and set the sample.'),
-            localize('It returns a percentage of the sample; about 10% is the chance level for a fair digit.'),
-            localize('Compare it, for example: Repeat share > 15 → the market is repeating more than usual.'),
-        ],
-    },
-    {
-        name: localize('Digit streak'),
-        summary: localize('How many ticks in a row ended with the same last digit.'),
-        steps: [
-            localize('Drag “Ticks in a row with the same last digit” onto the canvas — it has no settings.'),
-            localize('It always follows the newest tick and returns a count: 1 means the latest tick started a fresh run.'),
-            localize('Compare it, for example: Digit streak > 4 → wait for the run to break before you buy.'),
+            localize('Drag “Digit … has no hot / cold bar, last … ticks” onto the canvas.'),
+            localize('Pick the digit — 6 for the Under 6 recovery leg — and how many ticks to read.'),
+            localize('It reads the same green and red bars the Digits page draws, so it turns false once that digit becomes the hottest or the coldest.'),
+            localize('With no ticks loaded yet it answers false, never neutral.'),
         ],
     },
 ];
 
 const HOW_TO_ADD = [
     localize('Open Bot Builder and expand the Blocks menu.'),
-    localize('Open Digits — the new blocks sit below the existing digit blocks.'),
+    localize('Open Digits — the three newest blocks sit at the top, followed by the frequency readings they are built on.'),
     localize('Drag a block onto the canvas, or press the + on its card.'),
     localize('Connect it inside a condition, for example Purchase conditions → before purchase, then set its values and run your bot.'),
 ];
 
 const OTHER_BLOCKS = [
-    localize('Last digit is over / under — true when the newest digit is above or below the one you pick.'),
+    localize('Last digit is over / under — the contract gate: “Over 1” wins on digits 2–9, “Under 6” wins on digits 0–5.'),
     localize('Last digit is even / odd — true for 0, 2, 4, 6, 8 or for 1, 3, 5, 7, 9.'),
-    localize('Last digit matches / differs — true when the newest digit is, or is not, the digit you pick.'),
-    localize('Frequency (%) of digit — the same idea as the count block, shown as a percentage instead of a count.'),
+    localize('Last digit matches / differs — the newest digit is, or is not, the digit you pick.'),
+    localize('Digit frequency (%) — how much of the window the digit took; a fair digit sits near 10%.'),
+    localize('Hot / cold digit — the digit that appeared most, or least, often in the window.'),
+    localize('Digit streak — how many ticks in a row share the newest digit.'),
+    localize('Switch active market — move the bot to another market between trades.'),
 ];
 
 const DigitBlocksHelp = ({ is_visible, onClose }: TDigitBlocksHelp) => (
@@ -115,7 +73,7 @@ const DigitBlocksHelp = ({ is_visible, onClose }: TDigitBlocksHelp) => (
         <div className='digit-blocks-help__content'>
             <p className='digit-blocks-help__intro'>
                 {localize(
-                    'Every Digit block reads the last digit of the live ticks of the market you set in Trade parameters. Here is how to use the blocks added to the Digits menu.'
+                    'Every Digit block reads the last digit of the live ticks of the market you set in Trade parameters. The menu keeps only the blocks a digit bot actually needs.'
                 )}
             </p>
 
