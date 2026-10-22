@@ -561,16 +561,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         stake: 10,
         takeProfit: 10,
         stopLoss: 20,
-        multiplier: 1.5,
-        entryOperator: 'LTE',
-        triggerDigit: 1,
-        entryRule: 'Last digit ≤ 1 · digit 0 and digit 1 both under 10.5% of the last 1000 ticks',
+        multiplier: 2,
+        entryOperator: 'GTE',
+        triggerDigit: 5,
+        entryRule:
+            'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.5% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
         buyCondition:
-            'Two Over 1 gates first: the newest digit is 0 or 1, and both digit 0 and digit 1 stayed under 10.5% of the last 1000 ticks. If the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not) it buys the Under 6 recovery instead — but only while neither digit 5 nor digit 6 carries a green (hottest) or red (coldest) bar. In every case the newest digit of a run must be genuine — the shares gate fails until real ticks are loaded — and a 9 seen while the recovery is armed or running stops the bot.',
+            'Over 1 needs the newest digit to be 5 or 6, both digit 0 and digit 1 under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carrying a green (hottest) or red (coldest) bar. After a loss it switches to the Under 6 recovery and buys only once the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not) with the same neutral-bar gate — digit 9 itself never gets bought. Every gate fails until real ticks are loaded.',
         afterPurchase:
-            'Win → stake back to 10 · Loss → stake × 1.5 · stops for good at +10, −20, after the third Over 1 run, or when a 9 shows while the recovery is armed or running',
+            'Win → stake back to 10 and back to Over 1 · Loss → stake × 2 · stops for good at +10, −20, after the third Over 1 run, or on a digit 9 once a contract has been taken',
         restartCondition:
-            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10 and the run counter, a loss lifts the stake ×1.5. The three-run limit stops the bot once three Over 1 runs have settled — the recovery trade does not count as a run — and a digit 9 seen while the recovery is armed or running stops the run for good: press Run again to start a fresh one.',
+            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10, clears the recovery and returns the bot to Over 1; a loss lifts the stake ×2 and arms the Under 6 recovery. The three-run limit stops the bot once three Over 1 runs have settled — the recovery trade does not count as a run — and a digit 9 seen after the first contract settles stops the run for good: press Run again to start a fresh one.',
         blocksUsed:
             'Digits above in a row · Two digits below a share · Digit bar is neutral · Stop the bot · AND',
     },
