@@ -17,4 +17,5 @@ import './Market Intelligence';
 import './Math';
 import './Observer';
 import './Risk Management';
+import './Strategy Learning';
 import './Text';

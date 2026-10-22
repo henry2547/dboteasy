@@ -315,6 +315,34 @@ export const ToolboxItems = () =>
                 <Block type='risk_reset_session' />
                 <Block type='risk_report' />
             </Category>
+            {/* Strategy learning: per-label hit rate, streaks and profit measured from contracts
+                this run really settled. Names must match the "Learn following trades" block. */}
+            <Category id='strategy_learning' name={localize('Strategy Learning')}>
+                <Block type='learn_set_strategy'>
+                    <Field name='NAME'>strategy 1</Field>
+                </Block>
+                <Block type='learn_hit_rate'>
+                    <Field name='NAME' />
+                </Block>
+                <Block type='learn_sample_size'>
+                    <Field name='NAME' />
+                </Block>
+                <Block type='learn_streak'>
+                    <Field name='KIND'>wins</Field>
+                    <Field name='NAME' />
+                </Block>
+                <Block type='learn_best_strategy'>
+                    <Field name='CRITERION'>hit_rate</Field>
+                    <Field name='MIN_SAMPLE'>10</Field>
+                </Block>
+                <Block type='learn_compare'>
+                    <Field name='FIRST'>strategy 1</Field>
+                    <Field name='SECOND'>strategy 2</Field>
+                    <Field name='MIN_SAMPLE'>10</Field>
+                </Block>
+                <Block type='learn_report' />
+                <Block type='learn_reset' />
+            </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they
                 were migrated from. Each item drags the block onto the canvas with its defaults. */}

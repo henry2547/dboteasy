@@ -19,6 +19,7 @@ window.Blockly.Categories = {
     Digits: 'digits',
     Market_Intelligence: 'market_intelligence',
     Risk_Management: 'risk_management',
+    Strategy_Learning: 'strategy_learning',
     Candle: 'candle',
     Miscellaneous: 'miscellaneous',
     Loop: 'loops',

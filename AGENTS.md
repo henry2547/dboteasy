@@ -322,6 +322,39 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
 
+## Strategy Learning blocks (Bot Builder)
+The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy
+actually performed, from contracts the engine really settled. It never simulates or predicts.
+- Blocks live in `src/external/bot-skeleton/scratch/blocks/Strategy Learning/` (note the space in the
+  folder name) and are imported by `blocks/index.js`. Category constant:
+  `window.Blockly.Categories.Strategy_Learning` in `scratch/hooks/constant.js`; palette entry:
+  `toolbox-items.tsx`.
+- The eight blocks are `learn_set_strategy` (statement: label following trades), `learn_hit_rate`,
+  `learn_sample_size`, `learn_streak` (wins/losses), `learn_best_strategy`, `learn_compare`,
+  `learn_report` and `learn_reset`. A **blank name field** means "the strategy currently being
+  learned"; `learn_compare` needs both names.
+- Rules are pure functions in `services/tradeEngine/utils/strategy-learning.js` (tested by
+  `utils/__tests__/strategy-learning.test.js`). A settlement counts as a win only when
+  `profit > 0` — the same rule as the statistics panel, so a flat contract is a loss. The streak is
+  signed internally (+ wins, − losses) and `learn_streak` reports 0 for the kind that is not running.
+- `trade/StrategyLearning.js` is a trade-engine mixin (outermost wrapper in `trade/index.js`). It
+  records from the existing settlement hook in `Total.js` — `recordLearningSettlement({ profit })`
+  runs next to `recordRiskSettlement` — and is exposed through
+  `Interface/LearningInterface.js`, spread into the bot interface in `Interface/index.js`. Every read
+  is synchronous, so the blocks work inside ordinary IF/AND/OR conditions.
+- **Fails closed:** `learn_best_strategy` answers an empty text and `learn_compare` answers false
+  when a strategy has fewer than the minimum settled trades. `statistics.clear` resets the learning
+  memory, matching the session semantics of the other engine blocks.
+- Verify: `npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__` (66 tests) and
+  `npx jest src/external/bot-skeleton/services/observer/__tests__/observer-generation.test.js`
+  (every block tree type has a generator). In the Bot Builder palette the "Strategy Learning"
+  category lists the eight blocks; a scratch workspace containing them generates
+  `Bot.learnSetStrategy("…")`, `Bot.learnHitRate(…)`, `Bot.learnSampleSize(…)`,
+  `Bot.learnStreak(…, "losses")`, `Bot.learnBestStrategy("hit_rate", 10)`,
+  `Bot.learnCompare("a", "b", 5)`, `Bot.learnReport()` and `Bot.learnReset()` without console
+  errors. Real per-strategy numbers need settled contracts, so they are verified by hand with a Demo
+  account (Run is login-gated).
+
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
 `AiBotProvider` or lazy-loads `AiBotPage`, and `DBOT_TABS` / `TAB_IDS` / the `hash` array in

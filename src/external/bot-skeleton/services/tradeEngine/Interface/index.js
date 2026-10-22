@@ -1,5 +1,6 @@
 import TradeEngine from '../trade';
 import getBotInterface from './BotInterface';
+import getLearningInterface from './LearningInterface';
 import getMarketIntelligenceInterface from './MarketIntelligenceInterface';
 import getMarketScanInterface from './MarketScanInterface';
 import getRiskInterface from './RiskInterface';
@@ -28,6 +29,9 @@ const Interface = $scope => {
             // Session risk guards and stake sizing: synchronous reads of the numbers this session
             // really recorded, so they work inside an ordinary condition.
             ...getRiskInterface(tradeEngine),
+            // Strategy learning: per-label hit rates and streaks from contracts this session
+            // really settled, readable synchronously inside an ordinary condition.
+            ...getLearningInterface(tradeEngine),
             getTicksInterface: getTicksInterface(tradeEngine),
             // Exposed as its own surface: every entry is a promise, wrapped as an async native
             // function by the interpreter (see utils/interpreter.js).

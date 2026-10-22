@@ -57,6 +57,8 @@ export default Engine =>
 
             // Feeds the Risk Management blocks with the settlement this session really booked.
             this.recordRiskSettlement?.({ profit, stake: buyPrice });
+            // Attributes the same settlement to the strategy the program labelled for learning.
+            this.recordLearningSettlement?.({ profit });
 
             info({
                 profit,
