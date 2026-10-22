@@ -94,12 +94,12 @@ working while the bot-side symbol list is empty.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has seven tabs, in this order: Dashboard, Free Bots, Bot Builder, Strategy Engine,
-Deriv Chart, Digits, Statistics.
+The main tab bar has eight tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
+Strategy Engine, Deriv Chart, Digits, Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
-**Bot Builder is index 2** (Free Bots sits right after Dashboard since the scanner hands a row straight
+**Bot Builder is index 3** (AI Builder, then Free Bots, sit right after Dashboard; both hand a bot straight
 to the builder). Code that switches on the active tab compares against `DBOT_TABS.BOT_BUILDER`, never a
 literal — the vendored tours, save/load modals and `bot-builder.tsx` were all moved off `=== 1` when the
 tabs were reordered.
@@ -651,3 +651,16 @@ unit-tested in isolation (`engines/__tests__/lab-engines.test.ts`, 21 tests).
   scattergram, zero-lookahead walk-forward). Out-of-band matrix cells are tinted red (>12%) /
   blue (<8%). Run `docker compose exec web npx jest src/pages/digits/engines`.
   `npx tsc --noEmit` clean. No sideways scroll at 431px (the matrix scrolls inside its own panel).
+
+## AI Builder tab (AI Bot Architect)
+Second tab (`#ai_architect`, `#id-ai-architect`, `DBOT_TABS.AI_ARCHITECT = 1`), lazy-loaded from
+`main.tsx` like the other pages. `DBOT_TABS`, `TAB_IDS` and the `hash` array must stay in the same order.
+The page is `src/pages/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss`, all `aa-*` classes).
+- It only ever uses blocks the capability registry says are registered; **Load into Bot Builder** goes through
+  `use-architect-loader.ts`, which snapshots the canvas, loads, reads the live workspace back and restores the
+  snapshot on any mismatch. Loading never starts the bot, and is refused while one is running.
+- The tab icon is `LabelPairedLightbulbCaptionRegularIcon` (quill-icons has no Brain/Robot icon; a missing
+  export breaks the whole dev build).
+- Verify: open the tab, press Generate on an example prompt (expect a "Validation Passed" card), then Load —
+  the app switches to `#bot_builder` and the canvas holds the generated blocks.
+  `docker compose exec web npx jest src/pages/ai-architect` (83 tests); `npx tsc --noEmit` is clean.
