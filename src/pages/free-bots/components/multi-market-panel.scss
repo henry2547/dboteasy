@@ -1,0 +1,148 @@
+/* Multi-Market Digit Entry Hunter configurator (Free Bots tab). */
+
+.multi-market {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.4rem;
+    border: 1px solid var(--general-main-3);
+    border-radius: 1.2rem;
+    background: var(--general-section-1);
+
+    @media (min-width: 768px) {
+        padding: 1.8rem;
+    }
+
+    &__header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    &__intro {
+        margin: 0;
+        font-size: 1.25rem;
+        line-height: 1.5;
+        color: var(--text-less-prominent);
+    }
+
+    &__presets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    &__preset {
+        padding: 0.5rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-main-1);
+        color: var(--text-general);
+        font-size: 1.2rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &--active {
+            border-color: var(--brand-primary, #ff444f);
+            color: var(--brand-primary, #ff444f);
+        }
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+
+        @media (min-width: 640px) {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        @media (min-width: 1200px) {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+        min-width: 0;
+
+        select,
+        input {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            border-radius: 0.8rem;
+            border: 1px solid var(--general-main-3);
+            background: var(--general-main-1);
+            color: var(--text-general);
+            font-size: 1.3rem;
+        }
+    }
+
+    &__summary {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        padding: 1rem 1.2rem;
+        border-radius: 0.9rem;
+        background: var(--general-main-1);
+    }
+
+    &__name {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    &__rule {
+        margin: 0;
+        font-size: 1.2rem;
+        line-height: 1.5;
+        color: var(--text-less-prominent);
+    }
+
+    &__errors {
+        margin: 0;
+        padding-left: 1.8rem;
+        font-size: 1.2rem;
+        color: var(--status-danger, #cc2e3d);
+    }
+
+    &__error {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--status-danger, #cc2e3d);
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.9rem;
+    }
+
+    &__load {
+        padding: 0.8rem 1.6rem;
+        border-radius: 0.9rem;
+        border: none;
+        background: var(--brand-primary, #ff444f);
+        color: #fff;
+        font-size: 1.3rem;
+        font-weight: 700;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+
+    &__hint {
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+}

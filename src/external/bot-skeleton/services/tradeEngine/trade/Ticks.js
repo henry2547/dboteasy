@@ -16,11 +16,15 @@ export default Engine =>
     class Ticks extends Engine {
         async watchTicks(symbol) {
             if (symbol && this.symbol !== symbol) {
+                // The previous market's listener must be released before its key is replaced,
+                // otherwise switching markets (or repeatedly running the bot) leaves a listener
+                // behind for every market the session has visited.
+                const previous_symbol = this.symbol;
                 this.symbol = symbol;
                 const { ticksService } = this.$scope;
 
                 await ticksService.stopMonitor({
-                    symbol,
+                    symbol: previous_symbol,
                     key: tickListenerKey,
                 });
                 const callback = ticks => {

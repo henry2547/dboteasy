@@ -4,6 +4,7 @@ import { useDigitsLabContext } from '@/pages/digits/digits-lab-context';
 import MarketSelector from '@/pages/digits/components/market-selector';
 import BotStatusBanner from './components/bot-status-banner';
 import FreeBotCard from './components/free-bot-card';
+import MultiMarketPanel from './components/multi-market-panel';
 import { supportsDigitContracts } from './market-support';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from './templates';
 import { useFreeBotLoader } from './use-free-bot-loader';
@@ -105,6 +106,17 @@ const FreeBotsPage = observer(() => {
                     ))}
                 </div>
             </section>
+
+            <MultiMarketPanel
+                market={selectedMarket}
+                support={support}
+                loading={loader.loading && !!loader.bot?.templateId.startsWith('multi_market_')}
+                isRunning={loader.isRunning}
+                errorMessage={
+                    loader.bot?.templateId.startsWith('multi_market_') ? loader.bot?.errorMessage ?? null : null
+                }
+                onLoad={handleLoad}
+            />
 
             <p className='free-bots__disclaimer'>
                 Loading never places a trade and the library is not advice: the scanner&apos;s digit percentages describe

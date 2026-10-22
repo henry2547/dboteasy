@@ -5,3 +5,4 @@ import './digits_frequency';
 import './digits_frequency_count';
 import './digits_hot_cold';
 import './digits_streak';
+import './switch_active_market';

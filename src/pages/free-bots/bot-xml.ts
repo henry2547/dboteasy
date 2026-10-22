@@ -145,6 +145,9 @@ interface EntryCondition {
     trigger: string | null;
     /** `even` / `odd` when the purchase is gated by the Even/Odd digit block. */
     parity: string | null;
+    /** `matches` / `differs` when the purchase is gated by the Matches/Differs digit block. */
+    matchMode: 'matches' | 'differs' | null;
+    matchDigit: string | null;
     purchaseContract: string | null;
     hasPurchase: boolean;
 }
@@ -172,6 +175,8 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
             operator,
             trigger,
             parity: null,
+            matchMode: null,
+            matchDigit: null,
             purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
             hasPurchase: !!purchase,
         };
@@ -190,6 +195,30 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
             operator: null,
             trigger: null,
             parity,
+            matchMode: null,
+            matchDigit: null,
+            purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
+            hasPurchase: true,
+        };
+    }
+
+    // Matches/Differs: `if <last digit matches/differs from N> then purchase <contract>`.
+    const matchBlocks = blocksOfType(beforePurchase, 'digits_matches_differs');
+    for (const matchBlock of matchBlocks) {
+        const mode = fieldValue(matchBlock, 'MODE');
+        const matchDigit = fieldValue(matchBlock, 'DIGIT');
+        if (mode !== 'matches' && mode !== 'differs') continue;
+
+        const controlsIf = matchBlock.parentElement?.parentElement ?? null;
+        const purchase = controlsIf?.querySelector('statement[name="DO0"] block[type="purchase"]') ?? null;
+        if (!purchase) continue;
+
+        return {
+            operator: null,
+            trigger: null,
+            parity: null,
+            matchMode: mode,
+            matchDigit,
             purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
             hasPurchase: true,
         };
@@ -419,26 +448,40 @@ export function inspectFreeBotXml(
 
     const entry = findEntryCondition(doc);
     const expectsParity = !!template.entryParity;
+    const expectsMatch = template.strategy === 'matches' || template.strategy === 'differs';
+
+    const entryMatchesTemplate = (condition: EntryCondition): boolean => {
+        if (expectsMatch) {
+            return condition.matchMode === template.strategy && Number(condition.matchDigit) === template.prediction;
+        }
+        if (expectsParity) return condition.parity === template.entryParity;
+        return condition.operator === template.entryOperator && Number(condition.trigger) === template.triggerDigit;
+    };
+
     const entryOk =
-        !!entry &&
-        entry.hasPurchase &&
-        entry.purchaseContract === template.contractType &&
-        (expectsParity
-            ? entry.parity === template.entryParity
-            : entry.operator === template.entryOperator && Number(entry.trigger) === template.triggerDigit);
+        !!entry && entry.hasPurchase && entry.purchaseContract === template.contractType && entryMatchesTemplate(entry);
+
     checks.push({
         id: 'entry-condition',
         label: 'Entry condition',
         passed: entryOk,
         detail: entry
-            ? `${entry.parity ? `Last digit ${entry.parity}` : `Last digit ${entry.operator} ${entry.trigger}`} → purchase ${entry.purchaseContract ?? '—'}`
+            ? `${
+                  entry.parity
+                      ? `Last digit ${entry.parity}`
+                      : entry.matchMode
+                        ? `Last digit ${entry.matchMode} ${entry.matchDigit}`
+                        : `Last digit ${entry.operator} ${entry.trigger}`
+              } → purchase ${entry.purchaseContract ?? '—'}`
             : 'No digit entry condition found around the purchase block.',
     });
     if (!entryOk) {
         errors.push(
-            expectsParity
-                ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${template.contractType}".`
-                : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${template.contractType}".`
+            expectsMatch
+                ? `Entry condition mismatch: expected "last digit ${template.strategy} ${template.prediction} → purchase ${template.contractType}".`
+                : expectsParity
+                  ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${template.contractType}".`
+                  : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${template.contractType}".`
         );
     }
 

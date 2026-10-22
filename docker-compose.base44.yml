@@ -9,7 +9,21 @@ services:
       - "3000:4003"
     environment:
       - BASE44_PREVIEW_MODE
-    command: ["sh", "-ec", "npm ci --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0"]
+    # `npm ci` only when the mounted node_modules is missing or was installed from a different
+    # package-lock.json. Re-installing on every start wipes node_modules for ~45 s while a container
+    # of the same compose project may still be serving, and Rsbuild then dies with
+    # ERR_MODULE_NOT_FOUND (`@rsbuild/core/dist/…` chunks disappear mid-serve). The hash file is
+    # written only after an install has finished, so an interrupted install is re-run next start.
+    command:
+      - sh
+      - -ec
+      - |
+        lock_hash=$$(md5sum package-lock.json | cut -d' ' -f1)
+        if [ ! -f node_modules/.package-lock.json ] || [ "$$(cat node_modules/.base44-lock-hash 2>/dev/null)" != "$$lock_hash" ]; then
+            npm ci --no-audit --no-fund
+            printf '%s\n' "$$lock_hash" > node_modules/.base44-lock-hash
+        fi
+        exec npm run dev -- --host 0.0.0.0
     restart: on-failure
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4003/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

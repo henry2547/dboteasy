@@ -1,0 +1,53 @@
+/* The market-scan monitoring strip: a read-only overlay at the bottom of the Bot Builder canvas
+   while a "Switch active market" scan is running. It is not interactive, so it never swallows a
+   gesture meant for the canvas. */
+.market-scan-strip {
+    position: fixed;
+    z-index: 34;
+    bottom: 0.8rem;
+    inset-inline-start: 0.8rem;
+    inset-inline-end: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1.2rem;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-5);
+    color: var(--text-general);
+    font-size: 1.1rem;
+    line-height: 1.4;
+    box-shadow: 0 2px 8px 0 var(--shadow-box);
+    pointer-events: none;
+
+    @media (min-width: 768px) {
+        /* Clears the docked palette on a desktop; the run panel owns the right-hand side. */
+        inset-inline-start: 25.2rem;
+        inset-inline-end: auto;
+        max-width: 56rem;
+    }
+
+    &__state {
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        background: var(--brand-secondary);
+        color: var(--text-colored-background);
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    &__field {
+        white-space: nowrap;
+
+        &--warning {
+            color: var(--status-danger);
+            font-weight: bold;
+        }
+    }
+
+    &__message {
+        flex: 1 1 100%;
+        color: var(--text-less-prominent);
+    }
+}

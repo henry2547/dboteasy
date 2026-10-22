@@ -270,3 +270,52 @@
         margin: 0;
     }
 }
+
+/* Below the desktop breakpoint the palette that opens the flyout is a drawer over the canvas, so
+   there is no room for a side panel: the flyout takes the full width, just under the drawer tab,
+   and carries its own close button in a bar of its own. */
+@include mobile-or-tablet-screen {
+    .flyout {
+        inset-inline-start: 0;
+        top: 7rem;
+        width: 100% !important;
+        min-width: 0;
+        height: calc(100% - 8rem);
+        max-height: calc(100% - 8rem);
+        margin-inline-start: 0;
+        margin-top: 0;
+        border-radius: 0;
+
+        &__mobile-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+            height: 4rem;
+            padding: 0 0.6rem 0 1.2rem;
+            border-bottom: 1px solid var(--general-section-1);
+            color: var(--text-general);
+        }
+
+        &__close {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+            width: 2.8rem;
+            height: 2.8rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        /* The mobile bar takes its 4rem off both content variants. */
+        &__content {
+            height: calc(100% - 10.4rem);
+        }
+
+        &__normal-content {
+            height: calc(100% - 4rem);
+        }
+    }
+}
