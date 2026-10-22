@@ -153,10 +153,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
   **59** for the plain Over/Under and Even/Odd templates, **63** for every template with an extra digit
   filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`, `under5_nine_rare`,
-  `over4_five_hot`) and **67** for `over2_three_low_digits`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  `over4_five_hot`), **67** for `over2_three_low_digits` and **118** for the two-leg
+  `over1_under6_recovery`. `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
   that formula in sync if a template gains blocks (the unit test pins 59 for the first template only).
-- **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
+- **Free Bots library (fifteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
   two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7, Even/Odd) and a second
   entry gate built from
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
@@ -169,6 +170,15 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
   the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
   round, or every observer-gated template fails the loader inspection.
+- **Two-leg bot (`over1_under6_recovery`):** the only template whose trade definition carries
+  `contractType: 'both'`. Its `trade_definition_tradeoptions` PREDICTION input holds the
+  `freebot:prediction` variable, so the primary branch sets it to 1 and buys `DIGITOVER` while the
+  recovery branch sets it to 6 and buys `DIGITUNDER`; `inspectFreeBotXml`'s `recovery-leg` check fails
+  unless both that purchase and the variable barrier exist. `settings.purchases` is read with
+  `block[type="before_purchase"] block[type="purchase"]` — `before_purchase` is a block *type*, so a
+  `before_purchase` tag selector matches nothing and silently reports zero purchases. Mind `logic_and`
+  too: this builder registers `logic_operation` only, so an AND must be `logic_operation` with
+  `OP=AND`, otherwise the load reports an unsupported block type.
 - **The stake must be initialised in "Run once at start".** `Bot.start()` is called by
   `BinaryBotPrivateStart` (dbot.js) at the top of every trade loop, *before* `before_purchase` runs, and
   the generator reads the `AMOUNT` input into `amount` right there. Every template keeps its stake in the

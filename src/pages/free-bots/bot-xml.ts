@@ -129,7 +129,7 @@ function readSettings(doc: Document): FreeBotXmlSettings {
     const after = blocksOfType(doc, 'after_purchase')[0] ?? null;
     const multiplier = findMultiplier(after)?.multiplier ?? null;
     const purchases = Array.from(
-        doc.querySelectorAll('before_purchase block[type="purchase"] field[name="PURCHASE_LIST"]')
+        doc.querySelectorAll('block[type="before_purchase"] block[type="purchase"] field[name="PURCHASE_LIST"]')
     )
         .map(field => field.textContent?.trim() ?? '')
         .filter(Boolean);

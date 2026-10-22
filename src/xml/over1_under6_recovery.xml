@@ -334,7 +334,8 @@
         <next>
           <block type="controls_if" id="freebot-o1u6-nine-stop">
             <value name="IF0">
-              <block type="logic_and" id="freebot-o1u6-nine-stop-and">
+              <block type="logic_operation" id="freebot-o1u6-nine-stop-and">
+                <field name="OP">AND</field>
                 <value name="A">
                   <block type="variables_get" id="freebot-o1u6-read-recovery">
                     <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
