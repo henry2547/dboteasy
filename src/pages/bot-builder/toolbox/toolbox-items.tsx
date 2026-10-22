@@ -208,6 +208,41 @@ export const ToolboxItems = () =>
                     </Value>
                 </Block>
                 <Block type='digits_streak' />
+                <Block type='digits_gap'>
+                    <Field name='DIGIT'>1</Field>
+                </Block>
+                <Block type='digits_longest_run'>
+                    <Field name='DIGIT'>3</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_parity_share'>
+                    <Field name='PARITY'>even</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_transition_count'>
+                    <Field name='FROM_DIGIT'>1</Field>
+                    <Field name='TO_DIGIT'>2</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='digits_repeat_share'>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
                 <Block type='switch_active_market'>
                     <Field name='ORDER'>sequential</Field>
                     <Value name='MAX_SWITCHES'>

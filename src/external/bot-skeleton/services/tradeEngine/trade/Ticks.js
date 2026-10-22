@@ -7,6 +7,14 @@ import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { observerRuntime } from '../../observer';
 import { getDirection, getLastDigit } from '../utils/helpers';
+import {
+    digitGap,
+    lastDigitsOfSample,
+    longestDigitRun,
+    parityShare,
+    repeatShare,
+    transitionCount,
+} from '../utils/digit-analysis';
 import { expectPositiveInteger } from '../utils/sanitize';
 import * as constants from './state/constants';
 
@@ -190,6 +198,41 @@ export default Engine =>
                     }
                     resolve(streak);
                 })
+            );
+        }
+
+        /** Ticks since the digit last appeared, over the whole loaded history. -1 = never seen. */
+        getDigitGap(digit) {
+            return new Promise(resolve => this.getLastDigitList().then(digits => resolve(digitGap(digits, digit))));
+        }
+
+        getLongestDigitRun(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits =>
+                    resolve(longestDigitRun(lastDigitsOfSample(digits, sample), digit))
+                )
+            );
+        }
+
+        getDigitParityShare(parity, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits =>
+                    resolve(parityShare(lastDigitsOfSample(digits, sample), parity))
+                )
+            );
+        }
+
+        getDigitTransitionCount(from_digit, to_digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits =>
+                    resolve(transitionCount(lastDigitsOfSample(digits, sample), from_digit, to_digit))
+                )
+            );
+        }
+
+        getDigitRepeatShare(sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => resolve(repeatShare(digits, sample)))
             );
         }
 
