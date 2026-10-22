@@ -94,12 +94,12 @@ working while the bot-side symbol list is empty.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has seven tabs, in this order: Dashboard, Free Bots, Bot Builder, Strategy Engine,
-Deriv Chart, Digits, Statistics.
+The main tab bar has eight tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
+Strategy Engine, Deriv Chart, Digits, Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
-**Bot Builder is index 2** (Free Bots sits right after Dashboard since the scanner hands a row straight
+**Bot Builder is index 3** (AI Builder, then Free Bots, sit right after Dashboard; both hand a bot straight
 to the builder). Code that switches on the active tab compares against `DBOT_TABS.BOT_BUILDER`, never a
 literal — the vendored tours, save/load modals and `bot-builder.tsx` were all moved off `=== 1` when the
 tabs were reordered.
@@ -197,15 +197,27 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   group to `GROUPS` shows it here automatically, but its "what it is / how to use it" copy needs an entry
   in that file's `GROUP_TEXT`.
 - **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
-  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold` and
-  `digits_streak` live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot
-  Builder's "Digits" category (its Blocks-menu flyout lists them with an add button). Mind the import
-  depth: those files sit one level under `blocks/`, so shared helpers come from `../../utils` —
-  importing `modifyContextMenu` from `../../../utils` breaks the whole dev build.
+  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold`,
+  `digits_streak`, plus the digit-analysis set `digits_gap`, `digits_longest_run`,
+  `digits_parity_share`, `digits_transition_count` and `digits_repeat_share`, live in
+  `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot Builder's "Digits"
+  category (its Blocks-menu flyout lists them with an add button). Mind the import depth: those files
+  sit one level under `blocks/`, so shared helpers come from `../../utils` — importing
+  `modifyContextMenu` from `../../../utils` breaks the whole dev build.
 - The count / hot-cold / streak blocks call `Bot.getDigitCount`, `Bot.getHotColdDigit(mode, sample)`
   and `Bot.getDigitStreak()`. Those helpers live in `services/tradeEngine/trade/Ticks.js` and are
   exposed through `services/tradeEngine/Interface/TicksInterface.js` — both files must be updated
   together, or the generated code calls an undefined function.
+- **Digit analysis blocks** (`digits_gap`, `digits_longest_run`, `digits_parity_share`,
+  `digits_transition_count`, `digits_repeat_share`) call `Bot.getDigitGap(digit)`,
+  `Bot.getLongestDigitRun(digit, sample)`, `Bot.getDigitParityShare(parity, sample)`,
+  `Bot.getDigitTransitionCount(from, to, sample)` and `Bot.getDigitRepeatShare(sample)`. The rules
+  themselves are pure functions in `services/tradeEngine/utils/digit-analysis.js` (tested by
+  `utils/__tests__/digit-analysis.test.js`); `Ticks.js` only slices the sample from the engine's own
+  `getLastDigitList()` and wraps the result in a promise. A digit that never appeared reports gap
+  `-1` (never `0`, which means "the newest tick"), and an empty window reports a 0 share rather than
+  an invented one. `digits_gap` has no SAMPLE input on purpose: it reads the whole cached history, so
+  a digit last seen 300 ticks ago is not reported as "never".
 - **Digit blocks guide:** the toolbar's `?` icon (`#db-toolbar__digit-help-button` in
   `toolbar/workspace-group.tsx`) opens `toolbar/digit-blocks-help.tsx`, a step-by-step modal for the
   digit blocks. Its stylesheet widens the shared dialog (`dc-dialog__dialog`) and makes
@@ -309,6 +321,84 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
+
+## Strategy Learning blocks (Bot Builder)
+The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy
+actually performed, from contracts the engine really settled. It never simulates or predicts.
+- Blocks live in `src/external/bot-skeleton/scratch/blocks/Strategy Learning/` (note the space in the
+  folder name) and are imported by `blocks/index.js`. Category constant:
+  `window.Blockly.Categories.Strategy_Learning` in `scratch/hooks/constant.js`; palette entry:
+  `toolbox-items.tsx`.
+- The eight blocks are `learn_set_strategy` (statement: label following trades), `learn_hit_rate`,
+  `learn_sample_size`, `learn_streak` (wins/losses), `learn_best_strategy`, `learn_compare`,
+  `learn_report` and `learn_reset`. A **blank name field** means "the strategy currently being
+  learned"; `learn_compare` needs both names.
+- Rules are pure functions in `services/tradeEngine/utils/strategy-learning.js` (tested by
+  `utils/__tests__/strategy-learning.test.js`). A settlement counts as a win only when
+  `profit > 0` — the same rule as the statistics panel, so a flat contract is a loss. The streak is
+  signed internally (+ wins, − losses) and `learn_streak` reports 0 for the kind that is not running.
+- `trade/StrategyLearning.js` is a trade-engine mixin (outermost wrapper in `trade/index.js`). It
+  records from the existing settlement hook in `Total.js` — `recordLearningSettlement({ profit })`
+  runs next to `recordRiskSettlement` — and is exposed through
+  `Interface/LearningInterface.js`, spread into the bot interface in `Interface/index.js`. Every read
+  is synchronous, so the blocks work inside ordinary IF/AND/OR conditions.
+- **Fails closed:** `learn_best_strategy` answers an empty text and `learn_compare` answers false
+  when a strategy has fewer than the minimum settled trades. `statistics.clear` resets the learning
+  memory, matching the session semantics of the other engine blocks.
+- Verify: `npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__` (66 tests) and
+  `npx jest src/external/bot-skeleton/services/observer/__tests__/observer-generation.test.js`
+  (every block tree type has a generator). In the Bot Builder palette the "Strategy Learning"
+  category lists the eight blocks; a scratch workspace containing them generates
+  `Bot.learnSetStrategy("…")`, `Bot.learnHitRate(…)`, `Bot.learnSampleSize(…)`,
+  `Bot.learnStreak(…, "losses")`, `Bot.learnBestStrategy("hit_rate", 10)`,
+  `Bot.learnCompare("a", "b", 5)`, `Bot.learnReport()` and `Bot.learnReset()` without console
+  errors. Real per-strategy numbers need settled contracts, so they are verified by hand with a Demo
+  account (Run is login-gated).
+
+## Trading & Execution, Bot Control and Reporting blocks (Bot Builder)
+The last three engine-backed palette categories. They read what the trade engine already did and
+never trade, size a stake or stop a session on their own initiative.
+- Blocks: `scratch/blocks/Trading Execution/`, `scratch/blocks/Bot Control/` and
+  `scratch/blocks/Reporting/` (folder names carry the space, like the other engine folders), imported
+  by `blocks/index.js`. Category constants: `window.Blockly.Categories.Trading_Execution` /
+  `Bot_Control` / `Session_Reporting` in `scratch/hooks/constant.js`; palette entries in
+  `toolbox-items.tsx` (`trading_execution`, `bot_control`, `session_reporting`).
+- Eleven blocks: `exec_last_result`, `exec_last_profit`, `exec_session_profit`, `exec_session_trades`,
+  `exec_open_contracts`, `exec_has_open_contract`, `exec_wait_settlement` (the only statement with a
+  promise), `bot_stop`, `bot_trade_limit_reached`, `report_session` and `report_journal`.
+- Rules are pure functions in `services/tradeEngine/utils/session-control.js` (tested by
+  `utils/__tests__/session-control.test.js`). A contract is counted when the engine bought it; a
+  result exists only after settlement, and flat contracts (`profit === 0`) count as losses — the same
+  rule as the statistics panel. `exec_last_result` answers `''` before the first settlement, and
+  `sessionSummary` says "no contracts taken yet" instead of printing zeros as a measured result.
+- `trade/SessionControl.js` is the outermost trade-engine mixin in `trade/index.js`. It records from
+  the existing hooks — `recordSessionEntry()` next to `recordRiskEntry` in `Purchase.js`,
+  `recordSessionSettlement({ profit, stake })` next to `recordLearningSettlement` in `Total.js` — and
+  `statistics.clear` resets it.
+- **It does not keep its own open-contract counter.** `sessionOpenContracts()` reads `this.contractId`,
+  the id the engine is actually holding, so a settled or abandoned contract can never leave a phantom
+  blocking position. `exec_wait_settlement` resolves on the engine's own settlement (`contractId`
+  cleared or scope `STOP`), never on a timer, and resolves `false` immediately when nothing is open.
+- **Stopping goes through the existing path.** `stopBotWithReason` emits `bot.stop_button_click` — the
+  same event the run panel's Stop button emits — so the open contract is still allowed to settle, the
+  subscriptions are cleared and the UI reports a normal stop. It is one-shot per session, and the
+  reason is journalled through `ui.log.notify`.
+- Interface split: the synchronous reads live in `Interface/SessionControlInterface.js` (spread into
+  `getInterface()` like the risk surface); the one promise is exported as
+  `getSessionControlAsyncInterface` and wrapped with `createAsync` in `utils/interpreter.js` — mixing
+  a sync value into that promise map would suspend the interpreter on a non-promise.
+- A trade limit of `0` or less means "not set" and never stops a session; `report_journal` writes text
+  verbatim at info/warn/error, and an unknown level falls back to info.
+- Verify: `docker compose exec web npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__`
+  (79 tests) plus
+  `npx jest src/external/bot-skeleton/services/observer/__tests__/observer-generation.test.js`
+  (every block in the tree has a generator). In the palette the three categories list the eleven blocks;
+  a scratch workspace containing them generates `Bot.sessionWaitForSettlement()`,
+  `Bot.sessionStop(…)`, `Bot.sessionJournal(…, "warn")`, `Bot.sessionLastResult()`,
+  `Bot.sessionLastProfit()`, `Bot.sessionProfit()`, `Bot.sessionTradesTaken()`,
+  `Bot.sessionOpenContracts()`, `Bot.sessionHasOpenContract()`, `Bot.sessionTradeLimitReached(3)` and
+  `Bot.sessionReport()` without console errors. Real settlement numbers need a logged-in account, so
+  the live path is verified by hand with a Demo account (Run is login-gated).
 
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
@@ -561,3 +651,16 @@ unit-tested in isolation (`engines/__tests__/lab-engines.test.ts`, 21 tests).
   scattergram, zero-lookahead walk-forward). Out-of-band matrix cells are tinted red (>12%) /
   blue (<8%). Run `docker compose exec web npx jest src/pages/digits/engines`.
   `npx tsc --noEmit` clean. No sideways scroll at 431px (the matrix scrolls inside its own panel).
+
+## AI Builder tab (AI Bot Architect)
+Second tab (`#ai_architect`, `#id-ai-architect`, `DBOT_TABS.AI_ARCHITECT = 1`), lazy-loaded from
+`main.tsx` like the other pages. `DBOT_TABS`, `TAB_IDS` and the `hash` array must stay in the same order.
+The page is `src/pages/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss`, all `aa-*` classes).
+- It only ever uses blocks the capability registry says are registered; **Load into Bot Builder** goes through
+  `use-architect-loader.ts`, which snapshots the canvas, loads, reads the live workspace back and restores the
+  snapshot on any mismatch. Loading never starts the bot, and is refused while one is running.
+- The tab icon is `LabelPairedLightbulbCaptionRegularIcon` (quill-icons has no Brain/Robot icon; a missing
+  export breaks the whole dev build).
+- Verify: open the tab, press Generate on an example prompt (expect a "Validation Passed" card), then Load —
+  the app switches to `#bot_builder` and the canvas holds the generated blocks.
+  `docker compose exec web npx jest src/pages/ai-architect` (83 tests); `npx tsc --noEmit` is clean.

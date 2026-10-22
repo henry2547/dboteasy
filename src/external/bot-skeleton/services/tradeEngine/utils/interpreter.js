@@ -99,6 +99,8 @@ const Interpreter = () => {
         const {
             getTicksInterface,
             getMarketScanInterface,
+            getMarketIntelligenceInterface,
+            getSessionControlAsyncInterface,
             alert,
             prompt,
             sleep,
@@ -106,6 +108,8 @@ const Interpreter = () => {
         } = bot_interface;
         const ticks_interface = getTicksInterface;
         const market_scan_interface = getMarketScanInterface ?? {};
+        const market_intelligence_interface = getMarketIntelligenceInterface ?? {};
+        const session_control_async_interface = getSessionControlAsyncInterface ?? {};
 
         js_interpreter.setProperty(scope, 'console', js_interpreter.nativeToPseudo(custom_console));
         js_interpreter.setProperty(scope, 'alert', js_interpreter.nativeToPseudo(alert));
@@ -125,6 +129,18 @@ const Interpreter = () => {
         // The market scan hands back a promise per step, so the generated loop suspends while a
         // market is discovered, subscribed and confirmed to be delivering its own genuine ticks.
         Object.entries(market_scan_interface).forEach(([name, f]) =>
+            js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
+        );
+
+        // Market intelligence (discovery, readiness, ranking, cooldowns) is exposed the same way:
+        // the generated program suspends while a pool is discovered or a contract list verified.
+        Object.entries(market_intelligence_interface).forEach(([name, f]) =>
+            js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
+        );
+
+        // Waiting for a settlement suspends the generated program exactly like the market steps do:
+        // it resolves on the engine's own settlement, so the next block reads a settled contract.
+        Object.entries(session_control_async_interface).forEach(([name, f]) =>
             js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
         );
 

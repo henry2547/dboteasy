@@ -30,6 +30,52 @@ const NEW_BLOCKS = [
         ],
     },
     {
+        name: localize('Digit gap'),
+        summary: localize('How many ticks have passed since a digit last showed up.'),
+        steps: [
+            localize('Drag “Ticks since digit … last appeared” onto the canvas and pick the digit.'),
+            localize('It returns a count: 0 means the newest tick ended in that digit, 2 means it was two ticks ago.'),
+            localize('A value of -1 means the digit has not appeared in the ticks loaded so far — it is not the same as a gap of 0.'),
+            localize('Use it in a condition, for example: Digit gap of 5 > 30 → the digit has been away for a while.'),
+        ],
+    },
+    {
+        name: localize('Longest digit run'),
+        summary: localize('The longest run a digit ever managed inside the sample.'),
+        steps: [
+            localize('Drag “Longest run of digit … in last … ticks” onto the canvas.'),
+            localize('Pick the digit and set the sample, for example 100 ticks.'),
+            localize('It returns the biggest number of ticks in a row that ended in that digit. 0 means it never repeated.'),
+        ],
+    },
+    {
+        name: localize('Digit parity share'),
+        summary: localize('How lopsided the sample is between even and odd digits.'),
+        steps: [
+            localize('Drag “Share (%) of … digits in last … ticks” and choose even or odd.'),
+            localize('It returns a percentage of the sample. 50% is balanced; far above or below is lopsided.'),
+            localize('Compare it, for example: Share of even digits > 55 → trade Even only while the sample leans that way.'),
+        ],
+    },
+    {
+        name: localize('Digit transition count'),
+        summary: localize('How often one digit followed another on the next tick.'),
+        steps: [
+            localize('Drag “Times digit … was followed by … in last … ticks” onto the canvas.'),
+            localize('Pick both digits and set the sample.'),
+            localize('It counts only pairs that sit next to each other in the tick history, so 0 means the pair never happened in the sample.'),
+        ],
+    },
+    {
+        name: localize('Digit repeat share'),
+        summary: localize('How often a tick repeated the previous tick’s digit.'),
+        steps: [
+            localize('Drag “Share (%) of ticks that repeated the previous digit” and set the sample.'),
+            localize('It returns a percentage of the sample; about 10% is the chance level for a fair digit.'),
+            localize('Compare it, for example: Repeat share > 15 → the market is repeating more than usual.'),
+        ],
+    },
+    {
         name: localize('Digit streak'),
         summary: localize('How many ticks in a row ended with the same last digit.'),
         steps: [

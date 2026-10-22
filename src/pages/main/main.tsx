@@ -33,6 +33,7 @@ import {
 } from '@/utils/trade-type-modal-handler';
 import {
     LabelPairedChartLineCaptionRegularIcon,
+    LabelPairedLightbulbCaptionRegularIcon,
     LabelPairedCircleDotCaptionFillIcon,
     LabelPairedCircleStarCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
@@ -53,6 +54,7 @@ const DerivChart = lazy(() => import('../chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../digits'));
 const StatisticsPage = lazy(() => import('../statistics'));
 const StrategyEnginePage = lazy(() => import('../strategy-engine'));
+const AiArchitectPage = lazy(() => import('../ai-architect'));
 const FreeBotsPage = lazy(() => import('../free-bots'));
 const GlobalScanButton = lazy(() => import('../digits/components/global-scan-button'));
 
@@ -87,7 +89,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'free_bots', 'bot_builder', 'strategy_engine', 'chart', 'digits', 'statistics'];
+    const hash = ['dashboard', 'ai_architect', 'free_bots', 'bot_builder', 'strategy_engine', 'chart', 'digits', 'statistics'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -404,6 +406,27 @@ const AppWrapper = observer(() => {
                                 id='id-dbot-dashboard'
                             >
                                 <Dashboard handleTabChange={handleTabChange} />
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedLightbulbCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='AI Builder' />
+                                    </>
+                                }
+                                id='id-ai-architect'
+                            >
+                                <ErrorBoundary label='AI Builder'>
+                                    <Suspense
+                                        fallback={<ChunkLoader message={localize('Please wait, loading the AI builder...')} />}
+                                    >
+                                        <AiArchitectPage />
+                                    </Suspense>
+                                </ErrorBoundary>
                             </div>
                             <div
                                 label={

@@ -1,0 +1,446 @@
+/* AI Bot Architect tab. The main area is a fixed-height overflow-hidden box, so the page owns its scrolling. */
+
+.ai-architect {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    box-sizing: border-box;
+    width: 100%;
+    height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding: 2rem 1.2rem 4.8rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+
+    @media (min-width: 768px) {
+        height: calc(100vh - 17rem);
+        padding: 2.4rem 2.4rem 5.6rem;
+    }
+
+    @media (min-width: 1200px) {
+        padding: 2.8rem 3.2rem 6.4rem;
+        max-width: 112rem;
+    }
+
+    &__hero {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.9rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    &__subtitle {
+        margin: 0.4rem 0 0;
+        font-size: 1.25rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.aa-card {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 1.4rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 0.8rem;
+    background: var(--general-main-2, var(--general-main-1));
+    font-size: 1.3rem;
+    line-height: 1.5;
+
+    &__title {
+        margin: 0 0 0.6rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    &__hint {
+        margin: 0.2rem 0 0;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.aa-prompt {
+    &__input {
+        box-sizing: border-box;
+        width: 100%;
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--general-section-1);
+        border-radius: 0.6rem;
+        background: var(--general-main-1);
+        color: var(--text-general);
+        font: inherit;
+        resize: vertical;
+
+        &:focus {
+            outline: 2px solid var(--brand-secondary, #ff444f);
+            outline-offset: 1px;
+        }
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        align-items: center;
+        margin-top: 1rem;
+    }
+
+    &__status {
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.aa-button {
+    min-height: 3.6rem;
+    padding: 0 1.4rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 0.6rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    &--primary {
+        border-color: var(--brand-secondary, #ff444f);
+        background: var(--brand-secondary, #ff444f);
+        color: #fff;
+    }
+
+    &--secondary {
+        background: transparent;
+    }
+
+    &--danger {
+        border-color: var(--status-danger, #ec3f3f);
+        color: var(--status-danger, #ec3f3f);
+        background: transparent;
+    }
+
+    &--small {
+        min-height: 3rem;
+        padding: 0 1rem;
+        font-size: 1.2rem;
+    }
+}
+
+.aa-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.8rem;
+    padding: 0 1rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 99rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font: inherit;
+    font-size: 1.2rem;
+
+    &--accent {
+        border-color: var(--brand-secondary, #ff444f);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+    }
+}
+
+button.aa-chip {
+    cursor: pointer;
+}
+
+.aa-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 3.2rem;
+    padding: 0 0.8rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 0.4rem;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font: inherit;
+}
+
+.aa-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--brand-secondary, #ff444f);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.aa-examples {
+    margin-top: 1.2rem;
+
+    &__label {
+        display: block;
+        margin-bottom: 0.6rem;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+}
+
+.aa-clarify {
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--general-section-1);
+
+    &__question {
+        margin: 0 0 0.6rem;
+        font-weight: 600;
+    }
+
+    &__options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+}
+
+.aa-message {
+    margin: 0;
+
+    &--bad {
+        border-color: var(--status-danger, #ec3f3f);
+        color: var(--status-danger, #ec3f3f);
+    }
+}
+
+.aa-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+
+    > p {
+        flex-basis: 100%;
+        margin: 0;
+    }
+}
+
+.aa-list {
+    margin: 0;
+    padding-left: 1.8rem;
+
+    &--muted {
+        color: var(--text-less-prominent);
+    }
+}
+
+.aa-empty {
+    margin: 0;
+    color: var(--text-less-prominent);
+}
+
+.aa-badge {
+    display: inline-block;
+    padding: 0 0.6rem;
+    border-radius: 0.4rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+
+    &--ok {
+        background: rgba(0, 168, 107, 0.16);
+        color: var(--brand-success, #00a86b);
+    }
+
+    &--bad {
+        background: rgba(236, 63, 63, 0.16);
+        color: var(--status-danger, #ec3f3f);
+    }
+}
+
+.aa-config__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--general-section-1);
+    overflow-wrap: anywhere;
+}
+
+.aa-flow,
+.aa-blocks__list,
+.aa-checks,
+.aa-library__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.aa-flow__step,
+.aa-blocks__item,
+.aa-check,
+.aa-library__item {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--general-section-1);
+    overflow-wrap: anywhere;
+}
+
+.aa-flow__stage,
+.aa-flow__title,
+.aa-flow__blocks {
+    display: block;
+}
+
+.aa-flow__title {
+    margin-top: 0.2rem;
+    font-weight: 600;
+}
+
+.aa-flow__blocks {
+    margin-top: 0.2rem;
+    font-family: monospace;
+    font-size: 1.1rem;
+    color: var(--text-less-prominent);
+}
+
+.aa-flow__stage,
+.aa-blocks__category,
+.aa-blocks__role {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-less-prominent);
+}
+
+.aa-blocks__type {
+    font-family: monospace;
+    font-size: 1.2rem;
+}
+
+.aa-check {
+    display: flex;
+    gap: 0.8rem;
+
+    &__mark {
+        flex: none;
+        font-weight: 700;
+    }
+
+    &__label {
+        font-weight: 600;
+    }
+
+    &__detail {
+        display: block;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.aa-changelog {
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+
+    &__entry {
+        padding: 0.8rem 0;
+        border-top: 1px solid var(--general-section-1);
+    }
+
+    &__instruction {
+        font-weight: 600;
+    }
+
+    &__note--warn {
+        color: var(--status-warning, #ffad3a);
+    }
+}
+
+.aa-refine__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 0.8rem;
+
+    .aa-input {
+        flex: 1 1 20rem;
+    }
+}
+
+.aa-library {
+    &__message {
+        margin: 0 0 0.8rem;
+        font-size: 1.2rem;
+    }
+
+    &__head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        min-width: 0;
+    }
+
+    &__name {
+        font-weight: 700;
+    }
+
+    &__meta,
+    &__date {
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__prompt {
+        display: -webkit-box;
+        overflow: hidden;
+        font-size: 1.2rem;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 0.8rem;
+    }
+}
+
+.aa-details {
+    margin-top: 0.6rem;
+    font-size: 1.2rem;
+}
+
+.aa-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
