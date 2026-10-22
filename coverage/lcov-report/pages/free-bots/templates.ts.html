@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.51% </span>
+                <span class="strong">98.2% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>610/613</span>
+                <span class='fraction'>602/613</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">62.5% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>5/8</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">66.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/3</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.51% </span>
+                <span class="strong">98.2% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>610/613</span>
+                <span class='fraction'>602/613</span>
             </div>
         
             
@@ -1272,11 +1272,11 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1286,9 +1286,9 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Free Bots library — the digit-contract templates that ship with the app.
  *
@@ -1885,11 +1885,11 @@ const FREE_BOT_XML: Record&lt;string, string&gt; = {
     over1_under6_recovery: over1Under6RecoveryXml,
 };
 &nbsp;
-export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {
-    const generated = multiMarketById(id);
-    if (generated) return generated;
-    return FREE_BOT_TEMPLATES.find(template =&gt; template.id === id)<span class="branch-0 cbranch-no" title="branch not covered" > ?? null;</span>
-}
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {</span></span>
+<span class="cstat-no" title="statement not covered" >    const generated = multiMarketById(id);</span>
+<span class="cstat-no" title="statement not covered" >    if (generated) return generated;</span>
+<span class="cstat-no" title="statement not covered" >    return FREE_BOT_TEMPLATES.find(template =&gt; template.id === id) ?? null;</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export function freeBotForStrategy(strategy: FreeBotStrategy | null | undefined): FreeBotTemplate | null {</span></span>
 <span class="cstat-no" title="statement not covered" >    return FREE_BOT_TEMPLATES.find(template =&gt; template.strategy === strategy) ?? null;</span>
@@ -1899,9 +1899,9 @@ export function freeBotById(id: string | null | undefined): FreeBotTemplate | nu
  * The untouched template XML — the Free Bots asset is never edited in place. A
  * generated template carries its own XML and never reads an asset.
  */
-export function freeBotXml(template: FreeBotTemplate): string {
-    return template.xml<span class="branch-0 cbranch-no" title="branch not covered" > ?? FREE_BOT_XML[template.id]<span class="branch-0 cbranch-no" title="branch not covered" > </span>?? '';</span>
-}
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export function freeBotXml(template: FreeBotTemplate): string {</span></span>
+<span class="cstat-no" title="statement not covered" >    return template.xml ?? FREE_BOT_XML[template.id] ?? '';</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -1909,7 +1909,7 @@ export function freeBotXml(template: FreeBotTemplate): string {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-22T22:08:44.288Z
+                at 2026-10-22T22:12:33.193Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
