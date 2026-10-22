@@ -8,7 +8,9 @@ import { clickRateLimiter } from '@/utils/click-rate-limiter';
 import GTM from '@/utils/gtm';
 import { help_content_config } from '@/utils/help-content/help-content.config';
 import { LabelPairedCircleExclamationCaptionFillIcon } from '@deriv/quill-icons';
+import { LabelPairedXmarkMdFillIcon } from '@deriv/quill-icons/LabelPaired';
 import { localize } from '@deriv-com/translations';
+import { useDevice } from '@deriv-com/ui';
 import { getPlatformConfig } from '../shared';
 import Input from '../shared_ui/input';
 import Text from '../shared_ui/text';
@@ -201,6 +203,7 @@ const FlyoutContent = (props: TFlyoutContent) => {
 };
 
 const Flyout = observer(() => {
+    const { isDesktop } = useDevice();
     const { flyout, flyout_help } = useStore();
     const { active_helper, initFlyoutHelp, setHelpContent } = flyout_help;
     const {
@@ -213,6 +216,7 @@ const Flyout = observer(() => {
         onUnmount,
         search_term,
         selected_category,
+        setVisibility,
         first_get_variable_block_index,
     } = flyout;
 
@@ -240,6 +244,26 @@ const Flyout = observer(() => {
                 })}
                 style={{ width: `${flyout_width}px` }}
             >
+                {/* The palette is a drawer below the desktop breakpoint, so the flyout covers the
+                    canvas and needs a close of its own (the drawer is behind it). */}
+                {!isDesktop && (
+                    <div className='flyout__mobile-bar'>
+                        {!is_search_flyout && selected_category && (
+                            <Text weight='bold' size='xs'>
+                                {localize(selected_category.getAttribute('name') as string)}
+                            </Text>
+                        )}
+                        <button
+                            type='button'
+                            className='flyout__close'
+                            data-testid='flyout__close'
+                            aria-label={localize('Close blocks menu')}
+                            onClick={() => setVisibility(false)}
+                        >
+                            <LabelPairedXmarkMdFillIcon fill='var(--text-general)' />
+                        </button>
+                    </div>
+                )}
                 {is_search_flyout && !is_help_content && (
                     <SearchResult search_term={search_term} total_result={total_result} />
                 )}

@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import Text from '@/components/shared_ui/text';
 import { useStore } from '@/hooks/useStore';
-import { LabelPairedChevronDownMdFillIcon } from '@deriv/quill-icons/LabelPaired';
+import { LabelPairedChevronDownMdFillIcon, LabelPairedXmarkMdFillIcon } from '@deriv/quill-icons/LabelPaired';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
@@ -13,6 +13,13 @@ import ToolbarButton from '../toolbar/toolbar-button';
 import SearchBox from './search-box';
 import { ToolboxItems } from './toolbox-items';
 
+/**
+ * The blocks palette. On a desktop it is the docked panel it always was — the header collapses it.
+ * Below the desktop breakpoint there is no room to dock a panel next to the canvas, so the same
+ * palette is rendered as a drawer over it: closed by default, opened from the "Blocks" tab on the
+ * left edge, and closed again as soon as a category puts its flyout on the screen (or on a tap
+ * outside it). The canvas keeps the full width while the drawer is closed.
+ */
 const Toolbox = observer(() => {
     const { isDesktop } = useDevice();
     const { toolbox, flyout, quick_strategy } = useStore();
@@ -35,6 +42,7 @@ const Toolbox = observer(() => {
 
     const toolbox_ref = React.useRef(ToolboxItems());
     const [is_open, setOpen] = React.useState(true);
+    const [is_drawer_open, setDrawerOpen] = React.useState(false);
     const [pending_selection] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -43,28 +51,84 @@ const Toolbox = observer(() => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Blockly measures the box it is rendered into, and that box changes with the palette (the
+    // drawer covers the canvas on a phone, collapsing frees the space on a desktop). Re-measure
+    // once the transition has settled, not only while it runs.
+    React.useEffect(() => {
+        const workspace = window.Blockly?.derivWorkspace;
+        if (!workspace) return undefined;
+        window.Blockly.svgResize(workspace);
+        const timer = setTimeout(() => window.Blockly.svgResize(workspace), 320);
+        return () => clearTimeout(timer);
+    }, [is_open, is_drawer_open]);
+
     const handleQuickStrategyOpen = () => {
         setFormVisibility(true);
         /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
         /* [/AI] */
     };
 
-    if (isDesktop) {
-        return (
-            <div className='db-toolbox' data-testid='dashboard__toolbox'>
-                <ToolbarButton
-                    popover_message={localize('Click here to start building your Deriv Bot.')}
-                    button_id='db-toolbar__get-started-button'
-                    button_classname='toolbar__btn toolbar__btn--icon toolbar__btn--start'
-                    buttonOnClick={handleQuickStrategyOpen}
-                    button_text={localize('Quick strategy')}
-                />
+    const closeDrawer = () => {
+        setDrawerOpen(false);
+        setVisibility(false);
+    };
+
+    const handleCategoryClick = (category: HTMLElement) => {
+        onToolboxItemClick(category);
+        // The flyout takes the screen on a phone, so the drawer gets out of its way.
+        if (!isDesktop) setDrawerOpen(false);
+    };
+
+    const is_content_open = isDesktop ? is_open : true;
+
+    return (
+        <>
+            {!isDesktop && !is_drawer_open && (
+                <button
+                    type='button'
+                    className='db-toolbox__drawer-tab'
+                    data-testid='db-toolbox__drawer-tab'
+                    aria-expanded={false}
+                    aria-controls='gtm-toolbox'
+                    onClick={() => setDrawerOpen(true)}
+                >
+                    {localize('Blocks')}
+                    <LabelPairedChevronDownMdFillIcon
+                        className='db-toolbox__drawer-tab__icon'
+                        fill='var(--text-general)'
+                    />
+                </button>
+            )}
+            {!isDesktop && is_drawer_open && (
+                <div className='db-toolbox__scrim' data-testid='db-toolbox__scrim' onClick={closeDrawer} />
+            )}
+            <div
+                className={classNames('db-toolbox', {
+                    'db-toolbox--mobile': !isDesktop,
+                    'db-toolbox--open': is_drawer_open,
+                })}
+                data-testid='dashboard__toolbox'
+            >
+                {/* The mobile toolbar already carries the Quick strategy button. */}
+                {isDesktop && (
+                    <ToolbarButton
+                        popover_message={localize('Click here to start building your Deriv Bot.')}
+                        button_id='db-toolbar__get-started-button'
+                        button_classname='toolbar__btn toolbar__btn--icon toolbar__btn--start'
+                        buttonOnClick={handleQuickStrategyOpen}
+                        button_text={localize('Quick strategy')}
+                    />
+                )}
                 <div id='gtm-toolbox' className='db-toolbox__content'>
                     <div className='db-toolbox__header'>
                         <div
                             className='db-toolbox__title'
                             data-testid='db-toolbox__title'
                             onClick={() => {
+                                if (!isDesktop) {
+                                    closeDrawer();
+                                    return;
+                                }
                                 setOpen(!is_open);
                                 setVisibility(false);
                             }}
@@ -72,15 +136,19 @@ const Toolbox = observer(() => {
                             {localize('Blocks menu')}
                             <span
                                 className={classNames('db-toolbox__title__chevron', {
-                                    'db-toolbox__title__chevron--active': is_open,
+                                    'db-toolbox__title__chevron--active': isDesktop ? is_open : is_drawer_open,
                                 })}
                             >
-                                <LabelPairedChevronDownMdFillIcon fill='var(--text-general)' />
+                                {isDesktop ? (
+                                    <LabelPairedChevronDownMdFillIcon fill='var(--text-general)' />
+                                ) : (
+                                    <LabelPairedXmarkMdFillIcon fill='var(--text-general)' />
+                                )}
                             </span>
                         </div>
                     </div>
                     <div
-                        className={classNames('db-toolbox__content-wrapper', { active: is_open })}
+                        className={classNames('db-toolbox__content-wrapper', { active: is_content_open })}
                         data-testid='db-toolbox__content-wrapper'
                     >
                         <SearchBox
@@ -109,10 +177,11 @@ const Toolbox = observer(() => {
                                                 <div
                                                     className='db-toolbox__item'
                                                     onClick={() => {
-                                                        // eslint-disable-next-line no-unused-expressions
-                                                        has_sub_category
-                                                            ? onToolboxItemExpand(index)
-                                                            : onToolboxItemClick(category);
+                                                        if (has_sub_category) {
+                                                            onToolboxItemExpand(index);
+                                                            return;
+                                                        }
+                                                        handleCategoryClick(category);
                                                     }}
                                                 >
                                                     <div className='db-toolbox__category-text'>
@@ -153,7 +222,7 @@ const Toolbox = observer(() => {
                                                                         }
                                                                     )}
                                                                     onClick={() => {
-                                                                        onToolboxItemClick(subCategory);
+                                                                        handleCategoryClick(subCategory);
                                                                     }}
                                                                 >
                                                                     <Text size='xxs'>
@@ -172,9 +241,8 @@ const Toolbox = observer(() => {
                     </div>
                 </div>
             </div>
-        );
-    }
-    return null;
+        </>
+    );
 });
 
 export default Toolbox;

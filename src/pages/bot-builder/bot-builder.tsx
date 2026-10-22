@@ -11,6 +11,7 @@ import { useDevice } from '@deriv-com/ui';
 import { TBlocklyEvents } from 'Types';
 import LoadModal from '../../components/load-modal';
 import BotStatusBanner from '../free-bots/components/bot-status-banner';
+import MarketScanStrip from './market-scan-strip';
 import SaveModal from '../dashboard/bot-list/save-modal';
 import BotBuilderTourHandler from '../tutorials/dbot-tours/bot-builder-tour';
 import QuickStrategy1 from './quick-strategy';
@@ -127,6 +128,7 @@ const BotBuilder = observer(() => {
             </div>
             {active_tab === DBOT_TABS.BOT_BUILDER && <BotBuilderTourHandler is_mobile={!isDesktop} />}
             {active_tab === DBOT_TABS.BOT_BUILDER && !is_preview_on_popup && <BotStatusBanner variant='overlay' />}
+            {active_tab === DBOT_TABS.BOT_BUILDER && !is_preview_on_popup && <MarketScanStrip />}
             {/* removed this outside from toolbar becuase it needs to loaded seperately without dependency */}
             <LoadModal />
             <SaveModal />
