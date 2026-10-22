@@ -12,6 +12,7 @@
  * definition can read them without importing the API services.
  */
 import { filterDigitMarkets, normalizeActiveSymbols } from '@/pages/digits/markets';
+import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import ApiHelpers from '../../api/api-helpers';
 import { DISCOVERY_TIMEOUT_MS } from './market-scan-states';
 
@@ -59,6 +60,26 @@ export const resolveSwitchLimit = (max_switches, pool_size) => {
     const configured = Number(max_switches);
     if (Number.isFinite(configured) && configured > 0) return Math.floor(configured);
     return Math.max(1, pool_size);
+};
+
+/**
+ * A readable reason for a market failure.
+ *
+ * An API error arrives as `{ error: { code, message } }` and a plain engine error as `Error`. The
+ * code is mapped to the app's own message when it is known, and the API's own text is kept for a code
+ * this build has never seen — so the run log says what actually happened instead of the generic
+ * "An error occurred" fallback.
+ */
+export const describeMarketFailure = (error, fallback = 'The market could not be used') => {
+    const api_error = error?.error || error;
+    const code = api_error?.code;
+    const message = api_error?.message;
+
+    if (code) {
+        const localized = getLocalizedErrorMessage(code, api_error) || message || fallback;
+        return `${localized} (${code})`;
+    }
+    return message || fallback;
 };
 
 const withTimeout = (promise, ms, message) =>
@@ -136,7 +157,10 @@ export const supportsContractTypes = async (symbol, contract_types = []) => {
             `${symbol} contract list took too long`
         );
     } catch (error) {
-        return { supported: false, reason: 'Contracts could not be verified for this market' };
+        return {
+            supported: false,
+            reason: describeMarketFailure(error, 'Contracts could not be verified for this market'),
+        };
     }
 
     if (!Array.isArray(contracts) || contracts.length === 0) {

@@ -22,7 +22,15 @@ let tickListenerKey;
 
 export default Engine =>
     class Ticks extends Engine {
-        async watchTicks(symbol) {
+        /**
+         * Moves the engine's tick subscription to `symbol`.
+         *
+         * `quiet` keeps a failed subscription from being raised as a fatal run error: the market scan
+         * treats it as a market it skips and reports the reason itself. On failure the engine stays on
+         * the market it was already subscribed to, so nothing downstream (pip size, proposals) reads a
+         * market whose ticks never arrived.
+         */
+        async watchTicks(symbol, { quiet = false } = {}) {
             if (symbol && this.symbol !== symbol) {
                 // The previous market's listener must be released before its key is replaced,
                 // otherwise switching markets (or repeatedly running the bot) leaves a listener
@@ -51,8 +59,13 @@ export default Engine =>
                     this.store.dispatch({ type: constants.NEW_TICK, payload: epoch });
                 };
 
-                const key = await ticksService.monitor({ symbol, callback });
-                tickListenerKey = key;
+                try {
+                    const key = await ticksService.monitor({ symbol, callback, quiet });
+                    tickListenerKey = key;
+                } catch (error) {
+                    this.symbol = previous_symbol;
+                    throw error;
+                }
             }
         }
 
