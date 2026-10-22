@@ -9,6 +9,7 @@
     <variable type="" id="freebot-run" islocal="false" iscloud="false">freebot:run</variable>
     <variable type="" id="freebot-recovery" islocal="false" iscloud="false">freebot:recovery</variable>
     <variable type="" id="freebot-trades" islocal="false" iscloud="false">freebot:trades</variable>
+    <variable type="" id="freebot-notice" islocal="false" iscloud="false">freebot:notice</variable>
   </variables>
   <block type="trade_definition" id="freebot-o1u6-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
@@ -164,7 +165,6 @@
   <block type="before_purchase" id="freebot-o1u6-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
       <block type="controls_if" id="freebot-o1u6-entry">
-        <mutation else="1"></mutation>
         <value name="IF0">
           <block type="logic_compare" id="freebot-o1u6-entry-compare">
             <field name="OP">GTE</field>
@@ -310,176 +310,207 @@
             </statement>
           </block>
         </statement>
-        <statement name="ELSE">
-          <block type="controls_if" id="freebot-o1u6-p2-armed">
+        <next>
+          <block type="controls_if" id="freebot-o1u6-recovery-leg">
             <value name="IF0">
-              <block type="logic_operation" id="freebot-o1u6-p2-armed-and">
-                <field name="OP">AND</field>
-                <value name="A">
-                  <block type="variables_get" id="freebot-o1u6-p2-read-recovery">
-                    <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                  </block>
-                </value>
-                <value name="B">
-                  <block type="digits_high_run" id="freebot-o1u6-p2-high-run-block">
-                    <field name="MODE">at_or_above</field>
-                    <field name="DIGIT">6</field>
-                    <value name="COUNT">
-                      <shadow type="math_number"><field name="NUM">3</field></shadow>
-                    </value>
-                  </block>
-                </value>
+              <block type="variables_get" id="freebot-o1u6-rec-read">
+                <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
               </block>
             </value>
             <statement name="DO0">
-              <block type="controls_if" id="freebot-o1u6-p2-not-nine">
+              <block type="controls_if" id="freebot-o1u6-rec-ready">
+                <mutation else="1"></mutation>
                 <value name="IF0">
-                  <block type="logic_compare" id="freebot-o1u6-p2-not-nine-compare">
-                    <field name="OP">LTE</field>
+                  <block type="logic_operation" id="freebot-o1u6-rec-gate-and">
+                    <field name="OP">AND</field>
                     <value name="A">
-                      <block type="last_digit" id="freebot-o1u6-p2-last-digit">
-                      </block>
-                    </value>
-                    <value name="B">
-                      <shadow type="math_number"><field name="NUM">8</field></shadow>
-                    </value>
-                  </block>
-                </value>
-                <statement name="DO0">
-                  <block type="controls_if" id="freebot-o1u6-p2-neutral-gate">
-                    <value name="IF0">
-                      <block type="logic_operation" id="freebot-o1u6-p2-neutral-and">
+                      <block type="logic_operation" id="freebot-o1u6-rec-run-and">
                         <field name="OP">AND</field>
                         <value name="A">
-                          <block type="digits_bar_neutral" id="freebot-o1u6-p2-neutral-6">
+                          <block type="digits_high_run" id="freebot-o1u6-rec-high-run">
+                            <field name="MODE">at_or_above</field>
                             <field name="DIGIT">6</field>
-                            <value name="SAMPLE">
-                              <shadow type="math_number"><field name="NUM">100</field></shadow>
+                            <value name="COUNT">
+                              <shadow type="math_number"><field name="NUM">3</field></shadow>
                             </value>
                           </block>
                         </value>
                         <value name="B">
-                          <block type="digits_bar_neutral" id="freebot-o1u6-p2-neutral-5">
+                          <block type="logic_compare" id="freebot-o1u6-rec-not-nine">
+                            <field name="OP">LTE</field>
+                            <value name="A">
+                              <block type="last_digit" id="freebot-o1u6-rec-last-digit">
+                              </block>
+                            </value>
+                            <value name="B">
+                              <shadow type="math_number"><field name="NUM">8</field></shadow>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_operation" id="freebot-o1u6-rec-neutral-and">
+                        <field name="OP">AND</field>
+                        <value name="A">
+                          <block type="digits_bar_neutral" id="freebot-o1u6-rec-neutral-5">
                             <field name="DIGIT">5</field>
                             <value name="SAMPLE">
                               <shadow type="math_number"><field name="NUM">100</field></shadow>
                             </value>
                           </block>
                         </value>
+                        <value name="B">
+                          <block type="digits_bar_neutral" id="freebot-o1u6-rec-neutral-6">
+                            <field name="DIGIT">6</field>
+                            <value name="SAMPLE">
+                              <shadow type="math_number"><field name="NUM">100</field></shadow>
+                            </value>
+                          </block>
+                        </value>
                       </block>
                     </value>
-                    <statement name="DO0">
-                      <block type="variables_set" id="freebot-o1u6-p2-prediction">
-                        <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="freebot-o1u6-rec-prediction">
+                    <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
+                    <value name="VALUE">
+                      <block type="math_number" id="freebot-o1u6-rec-num-6">
+                        <field name="NUM">6</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="freebot-o1u6-rec-run-reset">
+                        <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
                         <value name="VALUE">
-                          <block type="math_number" id="freebot-o1u6-num-6">
-                            <field name="NUM">6</field>
+                          <block type="math_number" id="freebot-o1u6-rec-num-0">
+                            <field name="NUM">0</field>
                           </block>
                         </value>
                         <next>
-                          <block type="variables_set" id="freebot-o1u6-p2-recovery-on">
-                            <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
+                          <block type="purchase" id="freebot-o1u6-rec-purchase">
+                            <field name="PURCHASE_LIST">DIGITUNDER</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <statement name="ELSE">
+                  <block type="text_join" id="freebot-o1u6-rec-notice">
+                    <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+                    <statement name="STACK">
+                      <block type="text_statement" id="freebot-o1u6-rec-notice-label">
+                        <value name="TEXT">
+                          <shadow type="text" id="freebot-o1u6-rec-notice-label-text">
+                            <field name="TEXT">Recovery waiting · last digit</field>
+                          </shadow>
+                        </value>
+                        <next>
+                          <block type="text_statement" id="freebot-o1u6-rec-notice-digit">
+                            <value name="TEXT">
+                              <shadow type="text" id="freebot-o1u6-rec-notice-digit-text">
+                                <field name="TEXT"></field>
+                              </shadow>
+                              <block type="last_digit" id="freebot-o1u6-rec-notice-last-digit">
+                              </block>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="notify" id="freebot-o1u6-rec-notify">
+                        <field name="NOTIFICATION_TYPE">warn</field>
+                        <field name="NOTIFICATION_SOUND">silent</field>
+                        <value name="MESSAGE">
+                          <shadow type="text" id="freebot-o1u6-rec-notify-text">
+                            <field name="TEXT">Recovery waiting</field>
+                          </shadow>
+                          <block type="variables_get" id="freebot-o1u6-rec-notify-read">
+                            <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                          </block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </statement>
+            <next>
+              <block type="controls_if" id="freebot-o1u6-nine-exit">
+                <value name="IF0">
+                  <block type="logic_operation" id="freebot-o1u6-nine-exit-and">
+                    <field name="OP">AND</field>
+                    <value name="A">
+                      <block type="logic_compare" id="freebot-o1u6-nine-exit-trades">
+                        <field name="OP">GT</field>
+                        <value name="A">
+                          <block type="variables_get" id="freebot-o1u6-nine-read-trades">
+                            <field name="VAR" id="freebot-trades" variabletype="">freebot:trades</field>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number"><field name="NUM">0</field></shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_compare" id="freebot-o1u6-nine-exit-compare">
+                        <field name="OP">EQ</field>
+                        <value name="A">
+                          <block type="last_digit" id="freebot-o1u6-nine-exit-digit">
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number"><field name="NUM">9</field></shadow>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="freebot-o1u6-nine-exit-off">
+                    <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
+                    <value name="VALUE">
+                      <block type="logic_boolean" id="freebot-o1u6-bool-false">
+                        <field name="BOOL">FALSE</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="freebot-o1u6-nine-exit-run-reset">
+                        <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="freebot-o1u6-num-0">
+                            <field name="NUM">0</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="freebot-o1u6-nine-exit-stop">
+                            <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                             <value name="VALUE">
                               <block type="logic_boolean" id="freebot-o1u6-bool-true">
                                 <field name="BOOL">TRUE</field>
                               </block>
                             </value>
                             <next>
-                              <block type="variables_set" id="freebot-o1u6-p2-run-reset">
-                                <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                                <value name="VALUE">
-                                  <block type="math_number" id="freebot-o1u6-num-0">
-                                    <field name="NUM">0</field>
+                              <block type="bot_stop" id="freebot-o1u6-nine-exit-bot">
+                                <value name="REASON">
+                                  <block type="text" id="freebot-o1u6-nine-exit-reason">
+                                    <field name="TEXT">Digit 9 — exit spot, stopping</field>
                                   </block>
                                 </value>
-                                <next>
-                                  <block type="purchase" id="freebot-o1u6-p2-purchase">
-                                    <field name="PURCHASE_LIST">DIGITUNDER</field>
-                                  </block>
-                                </next>
                               </block>
                             </next>
                           </block>
                         </next>
                       </block>
-                    </statement>
+                    </next>
                   </block>
                 </statement>
               </block>
-            </statement>
-          </block>
-        </statement>
-        <next>
-          <block type="controls_if" id="freebot-o1u6-nine-exit">
-            <value name="IF0">
-              <block type="logic_operation" id="freebot-o1u6-nine-exit-and">
-                <field name="OP">AND</field>
-                <value name="A">
-                  <block type="logic_compare" id="freebot-o1u6-nine-exit-trades">
-                    <field name="OP">GT</field>
-                    <value name="A">
-                      <block type="variables_get" id="freebot-o1u6-nine-read-trades">
-                        <field name="VAR" id="freebot-trades" variabletype="">freebot:trades</field>
-                      </block>
-                    </value>
-                    <value name="B">
-                      <shadow type="math_number"><field name="NUM">0</field></shadow>
-                    </value>
-                  </block>
-                </value>
-                <value name="B">
-                  <block type="logic_compare" id="freebot-o1u6-nine-exit-compare">
-                    <field name="OP">EQ</field>
-                    <value name="A">
-                      <block type="last_digit" id="freebot-o1u6-nine-exit-digit">
-                      </block>
-                    </value>
-                    <value name="B">
-                      <shadow type="math_number"><field name="NUM">9</field></shadow>
-                    </value>
-                  </block>
-                </value>
-              </block>
-            </value>
-            <statement name="DO0">
-              <block type="variables_set" id="freebot-o1u6-nine-exit-off">
-                <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                <value name="VALUE">
-                  <block type="logic_boolean" id="freebot-o1u6-bool-false">
-                    <field name="BOOL">FALSE</field>
-                  </block>
-                </value>
-                <next>
-                  <block type="variables_set" id="freebot-o1u6-nine-exit-run-reset">
-                    <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                    <value name="VALUE">
-                      <block type="math_number" id="freebot-o1u6-num-0">
-                        <field name="NUM">0</field>
-                      </block>
-                    </value>
-                    <next>
-                      <block type="variables_set" id="freebot-o1u6-nine-exit-stop">
-                        <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
-                        <value name="VALUE">
-                          <block type="logic_boolean" id="freebot-o1u6-bool-true">
-                            <field name="BOOL">TRUE</field>
-                          </block>
-                        </value>
-                        <next>
-                          <block type="bot_stop" id="freebot-o1u6-nine-exit-bot">
-                            <value name="REASON">
-                              <block type="text" id="freebot-o1u6-nine-exit-reason">
-                                <field name="TEXT">Digit 9 — exit spot, stopping</field>
-                              </block>
-                            </value>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </next>
-              </block>
-            </statement>
+            </next>
           </block>
         </next>
       </block>
