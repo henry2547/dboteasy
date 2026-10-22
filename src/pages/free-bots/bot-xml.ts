@@ -35,6 +35,13 @@ export interface FreeBotXmlSettings {
     multiplier: string | null;
     takeProfit: string | null;
     stopLoss: string | null;
+    /**
+     * True when the barrier comes from a block instead of the fixed number in the
+     * input's shadow — how a two-leg template carries a different barrier per leg.
+     */
+    dynamicPrediction: boolean;
+    /** Every contract the purchase conditions buy, in document order. */
+    purchases: string[];
 }
 
 export interface FreeBotXmlReport {
@@ -73,6 +80,8 @@ const EMPTY_SETTINGS: FreeBotXmlSettings = {
     multiplier: null,
     takeProfit: null,
     stopLoss: null,
+    dynamicPrediction: false,
+    purchases: [],
 };
 
 function blocksOfType(root: Element | Document, type: string): Element[] {
@@ -119,8 +128,15 @@ function readSettings(doc: Document): FreeBotXmlSettings {
     const entry = findEntryCondition(doc);
     const after = blocksOfType(doc, 'after_purchase')[0] ?? null;
     const multiplier = findMultiplier(after)?.multiplier ?? null;
+    const purchases = Array.from(
+        doc.querySelectorAll('block[type="before_purchase"] block[type="purchase"] field[name="PURCHASE_LIST"]')
+    )
+        .map(field => field.textContent?.trim() ?? '')
+        .filter(Boolean);
 
     return {
+        dynamicPrediction: !!tradeoptions?.querySelector('value[name="PREDICTION"] > block'),
+        purchases,
         symbol: fieldValue(market, 'SYMBOL_LIST', 'field'),
         market: fieldValue(market, 'MARKET_LIST', 'field'),
         submarket: fieldValue(market, 'SUBMARKET_LIST', 'field'),
@@ -458,8 +474,11 @@ export function inspectFreeBotXml(
         return condition.operator === template.entryOperator && Number(condition.trigger) === template.triggerDigit;
     };
 
+    // A two-leg template buys its primary contract in the branch the entry condition
+    // wraps; `contractType` is `both` for it, so the entry is compared with the leg.
+    const primary_contract = template.primaryContractType ?? template.contractType;
     const entryOk =
-        !!entry && entry.hasPurchase && entry.purchaseContract === template.contractType && entryMatchesTemplate(entry);
+        !!entry && entry.hasPurchase && entry.purchaseContract === primary_contract && entryMatchesTemplate(entry);
 
     checks.push({
         id: 'entry-condition',
@@ -478,11 +497,29 @@ export function inspectFreeBotXml(
     if (!entryOk) {
         errors.push(
             expectsMatch
-                ? `Entry condition mismatch: expected "last digit ${template.strategy} ${template.prediction} → purchase ${template.contractType}".`
+                ? `Entry condition mismatch: expected "last digit ${template.strategy} ${template.prediction} → purchase ${primary_contract}".`
                 : expectsParity
-                  ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${template.contractType}".`
-                  : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${template.contractType}".`
+                  ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${primary_contract}".`
+                  : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${primary_contract}".`
         );
+    }
+
+    // A recovery leg is only real when the purchase conditions buy it and the barrier
+    // can change for it: a fixed barrier would send the primary digit with the recovery.
+    if (template.recoveryLeg) {
+        const recovery_contract = template.recoveryLeg.contractType;
+        const recoveryOk = settings.purchases.includes(recovery_contract) && settings.dynamicPrediction;
+        checks.push({
+            id: 'recovery-leg',
+            label: 'Recovery leg',
+            passed: recoveryOk,
+            detail: `${recovery_contract} ${settings.purchases.includes(recovery_contract) ? '✓' : '✗'} · barrier set per leg ${settings.dynamicPrediction ? '✓' : '✗'}`,
+        });
+        if (!recoveryOk) {
+            errors.push(
+                `The recovery leg is incomplete: expected a purchase of ${recovery_contract} with the barrier held in a variable (so each leg can trade its own digit).`
+            );
+        }
     }
 
     const afterPurchase = blocksOfType(doc, 'after_purchase')[0] ?? null;

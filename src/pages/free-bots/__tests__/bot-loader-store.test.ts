@@ -62,7 +62,7 @@ describe('botLoaderStore', () => {
     it('records the live workspace facts on a successful load', () => {
         botLoaderStore.beginLoad(request());
         botLoaderStore.completeLoad(
-            { symbol: 'R_100', contractType: 'DIGITOVER', prediction: '1', blockCount: 24 },
+            { symbol: 'R_100', contractType: 'DIGITOVER', prediction: '1', predictionIsVariable: false, blockCount: 24 },
             'Demo',
             'VRTC123'
         );
@@ -85,7 +85,7 @@ describe('botLoaderStore', () => {
     it('only becomes validated when validation reports no errors', () => {
         botLoaderStore.beginLoad(request());
         botLoaderStore.completeLoad(
-            { symbol: 'R_100', contractType: 'DIGITOVER', prediction: '1', blockCount: 24 },
+            { symbol: 'R_100', contractType: 'DIGITOVER', prediction: '1', predictionIsVariable: false, blockCount: 24 },
             'Demo',
             'VRTC123'
         );

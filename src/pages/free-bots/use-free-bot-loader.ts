@@ -46,7 +46,9 @@ function readWorkspaceFacts(): WorkspaceFacts | null {
     const marketBlock = byType('trade_definition_market');
     const contractBlock = byType('trade_definition_contracttype');
     const tradeoptionsBlock = byType('trade_definition_tradeoptions') as unknown as {
-        getInput?: (name: string) => { connection?: { targetBlock?: () => { getFieldValue?: (name: string) => string } | null } } | null;
+        getInput?: (name: string) => {
+            connection?: { targetBlock?: () => { type?: string; getFieldValue?: (name: string) => string } | null };
+        } | null;
     } | undefined;
 
     const predictionBlock = tradeoptionsBlock?.getInput?.('PREDICTION')?.connection?.targetBlock?.();
@@ -55,6 +57,9 @@ function readWorkspaceFacts(): WorkspaceFacts | null {
         symbol: marketBlock?.getFieldValue('SYMBOL_LIST') ?? null,
         contractType: contractBlock?.getFieldValue('TYPE_LIST') ?? null,
         prediction: predictionBlock?.getFieldValue?.('NUM') ?? null,
+        // A two-leg template keeps the barrier in a variable, so the workspace reports
+        // a block here rather than the fixed number of the primary leg.
+        predictionIsVariable: predictionBlock?.type === 'variables_get',
         blockCount: blocks.length,
     };
 }
@@ -237,15 +242,21 @@ export function useFreeBotLoader() {
                     return;
                 }
 
-                // An Even/Odd template has no barrier, so the workspace must report none.
-                const predictionMatches =
-                    template.prediction === null
-                        ? facts.prediction === null || facts.prediction === ''
-                        : Number(facts.prediction) === template.prediction;
+                // An Even/Odd template has no barrier, so the workspace must report none;
+                // a two-leg template holds the barrier in a variable and must report that block.
+                const predictionMatches = template.recoveryLeg
+                    ? facts.predictionIsVariable
+                    : template.prediction === null
+                      ? facts.prediction === null || facts.prediction === ''
+                      : Number(facts.prediction) === template.prediction;
 
                 if (!predictionMatches) {
                     botLoaderStore.failLoad(
-                        `The Bot Builder reports prediction ${facts.prediction ?? '—'}, but ${template.name} uses ${template.prediction ?? 'no barrier (Even/Odd)'}. The workspace was left unchanged — nothing was traded.`
+                        `The Bot Builder reports prediction ${facts.prediction ?? 'no barrier'}, but ${template.name} uses ${
+                            template.recoveryLeg
+                                ? `a barrier variable set to ${template.prediction} for Over and ${template.recoveryLeg.prediction} for the recovery`
+                                : (template.prediction ?? 'no barrier (Even/Odd)')
+                        }. The workspace was left unchanged — nothing was traded.`
                     );
                     return;
                 }

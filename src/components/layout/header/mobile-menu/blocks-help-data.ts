@@ -18,18 +18,30 @@ export type TGuideGroup = {
     blocks?: TGuideEntry[];
 };
 
-/** The everyday digit blocks, grouped under "Digits" in the Blocks menu. */
+/** The digit blocks, grouped under "Digits" in the Blocks menu, in the order the menu lists them. */
 const DIGIT_BLOCKS: TGuideEntry[] = [
     {
         name: 'Digit over/under',
-        note: 'True when the last digit of the newest tick is above or below the digit you pick. “Over 2” is true for 3 to 9, “Under 7” for 0 to 6.',
+        note: 'True when the last digit of the newest tick is above or below the digit you pick. “Over 1” is true for 2 to 9, “Under 6” for 0 to 5.',
     },
     { name: 'Digit even/odd', note: 'True for 0, 2, 4, 6, 8 (even) or 1, 3, 5, 7, 9 (odd).' },
     { name: 'Digit matches/differs', note: 'True when the newest digit is, or is not, the digit you choose.' },
+    {
+        name: 'High digits in a row',
+        note: 'True when the last few ticks all ended at or above (or above) the digit you pick — the Under 6 recovery trigger.',
+    },
+    {
+        name: 'Two digits below a share',
+        note: 'True when both digits took less than the percentage you set of the recent window — the Over 1 entry gate.',
+    },
     { name: 'Digit frequency', note: 'The share of the recent ticks, in percent, that ended in the digit you choose.' },
-    { name: 'Digit frequency count', note: 'How many of the recent ticks ended in that digit, as a whole number.' },
-    { name: 'Hottest / coldest digit', note: 'The digit that appeared most, or least, often in the recent ticks.' },
+    { name: 'Hot / cold digit', note: 'The digit that appeared most, or least, often in the recent ticks.' },
+    {
+        name: 'Neutral digit bar',
+        note: 'True when the digit carries neither the green (hottest) nor the red (coldest) bar of the Digits page.',
+    },
     { name: 'Digit streak', note: 'How many ticks in a row ended with the same last digit as the newest tick.' },
+    { name: 'Switch active market', note: 'Moves the bot to the next eligible market between trades.' },
 ];
 
 /** The catalogue gives every block its category's advice; only wording of its own is worth repeating here. */
@@ -102,7 +114,7 @@ export const BLOCK_GUIDE_GROUPS: TGuideGroup[] = [
         steps: [
             'Open Bot Builder, expand the Blocks menu and pick Digits.',
             'Drag a block onto the canvas and set its digit, or its digit and sample — for example digit 3 in the last 100 ticks.',
-            'Boolean blocks (over/under, even/odd, matches/differs) go into an if block inside 2. Purchase conditions; number blocks (frequency, count, hottest/coldest, streak) go into a comparison such as greater than or less than.',
+            'Boolean blocks (over/under, even/odd, matches/differs, high digits in a row, two digits below a share, neutral digit bar) go into an if block inside 2. Purchase conditions; number blocks (frequency, hot/cold digit, streak) go into a comparison such as greater than or less than.',
             'Press Run and watch the tick-by-tick log to see the block being evaluated.',
         ],
         blocks: DIGIT_BLOCKS,

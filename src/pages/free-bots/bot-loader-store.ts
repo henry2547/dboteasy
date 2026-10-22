@@ -62,6 +62,8 @@ export interface WorkspaceFacts {
     symbol: string | null;
     contractType: string | null;
     prediction: string | null;
+    /** True when the barrier input holds a block, as the two-leg templates need. */
+    predictionIsVariable: boolean;
     blockCount: number;
 }
 
