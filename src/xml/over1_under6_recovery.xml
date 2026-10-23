@@ -73,7 +73,7 @@
                 <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                 <value name="VALUE">
                   <block type="math_number" id="freebot-o1u6-init-num-stake">
-                    <field name="NUM">10</field>
+                    <field name="NUM">20</field>
                   </block>
                 </value>
                 <next>
@@ -129,7 +129,7 @@
                                             <field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field>
                                             <value name="VALUE">
                                               <block type="math_number" id="freebot-o1u6-init-num-take-profit">
-                                                <field name="NUM">10</field>
+                                                <field name="NUM">20</field>
                                               </block>
                                             </value>
                                             <next>
@@ -137,7 +137,7 @@
                                                 <field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field>
                                                 <value name="VALUE">
                                                   <block type="math_number" id="freebot-o1u6-init-num-stop-loss">
-                                                    <field name="NUM">-20</field>
+                                                    <field name="NUM">-50</field>
                                                   </block>
                                                 </value>
                                                 <next>
@@ -145,7 +145,7 @@
                                                     <field name="VAR" id="freebot-runs" variabletype="">freebot:runs</field>
                                                     <value name="VALUE">
                                                       <block type="math_number" id="freebot-o1u6-init-num-runs">
-                                                        <field name="NUM">3</field>
+                                                        <field name="NUM">5</field>
                                                       </block>
                                                     </value>
                                                   </block>
@@ -232,7 +232,7 @@
           <shadow type="math_number_positive"><field name="NUM">1</field></shadow>
         </value>
         <value name="AMOUNT">
-          <shadow type="math_number_positive"><field name="NUM">10</field></shadow>
+          <shadow type="math_number_positive"><field name="NUM">20</field></shadow>
           <block type="variables_get" id="freebot-o1u6-trade-stake">
             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
           </block>
@@ -508,7 +508,7 @@
                           </block>
                         </value>
                         <value name="B">
-                          <shadow type="math_number"><field name="NUM">10</field></shadow>
+                          <shadow type="math_number"><field name="NUM">20</field></shadow>
                           <block type="variables_get" id="freebot-o1u6-ap-tp-read">
                             <field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field>
                           </block>
@@ -536,7 +536,7 @@
                               </block>
                             </value>
                             <value name="B">
-                              <shadow type="math_number"><field name="NUM">-20</field></shadow>
+                              <shadow type="math_number"><field name="NUM">-50</field></shadow>
                               <block type="variables_get" id="freebot-o1u6-ap-sl-read">
                                 <field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field>
                               </block>

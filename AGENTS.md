@@ -183,8 +183,8 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   too: this builder registers `logic_operation` only, so an AND must be `logic_operation` with
   `OP=AND`, otherwise the load reports an unsupported block type.
 - **Bot 15 keeps every number in a variable seeded by "Run once at start".** `INITIALIZATION` sets
-  `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 10,
-  `freebot:stop-loss` −20 and `freebot:runs` 3 (plus stake/profit/stop/trades/initialised), and the
+  `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 20,
+  `freebot:stop-loss` −50 and `freebot:runs` 5 (plus a stake of 20/profit/stop/trades/initialised), and the
   blocks call those variables instead of repeating literals. Only the digit gates keep literal numbers
   (10.5% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
   straight from the shadow.
@@ -201,7 +201,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
     stay `last_digit`-free) with digit 0 and digit 1 both under 10.5% of the last 1000 ticks and
     `digits_bar_neutral` on digit 5 AND digit 6 (one `logic_operation` with `OP=AND` over two neutral
     reads, sample 100). The recovery leg only needs `digits_high_run` (`above` 6, COUNT ←
-    `freebot:runs`): three ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
+    `freebot:runs`): five ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
     newest tick never stops the wait, then it buys
     `DIGITUNDER`. Keeping the two legs as IF/ELSE-IF branches is what lets a 7, 8 or 9 reach the
     recovery — as a trailing step with the Over gate's ELSE it could never run on those digits.
@@ -215,8 +215,8 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
     loss) is hit — there is no run cap and no digit-9 exit any more, and `freebot:recovery`/`freebot:run`
     are gone.
   - `inspectFreeBotXml`'s `findThreshold` resolves a compare whose `B` input is a `variables_get` to the
-    number the run-once block seeds for it, so the validation checklist still reports take profit 10 and
-    stop loss −20 for this template.
+    number the run-once block seeds for it, so the validation checklist still reports take profit 20 and
+    stop loss −50 for this template.
 - **The stake must be initialised in "Run once at start".** `Bot.start()` is called by
   `BinaryBotPrivateStart` (dbot.js) at the top of every trade loop, *before* `before_purchase` runs, and
   the generator reads the `AMOUNT` input into `amount` right there. Every template keeps its stake in the
