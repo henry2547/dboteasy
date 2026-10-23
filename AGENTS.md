@@ -200,8 +200,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
     `last_digit` compare, so that one must stay the outer one and the loss-count compare above it must
     stay `last_digit`-free) with digit 0 and digit 1 both under 10.5% of the last 1000 ticks and
     `digits_bar_neutral` on digit 5 AND digit 6 (one `logic_operation` with `OP=AND` over two neutral
-    reads, sample 100). The recovery leg only needs `digits_high_run` (`at_or_above` 6, COUNT ←
-    `freebot:runs`): three ticks in a row at or above 6, where a 9 counts like 6, 7 and 8, then it buys
+    reads, sample 100). The recovery leg only needs `digits_high_run` (`above` 6, COUNT ←
+    `freebot:runs`): three ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
+    newest tick never stops the wait, then it buys
     `DIGITUNDER`. Keeping the two legs as IF/ELSE-IF branches is what lets a 7, 8 or 9 reach the
     recovery — as a trailing step with the Over gate's ELSE it could never run on those digits.
   - **Both legs journal what they skip.** The recovery's `ELSE` logs `Recovery waiting · last digit N`

@@ -395,7 +395,7 @@
           <block type="controls_if" id="freebot-o1u6-rec-ready"><mutation else="1"></mutation>
             <value name="IF0">
               <block type="digits_high_run" id="freebot-o1u6-rec-high-run">
-                <field name="MODE">at_or_above</field>
+                <field name="MODE">above</field>
                 <field name="DIGIT">6</field>
                 <value name="COUNT">
                   <shadow type="math_number"><field name="NUM">3</field></shadow>
