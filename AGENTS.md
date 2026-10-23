@@ -384,6 +384,11 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
 
+## Even/Odd strategy blocks
+- The twelve `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
+- Engine entry regression coverage is in `utils/__tests__/even-odd-runtime.test.js`: the pure-rule tests alone cannot catch missing imports in `trade/EvenOdd.js`. Run with `--runInBand --coverage=false` to avoid rewriting tracked coverage output.
+- Browser generation can be checked in an isolated `Blockly.Workspace` without replacing the user's canvas or placing a trade. Live Demo purchases/settlements remain unverified.
+
 ## Strategy Learning blocks (Bot Builder)
 The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy
 actually performed, from contracts the engine really settled. It never simulates or predicts.

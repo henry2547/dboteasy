@@ -15,6 +15,7 @@ import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import {
     EO_CONTRACT_TYPES,
+    EO_NO_SIGNAL,
     configureEvenOdd,
     createEvenOddState,
     describeWindow,
