@@ -413,9 +413,15 @@ const getAllRequiredBlocks = (workspace, required_block_types) => {
     });
 };
 
+// The Even/Odd strategy blocks buy through the same engine path as `purchase`, so a canvas
+// built from them satisfies the mandatory purchase requirement without a separate `purchase`.
+const PURCHASE_BLOCK_TYPES = ['purchase', 'eo_buy_even', 'eo_buy_odd'];
+
 const getMissingBlocks = (workspace, required_block_types) => {
+    const blocks = workspace.getAllBlocks();
     return required_block_types.filter(blockType => {
-        return !workspace.getAllBlocks().some(block => block.type === blockType);
+        if (blockType === 'purchase' && blocks.some(block => PURCHASE_BLOCK_TYPES.includes(block.type))) return false;
+        return !blocks.some(block => block.type === blockType);
     });
 };
 

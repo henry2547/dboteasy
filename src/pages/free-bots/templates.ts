@@ -25,8 +25,7 @@
  */
 
 import { multiMarketById } from './multi-market';
-import evenEntryEveryTimeXml from '@/xml/even_entry_every_time.xml';
-import oddEntryEveryTimeXml from '@/xml/odd_entry_every_time.xml';
+import evenOddWindowXml from '@/xml/even_odd_window.xml';
 import over1EntryEveryTimeXml from '@/xml/over1_entry_every_time.xml';
 import over1TwoLowDigitsXml from '@/xml/over1_two_low_digits.xml';
 import over2EntryEveryTimeXml from '@/xml/over2_entry_every_time.xml';
@@ -58,8 +57,7 @@ export type FreeBotId =
     | 'under7_rare_nine'
     | 'under5_nine_rare'
     | 'over4_five_hot'
-    | 'even_entry_every_time'
-    | 'odd_entry_every_time'
+    | 'even_odd_window'
     | 'over1_under6_recovery';
 
 export type FreeBotStrategy =
@@ -106,7 +104,7 @@ export interface FreeBotRecoveryLeg {
  */
 export type FreeBotTradeType = 'overunder' | 'evenodd' | 'matchesdiffers';
 
-export type FreeBotParity = 'even' | 'odd';
+export type FreeBotParity = 'even' | 'odd' | 'both';
 
 export interface FreeBotTemplate {
     id: FreeBotId;
@@ -141,6 +139,12 @@ export interface FreeBotTemplate {
     prediction: number | null;
     /** Parity for an Even/Odd template; absent for Over/Under. */
     entryParity?: FreeBotParity;
+    /**
+     * Entry gate built from the Even/Odd strategy blocks (`eo_buy_even` / `eo_buy_odd`)
+     * instead of a `purchase` block, so the loader expects both buys and the
+     * "Selected signal direction" comparison around them.
+     */
+    entryBlocks?: 'even-odd-window';
     durationTicks: number;
     /** Symbol baked into the XML — replaced by the chosen market when loading. */
     defaultMarket: string;
@@ -488,16 +492,18 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         blocksUsed: 'Check Minimum Sample Size · Digit Frequency Above · AND · Notify · Create text with',
     },
     {
-        id: 'even_entry_every_time',
-        name: 'Even — Entry Every Time',
-        sourceFile: 'Derived from Over 1 with Entry every time.xml',
-        asset: 'even_entry_every_time.xml',
+        id: 'even_odd_window',
+        name: 'Even / Odd — Window Signal',
+        sourceFile: 'Built from the Even/Odd strategy blocks',
+        asset: 'even_odd_window.xml',
         strategy: 'even',
-        strategyLabel: 'Digit Even',
-        contractType: 'DIGITEVEN',
+        strategyLabel: 'Digit Even / Odd',
+        contractType: 'both',
+        primaryContractType: 'DIGITEVEN',
         tradeType: 'evenodd',
         prediction: null,
-        entryParity: 'even',
+        entryParity: 'both',
+        entryBlocks: 'even-odd-window',
         durationTicks: 1,
         defaultMarket: '1HZ25V',
         stake: 10,
@@ -506,44 +512,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 1.5,
         entryOperator: null,
         triggerDigit: null,
-        entryRule: 'Last digit is even (0, 2, 4, 6 or 8)',
+        entryRule:
+            'The last 20 valid ticks show even or odd digits at 65% or more — the signal direction picks the contract',
         buyCondition:
-            'Every tick whose last digit is even — the Even/Odd digit block reads the parity straight from the ticker, so roughly half of all ticks qualify.',
+            'Nothing is bought until the rolling window holds 20 genuine ticks of the subscribed market and one parity reached 65% of them. With the direction set to BOTH the higher parity wins (an exact tie resolves to EVEN), and Buy EVEN or Buy ODD sends that contract through the engine\'s own purchase path. One entry per signal, so the same tick can never enter twice; a window that is incomplete, stale or disconnected never signals. While it waits the journal shows the current signal.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next even tick until ' +
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick whose 20-tick window still reaches the threshold, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks · Notify · Create text with',
-    },
-    {
-        id: 'odd_entry_every_time',
-        name: 'Odd — Entry Every Time',
-        sourceFile: 'Derived from Over 1 with Entry every time.xml',
-        asset: 'odd_entry_every_time.xml',
-        strategy: 'odd',
-        strategyLabel: 'Digit Odd',
-        contractType: 'DIGITODD',
-        tradeType: 'evenodd',
-        prediction: null,
-        entryParity: 'odd',
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 10,
-        stopLoss: 20,
-        multiplier: 1.5,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule: 'Last digit is odd (1, 3, 5, 7 or 9)',
-        buyCondition:
-            'Every tick whose last digit is odd — the Even/Odd digit block reads the parity straight from the ticker, so roughly half of all ticks qualify.',
-        afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
-        restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next odd tick until ' +
-            MARTINGALE_STOP +
-            '.',
-        blocksUsed: 'Standard digit blocks · Notify · Create text with',
+        blocksUsed:
+            'Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Buy EVEN · Buy ODD · Allow one entry per signal · Notify · Create text with',
     },
     {
         id: 'over1_under6_recovery',
@@ -594,8 +573,7 @@ const FREE_BOT_XML: Record<string, string> = {
     under7_rare_nine: under7RareNineXml,
     under5_nine_rare: under5NineRareXml,
     over4_five_hot: over4FiveHotXml,
-    even_entry_every_time: evenEntryEveryTimeXml,
-    odd_entry_every_time: oddEntryEveryTimeXml,
+    even_odd_window: evenOddWindowXml,
     over1_under6_recovery: over1Under6RecoveryXml,
 };
 

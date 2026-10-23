@@ -7,27 +7,27 @@
     <variable type="" id="freebot-stop" islocal="false" iscloud="false">freebot:stop</variable>
     <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
   </variables>
-  <block type="trade_definition" id="freebot-even-definition" x="0" y="0">
+  <block type="trade_definition" id="freebot-eo-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
-      <block type="trade_definition_market" id="freebot-even-market" deletable="false" movable="false">
+      <block type="trade_definition_market" id="freebot-eo-market" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>
         <field name="SUBMARKET_LIST">random_index</field>
         <field name="SYMBOL_LIST">1HZ25V</field>
         <next>
-          <block type="trade_definition_tradetype" id="freebot-even-tradetype" deletable="false" movable="false">
+          <block type="trade_definition_tradetype" id="freebot-eo-tradetype" deletable="false" movable="false">
             <field name="TRADETYPECAT_LIST">digits</field>
             <field name="TRADETYPE_LIST">evenodd</field>
             <next>
-              <block type="trade_definition_contracttype" id="freebot-even-contracttype" deletable="false" movable="false">
-                <field name="TYPE_LIST">DIGITEVEN</field>
+              <block type="trade_definition_contracttype" id="freebot-eo-contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
                 <next>
-                  <block type="trade_definition_candleinterval" id="freebot-even-candleinterval" deletable="false" movable="false">
+                  <block type="trade_definition_candleinterval" id="freebot-eo-candleinterval" deletable="false" movable="false">
                     <field name="CANDLEINTERVAL_LIST">60</field>
                     <next>
-                      <block type="trade_definition_restartbuysell" id="freebot-even-restartbuysell" deletable="false" movable="false">
+                      <block type="trade_definition_restartbuysell" id="freebot-eo-restartbuysell" deletable="false" movable="false">
                         <field name="TIME_MACHINE_ENABLED">FALSE</field>
                         <next>
-                          <block type="trade_definition_restartonerror" id="freebot-even-restartonerror" deletable="false" movable="false">
+                          <block type="trade_definition_restartonerror" id="freebot-eo-restartonerror" deletable="false" movable="false">
                             <field name="RESTARTONERROR">TRUE</field>
                           </block>
                         </next>
@@ -42,48 +42,67 @@
       </block>
     </statement>
     <statement name="INITIALIZATION">
-      <block type="controls_if" id="freebot-even-init">
+      <block type="controls_if" id="freebot-eo-init">
         <value name="IF0">
-          <block type="logic_negate" id="freebot-even-not-initialised">
+          <block type="logic_negate" id="freebot-eo-not-initialised">
             <value name="BOOL">
-              <block type="variables_get" id="freebot-even-read-initialised">
+              <block type="variables_get" id="freebot-eo-read-initialised">
                 <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
               </block>
             </value>
           </block>
         </value>
         <statement name="DO0">
-          <block type="variables_set" id="freebot-even-set-initialised">
+          <block type="variables_set" id="freebot-eo-set-initialised">
             <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
             <value name="VALUE">
-              <block type="logic_boolean" id="freebot-even-initialised-true">
+              <block type="logic_boolean" id="freebot-eo-initialised-true">
                 <field name="BOOL">TRUE</field>
               </block>
             </value>
             <next>
-              <block type="variables_set" id="freebot-even-set-stake">
+              <block type="variables_set" id="freebot-eo-set-stake">
                 <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                 <value name="VALUE">
-                  <block type="math_number" id="freebot-even-base-stake">
+                  <block type="math_number" id="freebot-eo-base-stake">
                     <field name="NUM">10</field>
                   </block>
                 </value>
                 <next>
-                  <block type="variables_set" id="freebot-even-set-profit">
+                  <block type="variables_set" id="freebot-eo-set-profit">
                     <field name="VAR" id="freebot-profit" variabletype="">freebot:profit</field>
                     <value name="VALUE">
-                      <block type="math_number" id="freebot-even-zero-profit">
+                      <block type="math_number" id="freebot-eo-zero-profit">
                         <field name="NUM">0</field>
                       </block>
                     </value>
                     <next>
-                      <block type="variables_set" id="freebot-even-set-stop">
+                      <block type="variables_set" id="freebot-eo-set-stop">
                         <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                         <value name="VALUE">
-                          <block type="logic_boolean" id="freebot-even-stop-off">
+                          <block type="logic_boolean" id="freebot-eo-stop-off">
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
+                        <next>
+                          <block type="eo_configure" id="freebot-eo-configure">
+                            <field name="TICKS">20</field>
+                            <field name="PERCENT">65</field>
+                            <field name="DIRECTION">both</field>
+                            <next>
+                              <block type="eo_monitor_ticks" id="freebot-eo-monitor">
+                                <value name="TICKS">
+                                  <shadow type="math_number" id="freebot-eo-monitor-window">
+                                    <field name="NUM">20</field>
+                                  </shadow>
+                                </value>
+                                <next>
+                                  <block type="eo_one_entry_per_signal" id="freebot-eo-one-entry"></block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
                       </block>
                     </next>
                   </block>
@@ -95,20 +114,20 @@
       </block>
     </statement>
     <statement name="SUBMARKET">
-      <block type="trade_definition_tradeoptions" id="freebot-even-tradeoptions">
+      <block type="trade_definition_tradeoptions" id="freebot-eo-tradeoptions">
         <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
         <field name="DURATIONTYPE_LIST">t</field>
         <field name="CURRENCY_LIST">USD</field>
         <value name="DURATION">
-          <shadow type="math_number_positive" id="freebot-even-duration">
+          <shadow type="math_number_positive" id="freebot-eo-duration">
             <field name="NUM">1</field>
           </shadow>
         </value>
         <value name="AMOUNT">
-          <shadow type="math_number_positive" id="freebot-even-initial-stake">
+          <shadow type="math_number_positive" id="freebot-eo-initial-stake">
             <field name="NUM">10</field>
           </shadow>
-          <block type="variables_get" id="freebot-even-stake">
+          <block type="variables_get" id="freebot-eo-stake">
             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
           </block>
         </value>
@@ -116,172 +135,198 @@
       </block>
     </statement>
   </block>
-  <block type="before_purchase" id="freebot-even-before-purchase" x="0" y="740">
+  <block type="before_purchase" id="freebot-eo-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-even-entry"><mutation else="1"></mutation>
+      <block type="controls_if" id="freebot-eo-entry"><mutation else="1"></mutation>
         <value name="IF0">
-          <block type="digits_even_odd" id="freebot-even-entry-parity">
-            <field name="PARITY">even</field>
+          <block type="logic_compare" id="freebot-eo-entry-even">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <block type="eo_signal_direction" id="freebot-eo-entry-even-signal"></block>
+            </value>
+            <value name="B">
+              <shadow type="text" id="freebot-eo-entry-even-text">
+                <field name="TEXT">EVEN</field>
+              </shadow>
+            </value>
           </block>
         </value>
         <statement name="DO0">
-          <block type="purchase" id="freebot-even-purchase">
-            <field name="PURCHASE_LIST">DIGITEVEN</field>
-          </block>
+          <block type="eo_buy_even" id="freebot-eo-buy-even"></block>
         </statement>
         <statement name="ELSE">
-          <block type="text_join" id="freebot-even-entry-wait-notice">
-            <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
-            <statement name="STACK">
-              <block type="text_statement" id="freebot-even-entry-wait-notice-label">
-                <value name="TEXT">
-                  <shadow type="text" id="freebot-even-entry-wait-notice-label-text">
-                    <field name="TEXT">Waiting · last digit</field>
+          <block type="controls_if" id="freebot-eo-entry-odd"><mutation else="1"></mutation>
+            <value name="IF0">
+              <block type="logic_compare" id="freebot-eo-entry-odd-compare">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="eo_signal_direction" id="freebot-eo-entry-odd-signal"></block>
+                </value>
+                <value name="B">
+                  <shadow type="text" id="freebot-eo-entry-odd-text">
+                    <field name="TEXT">ODD</field>
                   </shadow>
                 </value>
-                <next>
-                  <block type="text_statement" id="freebot-even-entry-wait-notice-digit">
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="eo_buy_odd" id="freebot-eo-buy-odd"></block>
+            </statement>
+            <statement name="ELSE">
+              <block type="text_join" id="freebot-eo-entry-wait-notice">
+                <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+                <statement name="STACK">
+                  <block type="text_statement" id="freebot-eo-entry-wait-notice-label">
                     <value name="TEXT">
-                      <shadow type="text" id="freebot-even-entry-wait-notice-digit-text">
-                        <field name="TEXT"></field>
+                      <shadow type="text" id="freebot-eo-entry-wait-notice-label-text">
+                        <field name="TEXT">Waiting · signal</field>
                       </shadow>
-                      <block type="last_digit" id="freebot-even-entry-wait-notice-last-digit"></block>
+                    </value>
+                    <next>
+                      <block type="text_statement" id="freebot-eo-entry-wait-notice-signal">
+                        <value name="TEXT">
+                          <shadow type="text" id="freebot-eo-entry-wait-notice-signal-text">
+                            <field name="TEXT"></field>
+                          </shadow>
+                          <block type="eo_signal_direction" id="freebot-eo-entry-wait-notice-signal-block"></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <next>
+                  <block type="notify" id="freebot-eo-entry-wait-notify">
+                    <field name="NOTIFICATION_TYPE">info</field>
+                    <field name="NOTIFICATION_SOUND">silent</field>
+                    <value name="MESSAGE">
+                      <shadow type="text" id="freebot-eo-entry-wait-notify-text">
+                        <field name="TEXT">Waiting · signal</field>
+                      </shadow>
+                      <block type="variables_get" id="freebot-eo-entry-wait-notify-read">
+                        <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                      </block>
                     </value>
                   </block>
                 </next>
               </block>
             </statement>
-            <next>
-              <block type="notify" id="freebot-even-entry-wait-notify">
-                <field name="NOTIFICATION_TYPE">info</field>
-                <field name="NOTIFICATION_SOUND">silent</field>
-                <value name="MESSAGE">
-                  <shadow type="text" id="freebot-even-entry-wait-notify-text">
-                    <field name="TEXT">Waiting · last digit</field>
-                  </shadow>
-                  <block type="variables_get" id="freebot-even-entry-wait-notify-read">
-                    <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
-                  </block>
-                </value>
-              </block>
-            </next>
           </block>
         </statement>
       </block>
     </statement>
   </block>
-  <block type="after_purchase" id="freebot-even-after-purchase" x="720" y="0">
+  <block type="after_purchase" id="freebot-eo-after-purchase" x="720" y="0">
     <statement name="AFTERPURCHASE_STACK">
-      <block type="variables_set" id="freebot-even-set-won">
+      <block type="variables_set" id="freebot-eo-set-won">
         <field name="VAR" id="freebot-won" variabletype="">freebot:won</field>
         <value name="VALUE">
-          <block type="contract_check_result" id="freebot-even-check-win">
+          <block type="contract_check_result" id="freebot-eo-check-win">
             <field name="CHECK_RESULT">win</field>
           </block>
         </value>
         <next>
-          <block type="variables_set" id="freebot-even-add-profit">
+          <block type="variables_set" id="freebot-eo-add-profit">
             <field name="VAR" id="freebot-profit" variabletype="">freebot:profit</field>
             <value name="VALUE">
-              <block type="math_arithmetic" id="freebot-even-profit-sum">
+              <block type="math_arithmetic" id="freebot-eo-profit-sum">
                 <field name="OP">ADD</field>
                 <value name="A">
-                  <block type="variables_get" id="freebot-even-read-profit">
+                  <block type="variables_get" id="freebot-eo-read-profit">
                     <field name="VAR" id="freebot-profit" variabletype="">freebot:profit</field>
                   </block>
                 </value>
                 <value name="B">
-                  <block type="read_details" id="freebot-even-contract-profit">
+                  <block type="read_details" id="freebot-eo-contract-profit">
                     <field name="DETAIL_INDEX">4</field>
                   </block>
                 </value>
               </block>
             </value>
             <next>
-              <block type="controls_if" id="freebot-even-take-profit"><mutation else="1"></mutation>
+              <block type="controls_if" id="freebot-eo-take-profit"><mutation else="1"></mutation>
                 <value name="IF0">
-                  <block type="logic_compare" id="freebot-even-take-profit-compare">
+                  <block type="logic_compare" id="freebot-eo-take-profit-compare">
                     <field name="OP">GTE</field>
                     <value name="A">
-                      <block type="variables_get" id="freebot-even-read-profit-for-tp">
+                      <block type="variables_get" id="freebot-eo-read-profit-for-tp">
                         <field name="VAR" id="freebot-profit" variabletype="">freebot:profit</field>
                       </block>
                     </value>
                     <value name="B">
-                      <shadow type="math_number" id="freebot-even-take-profit-value">
+                      <shadow type="math_number" id="freebot-eo-take-profit-value">
                         <field name="NUM">10</field>
                       </shadow>
                     </value>
                   </block>
                 </value>
                 <statement name="DO0">
-                  <block type="variables_set" id="freebot-even-stop-on-profit">
+                  <block type="variables_set" id="freebot-eo-stop-on-profit">
                     <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                     <value name="VALUE">
-                      <block type="logic_boolean" id="freebot-even-stop-on-profit-value">
+                      <block type="logic_boolean" id="freebot-eo-stop-on-profit-value">
                         <field name="BOOL">TRUE</field>
                       </block>
                     </value>
                   </block>
                 </statement>
                 <next>
-                  <block type="controls_if" id="freebot-even-stop-loss"><mutation else="1"></mutation>
+                  <block type="controls_if" id="freebot-eo-stop-loss"><mutation else="1"></mutation>
                     <value name="IF0">
-                      <block type="logic_compare" id="freebot-even-stop-loss-compare">
+                      <block type="logic_compare" id="freebot-eo-stop-loss-compare">
                         <field name="OP">LTE</field>
                         <value name="A">
-                          <block type="variables_get" id="freebot-even-read-profit-for-sl">
+                          <block type="variables_get" id="freebot-eo-read-profit-for-sl">
                             <field name="VAR" id="freebot-profit" variabletype="">freebot:profit</field>
                           </block>
                         </value>
                         <value name="B">
-                          <shadow type="math_number" id="freebot-even-stop-loss-value">
+                          <shadow type="math_number" id="freebot-eo-stop-loss-value">
                             <field name="NUM">-20</field>
                           </shadow>
                         </value>
                       </block>
                     </value>
                     <statement name="DO0">
-                      <block type="variables_set" id="freebot-even-stop-on-loss">
+                      <block type="variables_set" id="freebot-eo-stop-on-loss">
                         <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                         <value name="VALUE">
-                          <block type="logic_boolean" id="freebot-even-stop-on-loss-value">
+                          <block type="logic_boolean" id="freebot-eo-stop-on-loss-value">
                             <field name="BOOL">TRUE</field>
                           </block>
                         </value>
                       </block>
                     </statement>
                     <next>
-                      <block type="controls_if" id="freebot-even-stake-step">
+                      <block type="controls_if" id="freebot-eo-stake-step">
                         <mutation else="1"></mutation>
                         <value name="IF0">
-                          <block type="variables_get" id="freebot-even-read-won">
+                          <block type="variables_get" id="freebot-eo-read-won">
                             <field name="VAR" id="freebot-won" variabletype="">freebot:won</field>
                           </block>
                         </value>
                         <statement name="DO0">
-                          <block type="variables_set" id="freebot-even-reset-stake">
+                          <block type="variables_set" id="freebot-eo-reset-stake">
                             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                             <value name="VALUE">
-                              <block type="math_number" id="freebot-even-reset-stake-value">
+                              <block type="math_number" id="freebot-eo-reset-stake-value">
                                 <field name="NUM">10</field>
                               </block>
                             </value>
                           </block>
                         </statement>
                         <statement name="ELSE">
-                          <block type="variables_set" id="freebot-even-multiply-stake">
+                          <block type="variables_set" id="freebot-eo-multiply-stake">
                             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                             <value name="VALUE">
-                              <block type="math_arithmetic" id="freebot-even-stake-multiplier">
+                              <block type="math_arithmetic" id="freebot-eo-stake-multiplier">
                                 <field name="OP">MULTIPLY</field>
                                 <value name="A">
-                                  <block type="variables_get" id="freebot-even-read-stake">
+                                  <block type="variables_get" id="freebot-eo-read-stake">
                                     <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                                   </block>
                                 </value>
                                 <value name="B">
-                                  <shadow type="math_number" id="freebot-even-multiplier-value">
+                                  <shadow type="math_number" id="freebot-eo-multiplier-value">
                                     <field name="NUM">1.5</field>
                                   </shadow>
                                 </value>
@@ -290,18 +335,18 @@
                           </block>
                         </statement>
                         <next>
-                          <block type="controls_if" id="freebot-even-trade-again">
+                          <block type="controls_if" id="freebot-eo-trade-again">
                             <value name="IF0">
-                              <block type="logic_negate" id="freebot-even-not-stopped">
+                              <block type="logic_negate" id="freebot-eo-not-stopped">
                                 <value name="BOOL">
-                                  <block type="variables_get" id="freebot-even-read-stop">
+                                  <block type="variables_get" id="freebot-eo-read-stop">
                                     <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                                   </block>
                                 </value>
                               </block>
                             </value>
                             <statement name="DO0">
-                              <block type="trade_again" id="freebot-even-trade-again-block"></block>
+                              <block type="trade_again" id="freebot-eo-trade-again-block"></block>
                             </statement>
                           </block>
                         </next>

@@ -16,8 +16,7 @@ jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
-jest.mock('@/xml/even_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/odd_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 
 import { botLoaderStore } from '../bot-loader-store';
 import { freeBotById } from '../templates';
