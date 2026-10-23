@@ -151,8 +151,8 @@ function readSettings(doc: Document): FreeBotXmlSettings {
         triggerDigit: entry?.trigger ?? null,
         entryParity: entry?.parity ?? null,
         multiplier,
-        takeProfit: findThreshold(after, 'GTE') ?? null,
-        stopLoss: findThreshold(after, 'LTE') ?? null,
+        takeProfit: findThreshold(after, doc, 'GTE') ?? null,
+        stopLoss: findThreshold(after, doc, 'LTE') ?? null,
     };
 }
 
@@ -255,13 +255,33 @@ function findMultiplier(afterPurchase: Element | null): { multiplier: string; op
     return null;
 }
 
-function findThreshold(afterPurchase: Element | null, operator: string): string | null {
+/**
+ * A number a `variables_set` in the trade definition's run-once block seeds, read
+ * back by variable id. Templates keep their take profit, stop loss and run length
+ * in variables so the blocks call them instead of repeating a literal.
+ */
+function startedNumber(doc: Document, variableId: string | null): string | null {
+    if (!variableId) return null;
+    const runOnce = Array.from(blocksOfType(doc, 'trade_definition')[0]?.children ?? []).find(
+        child => child.tagName === 'statement' && child.getAttribute('name') === 'INITIALIZATION'
+    );
+    const setter = runOnce?.querySelector(`block[type="variables_set"] field[name="VAR"][id="${variableId}"]`);
+    const value = setter?.parentElement?.querySelector('value[name="VALUE"] field[name="NUM"]');
+    return value?.textContent?.trim() ?? null;
+}
+
+function findThreshold(afterPurchase: Element | null, doc: Document, operator: string): string | null {
     if (!afterPurchase) return null;
     const compares = blocksOfType(afterPurchase, 'logic_compare');
     for (const compare of compares) {
         if (fieldValue(compare, 'OP') !== operator) continue;
         const value = compare.querySelector('value[name="B"] field[name="NUM"]')?.textContent?.trim();
         if (value) return value;
+        // A threshold the blocks read from a variable is resolved to the value the
+        // run-once block seeds, so the report still states the real number.
+        const variable = compare.querySelector('value[name="B"] block[type="variables_get"] field[name="VAR"]');
+        const seeded = startedNumber(doc, variable?.getAttribute('id') ?? null);
+        if (seeded) return seeded;
     }
     return null;
 }
