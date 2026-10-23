@@ -158,7 +158,8 @@ export interface FreeBotTemplate {
     blocksUsed: string;
 }
 
-const MARTINGALE_STOP = 'the bot stops for good at +10 profit or −20 loss';
+const MARTINGALE_STOP =
+    'the bot stops for good at +10 profit or −20 loss — every tick it skips is journalled with the last digit';
 
 export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     {
@@ -185,7 +186,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again immediately until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'under8_entry_every_time',
@@ -211,7 +212,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'over2_entry_every_time',
@@ -238,7 +239,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again immediately until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'over3_entry_every_time',
@@ -265,7 +266,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again immediately until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'under7_entry_every_time',
@@ -292,7 +293,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'under6_entry_every_time',
@@ -319,7 +320,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again immediately until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'over1_two_low_digits',
@@ -346,7 +347,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that shows another double low run, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number',
+        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number · Notify · Create text with',
     },
     {
         id: 'under8_two_high_digits',
@@ -373,7 +374,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that shows another double high run, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Read Digit N Ticks Ago · Greater Than Or Equal To · Number',
+        blocksUsed: 'Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Notify · Create text with',
     },
     {
         id: 'over2_three_low_digits',
@@ -400,7 +401,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 5 after a win, ×1.5 after a loss, and it trades again on the next tick that completes another three-in-a-row run, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND',
+        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND · Notify · Create text with',
     },
     {
         id: 'under7_rare_nine',
@@ -427,7 +428,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND',
+        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND · Notify · Create text with',
     },
     {
         id: 'under5_nine_rare',
@@ -454,7 +455,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND',
+        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND · Notify · Create text with',
     },
     {
         id: 'over4_five_hot',
@@ -481,7 +482,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Above · AND',
+        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Above · AND · Notify · Create text with',
     },
     {
         id: 'even_entry_every_time',
@@ -510,7 +511,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next even tick until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'odd_entry_every_time',
@@ -539,7 +540,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next odd tick until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Standard digit blocks only',
+        blocksUsed: 'Standard digit blocks · Notify · Create text with',
     },
     {
         id: 'over1_under6_recovery',
@@ -553,7 +554,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         recoveryLeg: {
             contractType: 'DIGITUNDER',
             prediction: 6,
-            trigger: 'three ticks in a row ended in 6, 7, 8 or 9 and the newest one is not 9',
+            trigger: 'three ticks in a row ended in 6, 7, 8 or 9 — a 9 counts like the others',
         },
         prediction: 1,
         durationTicks: 1,
@@ -561,18 +562,19 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         stake: 10,
         takeProfit: 10,
         stopLoss: 20,
-        multiplier: 1.5,
-        entryOperator: 'LTE',
-        triggerDigit: 1,
-        entryRule: 'Last digit ≤ 1 · digit 0 and digit 1 both under 10.3% of the last 1000 ticks',
+        multiplier: 2,
+        entryOperator: 'GTE',
+        triggerDigit: 5,
+        entryRule:
+            'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.5% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
         buyCondition:
-            'Two Over 1 gates first: the newest digit is 0 or 1, and both digit 0 and digit 1 stayed under 10.3% of the last 1000 ticks. If the highest digit of three ticks in a row was 6–9 (each tick 6, 7, 8 or 9 — 6, 8, 7 counts, 6, 5, 9 does not) it buys the Under 6 recovery instead, unless the newest digit is 9: a 9 stops the recovery. In every case the newest digit of a run must be genuine — the shares gate fails until real ticks are loaded.',
+            'Over 1 needs the newest digit to be 5 or 6, both digit 0 and digit 1 under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carrying a green (hottest) or red (coldest) bar. After a loss it switches to the Under 6 recovery and buys as soon as the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not) with the same neutral-bar gate, and a 9 on the newest tick counts as a high digit like 6, 7 and 8 — the recovery buys Under 6 on it. While either leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
         afterPurchase:
-            'Win → stake back to 10 · Loss → stake × 1.5 · stops for good at +10, −20, after the third Over 1 run, or when a 9 ends a recovery',
+            'Win → stake back to 10 and back to Over 1 · Loss → stake × 2 · stops for good when the exit tick ends in 9, at +10, −20 or after the third Over 1 run',
         restartCondition:
-            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10 and the run counter, a loss lifts the stake ×1.5. The three-run limit stops the bot once three Over 1 runs have settled, the recovery trade does not count as a run, and a digit 9 ends the recovery and hands the bot back to the Over 1 side.',
+            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10, clears the recovery and returns the bot to Over 1; a loss lifts the stake ×2 and arms the Under 6 recovery. The three-run limit stops the bot once three Over 1 runs have settled — the recovery trade does not count as a run — and while a leg waits for its setup the journal shows the last digit that failed the gate. An exit tick whose last digit is 9 sets the stop, so the bot does not trade again after a 9.',
         blocksUsed:
-            'Digits above in a row · Two digits below a share · Digit bar is neutral · AND',
+            'Digits above in a row · Two digits below a share · Digit bar is neutral · Notify · Create text with · AND',
     },
 ];
 

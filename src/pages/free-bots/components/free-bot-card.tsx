@@ -4,6 +4,8 @@ import type { MarketSupport } from '../market-support';
 import type { FreeBotTemplate } from '../templates';
 
 interface FreeBotCardProps {
+    /** Position of the bot in the library, shown as its number. */
+    index: number;
     template: FreeBotTemplate;
     market: MarketSymbol | null;
     support: MarketSupport;
@@ -22,6 +24,7 @@ interface FreeBotCardProps {
  * and several bots fit on one screen; the header toggles the rest open.
  */
 export default function FreeBotCard({
+    index,
     template,
     market,
     support,
@@ -75,7 +78,10 @@ export default function FreeBotCard({
                     aria-expanded={isOpen}
                     aria-controls={detailsId}
                 >
-                    <span>{template.name}</span>
+                    <span className='free-bot-card__headline'>
+                        <span className='free-bot-card__number'>{index}</span>
+                        <span>{template.name}</span>
+                    </span>
                     <span className='free-bot-card__caret' aria-hidden='true'>
                         {isOpen ? '▲' : '▼'}
                     </span>

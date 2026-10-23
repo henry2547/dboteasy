@@ -24,7 +24,7 @@ const NEW_BLOCKS = [
         summary: localize('Two digits that are both running colder than a percentage of the window.'),
         steps: [
             localize('Drag “Digits … + … both under … %, last … ticks” onto the canvas.'),
-            localize('Pick the two digits — 0 and 1 for the Over 1 setup — the share, 10.3%, and the window, 1000 ticks.'),
+            localize('Pick the two digits — 0 and 1 for the Over 1 setup — the share, 10.5%, and the window, 1000 ticks.'),
             localize('Both digits must be strictly below that percentage; a digit sitting exactly on it fails.'),
             localize('Use it so the bot only buys Over 1 while the two lowest digits are genuinely cold.'),
         ],
@@ -34,7 +34,7 @@ const NEW_BLOCKS = [
         summary: localize('A digit that carries neither the green (hottest) nor the red (coldest) bar.'),
         steps: [
             localize('Drag “Digit … has no hot / cold bar, last … ticks” onto the canvas.'),
-            localize('Pick the digit — 6 for the Under 6 recovery leg — and how many ticks to read.'),
+            localize('Pick the digits — 5 and 6 for the Under 6 recovery leg, joined with AND — and how many ticks to read.'),
             localize('It reads the same green and red bars the Digits page draws, so it turns false once that digit becomes the hottest or the coldest.'),
             localize('With no ticks loaded yet it answers false, never neutral.'),
         ],
