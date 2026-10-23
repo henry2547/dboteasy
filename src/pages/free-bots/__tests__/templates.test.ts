@@ -25,8 +25,7 @@ jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
-jest.mock('@/xml/even_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/odd_entry_every_time.xml', () => '', { virtual: true });
+jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml } from '../bot-xml';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from '../templates';
@@ -102,21 +101,28 @@ describe('Free Bots templates', () => {
         expect(template.restartCondition.length).toBeGreaterThan(20);
     });
 
-    it('the Even/Odd templates buy on parity with the digit blocks', () => {
+    it('the single Even/Odd bot buys both parities with the Even/Odd strategy blocks', () => {
         const parityTemplates = FREE_BOT_TEMPLATES.filter(template => !!template.entryParity);
 
-        expect(parityTemplates.map(template => template.id)).toEqual([
-            'even_entry_every_time',
-            'odd_entry_every_time',
-        ]);
+        expect(parityTemplates.map(template => template.id)).toEqual(['even_odd_window']);
         parityTemplates.forEach(template => {
             const report = inspectFreeBotXml(assetOf(template), template, isKnown);
             expect(report.ok).toBe(true);
-            expect(report.blockTypes).toContain('digits_even_odd');
-            expect(report.settings.entryParity).toBe(template.entryParity);
+            expect(report.blockTypes).toEqual(
+                expect.arrayContaining([
+                    'eo_configure',
+                    'eo_monitor_ticks',
+                    'eo_signal_direction',
+                    'eo_buy_even',
+                    'eo_buy_odd',
+                    'eo_one_entry_per_signal',
+                ])
+            );
+            expect(report.settings.entryParity).toBe('both');
             expect(report.settings.prediction).toBeNull();
-            expect(report.settings.contractType).toBe(template.contractType);
+            expect(report.settings.contractType).toBe('both');
             expect(report.settings.tradeType).toBe('evenodd');
+            expect(report.checks.find(check => check.id === 'even-odd-window')?.passed).toBe(true);
         });
     });
 

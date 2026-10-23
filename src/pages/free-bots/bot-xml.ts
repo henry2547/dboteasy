@@ -159,19 +159,25 @@ function readSettings(doc: Document): FreeBotXmlSettings {
 interface EntryCondition {
     operator: string | null;
     trigger: string | null;
-    /** `even` / `odd` when the purchase is gated by the Even/Odd digit block. */
+    /** `even` / `odd` / `both` when the purchase is gated by parity. */
     parity: string | null;
     /** `matches` / `differs` when the purchase is gated by the Matches/Differs digit block. */
     matchMode: 'matches' | 'differs' | null;
     matchDigit: string | null;
     purchaseContract: string | null;
     hasPurchase: boolean;
+    /** Set when the entry is an Even/Odd strategy block (`eo_buy_even` / `eo_buy_odd`). */
+    strategyBuy?: { even: boolean; odd: boolean };
+    /** True when the entry compares the "Selected signal direction" block. */
+    gatedBySignal?: boolean;
 }
 
 /**
  * The entry gate that wraps the purchase: either the classic
- * `if <last digit> <op> <digit> then purchase <contract>`, or the Even/Odd form
- * where the `digits_even_odd` digit block supplies the condition.
+ * `if <last digit> <op> <digit> then purchase <contract>`, the Even/Odd form
+ * where the `digits_even_odd` digit block supplies the condition, or the
+ * Even/Odd strategy form where `eo_buy_even` / `eo_buy_odd` buy directly and
+ * the signal comes from `eo_signal_direction`.
  */
 export function findEntryCondition(doc: Document): EntryCondition | null {
     const beforePurchase = blocksOfType(doc, 'before_purchase')[0];
@@ -237,6 +243,24 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
             matchDigit,
             purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
             hasPurchase: true,
+        };
+    }
+
+    // Even/Odd strategy blocks: `eo_buy_even` / `eo_buy_odd` buy through the engine's own
+    // purchase path, so a template built from them carries no `purchase` block at all.
+    const evenBuy = !!beforePurchase.querySelector('block[type="eo_buy_even"]');
+    const oddBuy = !!beforePurchase.querySelector('block[type="eo_buy_odd"]');
+    if (evenBuy || oddBuy) {
+        return {
+            operator: null,
+            trigger: null,
+            parity: evenBuy && oddBuy ? 'both' : evenBuy ? 'even' : 'odd',
+            matchMode: null,
+            matchDigit: null,
+            purchaseContract: evenBuy ? 'DIGITEVEN' : 'DIGITODD',
+            hasPurchase: true,
+            strategyBuy: { even: evenBuy, odd: oddBuy },
+            gatedBySignal: !!beforePurchase.querySelector('block[type="eo_signal_direction"]'),
         };
     }
 
@@ -506,7 +530,9 @@ export function inspectFreeBotXml(
         passed: entryOk,
         detail: entry
             ? `${
-                  entry.parity
+                  entry.strategyBuy
+                      ? `Even/Odd signal → ${entry.purchaseContract ?? '—'}`
+                      : entry.parity
                       ? `Last digit ${entry.parity}`
                       : entry.matchMode
                         ? `Last digit ${entry.matchMode} ${entry.matchDigit}`
@@ -522,6 +548,25 @@ export function inspectFreeBotXml(
                   ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${primary_contract}".`
                   : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${primary_contract}".`
         );
+    }
+
+    // A template built from the Even/Odd strategy blocks must buy BOTH parities and gate
+    // them on the signal the rolling window selects; one buy alone is a half-built strategy.
+    if (template.entryBlocks === 'even-odd-window') {
+        const windowOk = !!entry?.strategyBuy?.even && !!entry?.strategyBuy?.odd && !!entry.gatedBySignal;
+        checks.push({
+            id: 'even-odd-window',
+            label: 'Even/Odd window gate',
+            passed: windowOk,
+            detail: `Buy EVEN ${entry?.strategyBuy?.even ? '✓' : '✗'} · Buy ODD ${
+                entry?.strategyBuy?.odd ? '✓' : '✗'
+            } · signal direction ${entry?.gatedBySignal ? '✓' : '✗'}`,
+        });
+        if (!windowOk) {
+            errors.push(
+                'The Even/Odd entry is incomplete: a Buy EVEN and a Buy ODD block must both sit in the purchase conditions, gated by the "Selected signal direction" block.'
+            );
+        }
     }
 
     // A recovery leg is only real when the purchase conditions buy it and the barrier

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { MarketSymbol } from '@/pages/digits/types';
 import type { MarketSupport } from '../market-support';
 import type { FreeBotTemplate } from '../templates';
@@ -12,7 +12,7 @@ interface FreeBotCardProps {
     loading: boolean;
     isRunning: boolean;
     errorMessage: string | null;
-    onLoad: () => void;
+    onLoad: (template: FreeBotTemplate) => void;
 }
 
 /**
@@ -23,7 +23,7 @@ interface FreeBotCardProps {
  * The card starts collapsed to just the bot's name, so the library stays short
  * and several bots fit on one screen; the header toggles the rest open.
  */
-export default function FreeBotCard({
+function FreeBotCard({
     index,
     template,
     market,
@@ -42,7 +42,9 @@ export default function FreeBotCard({
             'Contract',
             template.prediction !== null
                 ? `${template.contractType} · prediction ${template.prediction}`
-                : `${template.contractType} · ${template.entryParity ?? 'parity'} digits`,
+                : template.entryParity === 'both'
+                  ? 'DIGITEVEN / DIGITODD · the signal picks the parity'
+                  : `${template.contractType} · ${template.entryParity ?? 'parity'} digits`,
         ],
         ['Duration', `${template.durationTicks} tick`],
         ['Default market in the XML', `${template.defaultMarket} — replaced by the market you pick`],
@@ -129,7 +131,7 @@ export default function FreeBotCard({
                     <button
                         type='button'
                         className='free-bot-card__load'
-                        onClick={onLoad}
+                        onClick={() => onLoad(template)}
                         disabled={blocked}
                         title={blockReason || `Load ${template.name} into the Bot Builder`}
                     >
@@ -144,3 +146,5 @@ export default function FreeBotCard({
         </article>
     );
 }
+
+export default memo(FreeBotCard);

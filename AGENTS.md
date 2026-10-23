@@ -151,7 +151,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **63** for Even/Odd, **77** for every template with an
+  **66** for the plain Over/Under templates, **76** for `even_odd_window`, **77** for every template with an
   extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
   `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **133** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
@@ -160,8 +160,8 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `-3`, …). `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
   that formula in sync if a template gains blocks (the unit test pins 66 for the first template only).
-- **Free Bots library (fifteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
-  two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7, Even/Odd) and a second
+- **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
+  two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7) and a second
   entry gate built from
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
   `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares), `under7_rare_nine` /
@@ -383,6 +383,11 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   every "When …" hat's event is raised, ops kept for renamed blocks). Run them with
   `docker compose exec web npx jest src/external/bot-skeleton/services/observer`. Run is
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
+
+## Even/Odd strategy blocks
+- The twelve `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
+- Engine entry regression coverage is in `utils/__tests__/even-odd-runtime.test.js`: the pure-rule tests alone cannot catch missing imports in `trade/EvenOdd.js`. Run with `--runInBand --coverage=false` to avoid rewriting tracked coverage output.
+- Browser generation can be checked in an isolated `Blockly.Workspace` without replacing the user's canvas or placing a trade. Live Demo purchases/settlements remain unverified.
 
 ## Strategy Learning blocks (Bot Builder)
 The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy

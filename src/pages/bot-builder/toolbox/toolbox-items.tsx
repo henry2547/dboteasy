@@ -240,6 +240,42 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                {/* Even/Odd strategy: configure the window it reads, then the conditions above the
+                    two entries. Every value is the engine call the block generates. */}
+                <Block type='eo_configure'>
+                    <Field name='TICKS'>20</Field>
+                    <Field name='PERCENT'>65</Field>
+                    <Field name='DIRECTION'>both</Field>
+                </Block>
+                <Block type='eo_monitor_ticks'>
+                    <Value name='TICKS'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>20</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='eo_window_ready' />
+                <Block type='eo_even_percentage' />
+                <Block type='eo_odd_percentage' />
+                <Block type='eo_even_meets'>
+                    <Value name='PERCENT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>65</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='eo_odd_meets'>
+                    <Value name='PERCENT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>65</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
+                <Block type='eo_signal_direction' />
+                <Block type='eo_buy_even' />
+                <Block type='eo_buy_odd' />
+                <Block type='eo_one_entry_per_signal' />
+                <Block type='eo_wait_tick' />
             </Category>
             {/* Market intelligence: discovery, readiness, ranking and cooldowns. Every block reads
                 the app's own market-discovery service and the trade engine's own tick data. */}

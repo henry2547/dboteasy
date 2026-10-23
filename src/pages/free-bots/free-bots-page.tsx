@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useApiBase } from '@/hooks/useApiBase';
 import { useDigitsLabContext } from '@/pages/digits/digits-lab-context';
@@ -23,25 +24,31 @@ const FreeBotsPage = observer(() => {
     const { activeLoginid } = useApiBase();
 
     const selectedMarket = lab.selectedMarket;
-    const support = supportsDigitContracts(selectedMarket);
+    // The feed updates on every tick; keeping these stable lets the (memoised) cards skip
+    // those re-renders, so the library stays smooth on a phone.
+    const support = useMemo(() => supportsDigitContracts(selectedMarket), [selectedMarket]);
     const feedDown = lab.connection.status !== 'connected';
     const accountLabel = activeLoginid ? (activeLoginid.startsWith('VR') ? 'Demo' : 'Real') : 'Not signed in';
 
-    const handleLoad = (template: FreeBotTemplate) => {
-        if (!selectedMarket) return;
-        void loader.loadBot({
-            template,
-            market: {
-                symbol: selectedMarket.apiSymbol,
-                displayName: selectedMarket.displayName,
-                market: selectedMarket.market ?? null,
-                submarket: selectedMarket.submarket ?? null,
-            },
-            marketSource: 'library',
-            marketSupported: support.supported,
-            marketSupportReason: support.reason,
-        });
-    };
+    const { loadBot } = loader;
+    const handleLoad = useCallback(
+        (template: FreeBotTemplate) => {
+            if (!selectedMarket) return;
+            void loadBot({
+                template,
+                market: {
+                    symbol: selectedMarket.apiSymbol,
+                    displayName: selectedMarket.displayName,
+                    market: selectedMarket.market ?? null,
+                    submarket: selectedMarket.submarket ?? null,
+                },
+                marketSource: 'library',
+                marketSupported: support.supported,
+                marketSupportReason: support.reason,
+            });
+        },
+        [loadBot, selectedMarket, support]
+    );
 
     return (
         <div className='free-bots'>
@@ -102,7 +109,7 @@ const FreeBotsPage = observer(() => {
                             errorMessage={
                                 loader.bot?.templateId === template.id ? loader.bot?.errorMessage ?? null : null
                             }
-                            onLoad={() => handleLoad(template)}
+                            onLoad={handleLoad}
                         />
                     ))}
                 </div>

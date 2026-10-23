@@ -101,6 +101,7 @@ const Interpreter = () => {
             getMarketScanInterface,
             getMarketIntelligenceInterface,
             getSessionControlAsyncInterface,
+            getEvenOddAsyncInterface,
             alert,
             prompt,
             sleep,
@@ -110,6 +111,7 @@ const Interpreter = () => {
         const market_scan_interface = getMarketScanInterface ?? {};
         const market_intelligence_interface = getMarketIntelligenceInterface ?? {};
         const session_control_async_interface = getSessionControlAsyncInterface ?? {};
+        const even_odd_async_interface = getEvenOddAsyncInterface ?? {};
 
         js_interpreter.setProperty(scope, 'console', js_interpreter.nativeToPseudo(custom_console));
         js_interpreter.setProperty(scope, 'alert', js_interpreter.nativeToPseudo(alert));
@@ -141,6 +143,13 @@ const Interpreter = () => {
         // Waiting for a settlement suspends the generated program exactly like the market steps do:
         // it resolves on the engine's own settlement, so the next block reads a settled contract.
         Object.entries(session_control_async_interface).forEach(([name, f]) =>
+            js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
+        );
+
+        // Waiting for a tick and the two Even/Odd buys suspend the generated program: the wait
+        // resolves on the engine's own next genuine tick, and a buy resolves only after the purchase
+        // path really recorded a contract.
+        Object.entries(even_odd_async_interface).forEach(([name, f]) =>
             js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
         );
 
