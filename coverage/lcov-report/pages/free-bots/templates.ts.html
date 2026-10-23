@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.21% </span>
+                <span class="strong">99.51% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>604/615</span>
+                <span class='fraction'>615/618</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">62.5% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>5/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/3</span>
+                <span class='fraction'>2/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.21% </span>
+                <span class="strong">99.51% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>604/615</span>
+                <span class='fraction'>615/618</span>
             </div>
         
             
@@ -678,7 +678,10 @@
 <a name='L613'></a><a href='#L613'>613</a>
 <a name='L614'></a><a href='#L614'>614</a>
 <a name='L615'></a><a href='#L615'>615</a>
-<a name='L616'></a><a href='#L616'>616</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L616'></a><a href='#L616'>616</a>
+<a name='L617'></a><a href='#L617'>617</a>
+<a name='L618'></a><a href='#L618'>618</a>
+<a name='L619'></a><a href='#L619'>619</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -1275,24 +1278,27 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Free Bots library — the digit-contract templates that ship with the app.
  *
@@ -1311,9 +1317,12 @@
  * `over1_under6_recovery` is the only two-leg template: its trade definition
  * carries the `both` contract type, so its purchase conditions buy Over 1 in the
  * primary branch and Under 6 in the recovery branch, with the shared prediction
- * variable set per branch. Its extra gates come from the Digits analysis blocks
- * (`Digits above in a row`, `Two digits below a share`, `Digit bar is neutral`)
- * rather than the observer blocks.
+ * variable set per branch. Run on Start seeds every number those blocks call —
+ * OVER 1, UNDER PREDICTION 6, LOSS COUNT 0, TAKE PROFIT 10, STOP LOSS −20 and the
+ * three-tick run — and the purchase conditions branch on the loss count itself
+ * rather than on a recovery flag. Its extra gates come from the Digits analysis
+ * blocks (`Digits above in a row`, `Two digits below a share`, `Digit bar is
+ * neutral`) rather than the observer blocks.
  */
 &nbsp;
 import { multiMarketById } from './multi-market';
@@ -1849,7 +1858,8 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         recoveryLeg: {
             contractType: 'DIGITUNDER',
             prediction: 6,
-            trigger: 'three ticks in a row ended in 6, 7, 8 or 9 — a 9 counts like the others',
+            trigger:
+                'the loss count is 1 or more and the last three ticks each ended 6, 7, 8 or 9 — a 9 counts like the others',
         },
         prediction: 1,
         durationTicks: 1,
@@ -1863,13 +1873,12 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryRule:
             'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.5% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
         buyCondition:
-            'Over 1 needs the newest digit to be 5 or 6, both digit 0 and digit 1 under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carrying a green (hottest) or red (coldest) bar. After a loss it switches to the Under 6 recovery and buys as soon as the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not) with the same neutral-bar gate, and a 9 on the newest tick counts as a high digit like 6, 7 and 8 — the recovery buys Under 6 on it. While either leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
+            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6, digit 0 and digit 1 are both under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carries a green (hottest) or red (coldest) bar. At 1 or more it waits for the Under 6 recovery instead: the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not), and a 9 on the newest tick counts as a high digit like 6, 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
         afterPurchase:
-            'Win → stake back to 10 and back to Over 1 · Loss → stake × 2 · stops for good when the exit tick ends in 9, at +10, −20 or after the third Over 1 run',
+            'Win → stake back to 10 and the loss count back to 0 (Over 1 again) · Loss → stake × 2 and the loss count + 1 (Under 6 recovery) · the session exits on the take-profit or stop-loss variable',
         restartCondition:
-            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10, clears the recovery and returns the bot to Over 1; a loss lifts the stake ×2 and arms the Under 6 recovery. The three-run limit stops the bot once three Over 1 runs have settled — the recovery trade does not count as a run — and while a leg waits for its setup the journal shows the last digit that failed the gate. An exit tick whose last digit is 9 sets the stop, so the bot does not trade again after a 9.',
-        blocksUsed:
-            'Digits above in a row · Two digits below a share · Digit bar is neutral · Notify · Create text with · AND',
+            'Straight after each contract settles it trades again while the stop is not set, so it keeps running through losses until the take profit — or the stop loss — is hit. The barrier comes from the prediction variable, which Run on Start recalculates from the loss count: 0 buys Over 1, 1 or more buys Under 6. While a leg waits for its setup the journal shows the last digit that failed the gate.',
+        blocksUsed: 'Digits above in a row · Two digits below a share · Digit bar is neutral · Notify · Create text with · AND',
     },
 ];
 &nbsp;
@@ -1891,11 +1900,11 @@ const FREE_BOT_XML: Record&lt;string, string&gt; = {
     over1_under6_recovery: over1Under6RecoveryXml,
 };
 &nbsp;
-<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {</span></span>
-<span class="cstat-no" title="statement not covered" >    const generated = multiMarketById(id);</span>
-<span class="cstat-no" title="statement not covered" >    if (generated) return generated;</span>
-<span class="cstat-no" title="statement not covered" >    return FREE_BOT_TEMPLATES.find(template =&gt; template.id === id) ?? null;</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {
+    const generated = multiMarketById(id);
+    if (generated) return generated;
+    return FREE_BOT_TEMPLATES.find(template =&gt; template.id === id)<span class="branch-0 cbranch-no" title="branch not covered" > ?? null;</span>
+}
 &nbsp;
 <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export function freeBotForStrategy(strategy: FreeBotStrategy | null | undefined): FreeBotTemplate | null {</span></span>
 <span class="cstat-no" title="statement not covered" >    return FREE_BOT_TEMPLATES.find(template =&gt; template.strategy === strategy) ?? null;</span>
@@ -1905,9 +1914,9 @@ const FREE_BOT_XML: Record&lt;string, string&gt; = {
  * The untouched template XML — the Free Bots asset is never edited in place. A
  * generated template carries its own XML and never reads an asset.
  */
-<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export function freeBotXml(template: FreeBotTemplate): string {</span></span>
-<span class="cstat-no" title="statement not covered" >    return template.xml ?? FREE_BOT_XML[template.id] ?? '';</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+export function freeBotXml(template: FreeBotTemplate): string {
+    return template.xml<span class="branch-0 cbranch-no" title="branch not covered" > ?? FREE_BOT_XML[template.id]<span class="branch-0 cbranch-no" title="branch not covered" > </span>?? '';</span>
+}
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -1915,7 +1924,7 @@ const FREE_BOT_XML: Record&lt;string, string&gt; = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-23T04:40:10.419Z
+                at 2026-10-23T05:45:57.153Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
