@@ -149,6 +149,20 @@ describe('Free Bots templates', () => {
         expect(report.checks.find(check => check.id === 'recovery-leg')?.passed).toBe(true);
     });
 
+    it('the recovery leg only counts digits above 6', () => {
+        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+        const gate = doc.querySelector('block[id="freebot-o1u6-rec-high-run"]')!;
+
+        // 7, 8 and 9 are the digits that qualify: the block reads "above 6", so a 9 counts like 7
+        // and 8 and a 6 breaks the wait. The run length stays the seeded `freebot:runs`.
+        expect(gate.querySelector('field[name="MODE"]')?.textContent).toBe('above');
+        expect(gate.querySelector('field[name="DIGIT"]')?.textContent).toBe('6');
+        expect(
+            gate.querySelector('value[name="COUNT"] block[type="variables_get"] field[name="VAR"]')?.textContent
+        ).toBe('freebot:runs');
+    });
+
     it('counts only the blocks Blockly will hold on the canvas', () => {
         // 60 real blocks + 7 shadows − 1 shadow replaced by the stake's
         // `variables_get` = 66. This exact number is what the loader compares

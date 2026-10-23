@@ -14,8 +14,8 @@ const NEW_BLOCKS = [
         summary: localize('Several ticks in a row that all ended at or above the digit you pick.'),
         steps: [
             localize('Drag “Last … digits all at or above …” from Blocks menu → Digits onto the canvas.'),
-            localize('Set how many ticks must qualify — 3 for the Over 1 / Under 6 setup — and the digit, 6 for “at or above 6”.'),
-            localize('Every one of those ticks must qualify: 6, 8, 7 passes, while 6, 5, 9 fails because the 5 breaks the run.'),
+            localize('Set how many ticks must qualify — 3 for the Over 1 / Under 6 setup — and the digit, 6 with “above” so only 7, 8 and 9 count.'),
+            localize('Every one of those ticks must qualify: 7, 8, 9 passes, while 7, 5, 9 fails because the 5 breaks the run.'),
             localize('Use it as the recovery trigger that starts the Under 6 leg.'),
         ],
     },
