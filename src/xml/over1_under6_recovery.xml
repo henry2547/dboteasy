@@ -5,9 +5,13 @@
     <variable type="" id="freebot-won" islocal="false" iscloud="false">freebot:won</variable>
     <variable type="" id="freebot-stop" islocal="false" iscloud="false">freebot:stop</variable>
     <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
+    <variable type="" id="freebot-over" islocal="false" iscloud="false">freebot:over</variable>
+    <variable type="" id="freebot-under-prediction" islocal="false" iscloud="false">freebot:under-prediction</variable>
+    <variable type="" id="freebot-loss-count" islocal="false" iscloud="false">freebot:loss-count</variable>
     <variable type="" id="freebot-prediction" islocal="false" iscloud="false">freebot:prediction</variable>
-    <variable type="" id="freebot-run" islocal="false" iscloud="false">freebot:run</variable>
-    <variable type="" id="freebot-recovery" islocal="false" iscloud="false">freebot:recovery</variable>
+    <variable type="" id="freebot-take-profit" islocal="false" iscloud="false">freebot:take-profit</variable>
+    <variable type="" id="freebot-stop-loss" islocal="false" iscloud="false">freebot:stop-loss</variable>
+    <variable type="" id="freebot-runs" islocal="false" iscloud="false">freebot:runs</variable>
     <variable type="" id="freebot-trades" islocal="false" iscloud="false">freebot:trades</variable>
     <variable type="" id="freebot-notice" islocal="false" iscloud="false">freebot:notice</variable>
   </variables>
@@ -48,78 +52,108 @@
     <statement name="INITIALIZATION">
       <block type="controls_if" id="freebot-o1u6-init">
         <value name="IF0">
-          <block type="logic_negate" id="freebot-o1u6-not-initialised">
+          <block type="logic_negate" id="freebot-o1u6-init-not-initialised">
             <value name="BOOL">
-              <block type="variables_get" id="freebot-o1u6-read-initialised">
+              <block type="variables_get" id="freebot-o1u6-init-read-initialised">
                 <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
               </block>
             </value>
           </block>
         </value>
         <statement name="DO0">
-          <block type="variables_set" id="freebot-o1u6-set-initialised">
+          <block type="variables_set" id="freebot-o1u6-init-set-initialised">
             <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
             <value name="VALUE">
-              <block type="logic_boolean" id="freebot-o1u6-bool-true">
+              <block type="logic_boolean" id="freebot-o1u6-init-bool-true">
                 <field name="BOOL">TRUE</field>
               </block>
             </value>
             <next>
-              <block type="variables_set" id="freebot-o1u6-set-stake">
+              <block type="variables_set" id="freebot-o1u6-init-set-stake">
                 <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                 <value name="VALUE">
-                  <block type="math_number" id="freebot-o1u6-num-10">
+                  <block type="math_number" id="freebot-o1u6-init-num-stake">
                     <field name="NUM">10</field>
                   </block>
                 </value>
                 <next>
-                  <block type="variables_set" id="freebot-o1u6-set-profit">
+                  <block type="variables_set" id="freebot-o1u6-init-set-profit">
                     <field name="VAR" id="freebot-profit" variabletype="">freebot:profit</field>
                     <value name="VALUE">
-                      <block type="math_number" id="freebot-o1u6-num-0">
+                      <block type="math_number" id="freebot-o1u6-init-num-profit">
                         <field name="NUM">0</field>
                       </block>
                     </value>
                     <next>
-                      <block type="variables_set" id="freebot-o1u6-set-stop">
+                      <block type="variables_set" id="freebot-o1u6-init-set-stop">
                         <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                         <value name="VALUE">
-                          <block type="logic_boolean" id="freebot-o1u6-bool-false">
+                          <block type="logic_boolean" id="freebot-o1u6-init-bool-stop">
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
                         <next>
-                          <block type="variables_set" id="freebot-o1u6-set-prediction">
-                            <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
+                          <block type="variables_set" id="freebot-o1u6-init-set-trades">
+                            <field name="VAR" id="freebot-trades" variabletype="">freebot:trades</field>
                             <value name="VALUE">
-                              <block type="math_number" id="freebot-o1u6-num-1">
-                                <field name="NUM">1</field>
+                              <block type="math_number" id="freebot-o1u6-init-num-trades">
+                                <field name="NUM">0</field>
                               </block>
                             </value>
                             <next>
-                              <block type="variables_set" id="freebot-o1u6-set-run">
-                                <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
+                              <block type="variables_set" id="freebot-o1u6-init-set-over">
+                                <field name="VAR" id="freebot-over" variabletype="">freebot:over</field>
                                 <value name="VALUE">
-                                  <block type="math_number" id="freebot-o1u6-num-0-2">
-                                    <field name="NUM">0</field>
+                                  <block type="math_number" id="freebot-o1u6-init-num-over">
+                                    <field name="NUM">1</field>
                                   </block>
                                 </value>
                                 <next>
-                                  <block type="variables_set" id="freebot-o1u6-set-recovery">
-                                    <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
+                                  <block type="variables_set" id="freebot-o1u6-init-set-under-prediction">
+                                    <field name="VAR" id="freebot-under-prediction" variabletype="">freebot:under-prediction</field>
                                     <value name="VALUE">
-                                      <block type="logic_boolean" id="freebot-o1u6-bool-false-2">
-                                        <field name="BOOL">FALSE</field>
+                                      <block type="math_number" id="freebot-o1u6-init-num-under-prediction">
+                                        <field name="NUM">6</field>
                                       </block>
                                     </value>
                                     <next>
-                                      <block type="variables_set" id="freebot-o1u6-set-trades">
-                                        <field name="VAR" id="freebot-trades" variabletype="">freebot:trades</field>
+                                      <block type="variables_set" id="freebot-o1u6-init-set-loss-count">
+                                        <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
                                         <value name="VALUE">
-                                          <block type="math_number" id="freebot-o1u6-num-0-trades">
+                                          <block type="math_number" id="freebot-o1u6-init-num-loss-count">
                                             <field name="NUM">0</field>
                                           </block>
                                         </value>
+                                        <next>
+                                          <block type="variables_set" id="freebot-o1u6-init-set-take-profit">
+                                            <field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field>
+                                            <value name="VALUE">
+                                              <block type="math_number" id="freebot-o1u6-init-num-take-profit">
+                                                <field name="NUM">10</field>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="variables_set" id="freebot-o1u6-init-set-stop-loss">
+                                                <field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field>
+                                                <value name="VALUE">
+                                                  <block type="math_number" id="freebot-o1u6-init-num-stop-loss">
+                                                    <field name="NUM">-20</field>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="variables_set" id="freebot-o1u6-init-set-runs">
+                                                    <field name="VAR" id="freebot-runs" variabletype="">freebot:runs</field>
+                                                    <value name="VALUE">
+                                                      <block type="math_number" id="freebot-o1u6-init-num-runs">
+                                                        <field name="NUM">3</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
                                       </block>
                                     </next>
                                   </block>
@@ -136,6 +170,56 @@
             </next>
           </block>
         </statement>
+        <next>
+          <block type="controls_if" id="freebot-o1u6-init-prediction"><mutation elseif="1"></mutation>
+            <value name="IF0">
+              <block type="logic_compare" id="freebot-o1u6-init-loss-zero-compare">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="variables_get" id="freebot-o1u6-init-loss-zero-read">
+                    <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <shadow type="math_number" id="freebot-o1u6-init-loss-zero-shadow"><field name="NUM">0</field></shadow>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="freebot-o1u6-init-prediction-over">
+                <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
+                <value name="VALUE">
+                  <block type="variables_get" id="freebot-o1u6-init-prediction-over-read">
+                    <field name="VAR" id="freebot-over" variabletype="">freebot:over</field>
+                  </block>
+                </value>
+              </block>
+            </statement>
+            <value name="IF1">
+              <block type="logic_compare" id="freebot-o1u6-init-loss-recovery-compare">
+                <field name="OP">GTE</field>
+                <value name="A">
+                  <block type="variables_get" id="freebot-o1u6-init-loss-recovery-read">
+                    <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <shadow type="math_number" id="freebot-o1u6-init-loss-recovery-shadow"><field name="NUM">1</field></shadow>
+                </value>
+              </block>
+            </value>
+            <statement name="DO1">
+              <block type="variables_set" id="freebot-o1u6-init-prediction-under">
+                <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
+                <value name="VALUE">
+                  <block type="variables_get" id="freebot-o1u6-init-prediction-under-read">
+                    <field name="VAR" id="freebot-under-prediction" variabletype="">freebot:under-prediction</field>
+                  </block>
+                </value>
+              </block>
+            </statement>
+          </block>
+        </next>
       </block>
     </statement>
     <statement name="SUBMARKET">
@@ -149,13 +233,13 @@
         </value>
         <value name="AMOUNT">
           <shadow type="math_number_positive"><field name="NUM">10</field></shadow>
-          <block type="variables_get" id="freebot-o1u6-stake">
+          <block type="variables_get" id="freebot-o1u6-trade-stake">
             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
           </block>
         </value>
         <value name="PREDICTION">
           <shadow type="math_number_positive"><field name="NUM">1</field></shadow>
-          <block type="variables_get" id="freebot-o1u6-prediction">
+          <block type="variables_get" id="freebot-o1u6-trade-prediction">
             <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
           </block>
         </value>
@@ -164,75 +248,59 @@
   </block>
   <block type="before_purchase" id="freebot-o1u6-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-o1u6-entry"><mutation else="1"></mutation>
+      <block type="controls_if" id="freebot-o1u6-conditions"><mutation elseif="1"></mutation>
         <value name="IF0">
-          <block type="logic_compare" id="freebot-o1u6-entry-compare">
-            <field name="OP">GTE</field>
+          <block type="logic_compare" id="freebot-o1u6-conditions-over-compare">
+            <field name="OP">EQ</field>
             <value name="A">
-              <block type="last_digit" id="freebot-o1u6-entry-digit">
+              <block type="variables_get" id="freebot-o1u6-conditions-over-read">
+                <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
               </block>
             </value>
             <value name="B">
-              <shadow type="math_number"><field name="NUM">5</field></shadow>
+              <shadow type="math_number" id="freebot-o1u6-conditions-over-shadow"><field name="NUM">0</field></shadow>
             </value>
           </block>
         </value>
         <statement name="DO0">
-          <block type="controls_if" id="freebot-o1u6-entry-upper">
+          <block type="controls_if" id="freebot-o1u6-entry"><mutation else="1"></mutation>
             <value name="IF0">
-              <block type="logic_compare" id="freebot-o1u6-entry-upper-compare">
-                <field name="OP">LTE</field>
+              <block type="logic_compare" id="freebot-o1u6-entry-compare">
+                <field name="OP">GTE</field>
                 <value name="A">
-                  <block type="last_digit" id="freebot-o1u6-entry-upper-digit">
+                  <block type="last_digit" id="freebot-o1u6-entry-digit">
                   </block>
                 </value>
                 <value name="B">
-                  <shadow type="math_number"><field name="NUM">6</field></shadow>
+                  <shadow type="math_number"><field name="NUM">5</field></shadow>
                 </value>
               </block>
             </value>
             <statement name="DO0">
-              <block type="controls_if" id="freebot-o1u6-p1-shares-gate">
+              <block type="controls_if" id="freebot-o1u6-entry-upper">
                 <value name="IF0">
-                  <block type="digits_shares_below" id="freebot-o1u6-p1-shares">
-                    <field name="FIRST">0</field>
-                    <field name="SECOND">1</field>
-                    <value name="PERCENT">
-                      <shadow type="math_number"><field name="NUM">10.5</field></shadow>
+                  <block type="logic_compare" id="freebot-o1u6-entry-upper-compare">
+                    <field name="OP">LTE</field>
+                    <value name="A">
+                      <block type="last_digit" id="freebot-o1u6-entry-upper-digit">
+                      </block>
                     </value>
-                    <value name="SAMPLE">
-                      <shadow type="math_number"><field name="NUM">1000</field></shadow>
+                    <value name="B">
+                      <shadow type="math_number"><field name="NUM">6</field></shadow>
                     </value>
                   </block>
                 </value>
                 <statement name="DO0">
-                  <block type="controls_if" id="freebot-o1u6-p1-run-gate">
+                  <block type="controls_if" id="freebot-o1u6-p1-shares-gate">
                     <value name="IF0">
-                      <block type="logic_operation" id="freebot-o1u6-p1-gate-and">
-                        <field name="OP">AND</field>
-                        <value name="A">
-                          <block type="logic_compare" id="freebot-o1u6-p1-run-compare">
-                            <field name="OP">LT</field>
-                            <value name="A">
-                              <block type="variables_get" id="freebot-o1u6-run">
-                                <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                              </block>
-                            </value>
-                            <value name="B">
-                              <block type="math_number" id="freebot-o1u6-num-3">
-                                <field name="NUM">3</field>
-                              </block>
-                            </value>
-                          </block>
+                      <block type="digits_shares_below" id="freebot-o1u6-p1-shares">
+                        <field name="FIRST">0</field>
+                        <field name="SECOND">1</field>
+                        <value name="PERCENT">
+                          <shadow type="math_number"><field name="NUM">10.5</field></shadow>
                         </value>
-                        <value name="B">
-                          <block type="logic_negate" id="freebot-o1u6-p1-not-recovery">
-                            <value name="BOOL">
-                              <block type="variables_get" id="freebot-o1u6-p1-read-recovery">
-                                <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                              </block>
-                            </value>
-                          </block>
+                        <value name="SAMPLE">
+                          <shadow type="math_number"><field name="NUM">1000</field></shadow>
                         </value>
                       </block>
                     </value>
@@ -260,46 +328,8 @@
                           </block>
                         </value>
                         <statement name="DO0">
-                          <block type="variables_set" id="freebot-o1u6-p1-prediction">
-                            <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
-                            <value name="VALUE">
-                              <block type="math_number" id="freebot-o1u6-num-1-2">
-                                <field name="NUM">1</field>
-                              </block>
-                            </value>
-                            <next>
-                              <block type="variables_set" id="freebot-o1u6-p1-recovery-off">
-                                <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                                <value name="VALUE">
-                                  <block type="logic_boolean" id="freebot-o1u6-bool-false-3">
-                                    <field name="BOOL">FALSE</field>
-                                  </block>
-                                </value>
-                                <next>
-                                  <block type="variables_set" id="freebot-o1u6-p1-run">
-                                    <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                                    <value name="VALUE">
-                                      <block type="math_arithmetic" id="freebot-o1u6-p1-run-add">
-                                        <field name="OP">ADD</field>
-                                        <value name="A">
-                                          <block type="variables_get" id="freebot-o1u6-run-2">
-                                            <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                                          </block>
-                                        </value>
-                                        <value name="B">
-                                          <shadow type="math_number"><field name="NUM">1</field></shadow>
-                                        </value>
-                                      </block>
-                                    </value>
-                                    <next>
-                                      <block type="purchase" id="freebot-o1u6-p1-purchase">
-                                        <field name="PURCHASE_LIST">DIGITOVER</field>
-                                      </block>
-                                    </next>
-                                  </block>
-                                </next>
-                              </block>
-                            </next>
+                          <block type="purchase" id="freebot-o1u6-p1-purchase">
+                            <field name="PURCHASE_LIST">DIGITOVER</field>
                           </block>
                         </statement>
                       </block>
@@ -308,20 +338,7 @@
                 </statement>
               </block>
             </statement>
-          </block>
-        </statement>
-        <statement name="ELSE">
-          <block type="controls_if" id="freebot-o1u6-entry-wait-guard">
-            <value name="IF0">
-              <block type="logic_negate" id="freebot-o1u6-entry-wait-guard-not">
-                <value name="BOOL">
-                  <block type="variables_get" id="freebot-o1u6-entry-wait-guard-read">
-                    <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                  </block>
-                </value>
-              </block>
-            </value>
-            <statement name="DO0">
+            <statement name="ELSE">
               <block type="text_join" id="freebot-o1u6-entry-wait-notice">
                 <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
                 <statement name="STACK">
@@ -361,120 +378,79 @@
             </statement>
           </block>
         </statement>
-        <next>
-          <block type="controls_if" id="freebot-o1u6-recovery-leg"><mutation else="1"></mutation>
+        <value name="IF1">
+          <block type="logic_compare" id="freebot-o1u6-conditions-recovery-compare">
+            <field name="OP">GTE</field>
+            <value name="A">
+              <block type="variables_get" id="freebot-o1u6-conditions-recovery-read">
+                <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
+              </block>
+            </value>
+            <value name="B">
+              <shadow type="math_number" id="freebot-o1u6-conditions-recovery-shadow"><field name="NUM">1</field></shadow>
+            </value>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="controls_if" id="freebot-o1u6-rec-ready"><mutation else="1"></mutation>
             <value name="IF0">
-              <block type="variables_get" id="freebot-o1u6-rec-read">
-                <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
+              <block type="digits_high_run" id="freebot-o1u6-rec-high-run">
+                <field name="MODE">at_or_above</field>
+                <field name="DIGIT">6</field>
+                <value name="COUNT">
+                  <shadow type="math_number"><field name="NUM">3</field></shadow>
+                  <block type="variables_get" id="freebot-o1u6-rec-run-count">
+                    <field name="VAR" id="freebot-runs" variabletype="">freebot:runs</field>
+                  </block>
+                </value>
               </block>
             </value>
             <statement name="DO0">
-              <block type="controls_if" id="freebot-o1u6-rec-ready">
-                <mutation else="1"></mutation>
-                <value name="IF0">
-                  <block type="logic_operation" id="freebot-o1u6-rec-gate-and">
-                    <field name="OP">AND</field>
-                    <value name="A">
-                      <block type="digits_high_run" id="freebot-o1u6-rec-high-run">
-                        <field name="MODE">at_or_above</field>
-                        <field name="DIGIT">6</field>
-                        <value name="COUNT">
-                          <shadow type="math_number"><field name="NUM">3</field></shadow>
-                        </value>
-                      </block>
-                    </value>
-                    <value name="B">
-                      <block type="logic_operation" id="freebot-o1u6-rec-neutral-and">
-                        <field name="OP">AND</field>
-                        <value name="A">
-                          <block type="digits_bar_neutral" id="freebot-o1u6-rec-neutral-5">
-                            <field name="DIGIT">5</field>
-                            <value name="SAMPLE">
-                              <shadow type="math_number"><field name="NUM">100</field></shadow>
-                            </value>
-                          </block>
-                        </value>
-                        <value name="B">
-                          <block type="digits_bar_neutral" id="freebot-o1u6-rec-neutral-6">
-                            <field name="DIGIT">6</field>
-                            <value name="SAMPLE">
-                              <shadow type="math_number"><field name="NUM">100</field></shadow>
-                            </value>
-                          </block>
-                        </value>
-                      </block>
-                    </value>
-                  </block>
-                </value>
-                <statement name="DO0">
-                  <block type="variables_set" id="freebot-o1u6-rec-prediction">
-                    <field name="VAR" id="freebot-prediction" variabletype="">freebot:prediction</field>
-                    <value name="VALUE">
-                      <block type="math_number" id="freebot-o1u6-rec-num-6">
-                        <field name="NUM">6</field>
-                      </block>
-                    </value>
-                    <next>
-                      <block type="variables_set" id="freebot-o1u6-rec-run-reset">
-                        <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                        <value name="VALUE">
-                          <block type="math_number" id="freebot-o1u6-rec-num-0">
-                            <field name="NUM">0</field>
-                          </block>
-                        </value>
-                        <next>
-                          <block type="purchase" id="freebot-o1u6-rec-purchase">
-                            <field name="PURCHASE_LIST">DIGITUNDER</field>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </statement>
-                <statement name="ELSE">
-                  <block type="text_join" id="freebot-o1u6-rec-notice">
-                    <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
-                    <statement name="STACK">
-                      <block type="text_statement" id="freebot-o1u6-rec-notice-label">
-                        <value name="TEXT">
-                          <shadow type="text" id="freebot-o1u6-rec-notice-label-text">
-                            <field name="TEXT">Recovery waiting · last digit</field>
-                          </shadow>
-                        </value>
-                        <next>
-                          <block type="text_statement" id="freebot-o1u6-rec-notice-digit">
-                            <value name="TEXT">
-                              <shadow type="text" id="freebot-o1u6-rec-notice-digit-text">
-                                <field name="TEXT"></field>
-                              </shadow>
-                              <block type="last_digit" id="freebot-o1u6-rec-notice-last-digit">
-                              </block>
-                            </value>
-                          </block>
-                        </next>
-                      </block>
-                    </statement>
-                    <next>
-                      <block type="notify" id="freebot-o1u6-rec-notify">
-                        <field name="NOTIFICATION_TYPE">warn</field>
-                        <field name="NOTIFICATION_SOUND">silent</field>
-                        <value name="MESSAGE">
-                          <shadow type="text" id="freebot-o1u6-rec-notify-text">
-                            <field name="TEXT">Recovery waiting</field>
-                          </shadow>
-                          <block type="variables_get" id="freebot-o1u6-rec-notify-read">
-                            <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
-                          </block>
-                        </value>
-                      </block>
-                    </next>
-                  </block>
-                </statement>
+              <block type="purchase" id="freebot-o1u6-rec-purchase">
+                <field name="PURCHASE_LIST">DIGITUNDER</field>
               </block>
             </statement>
-            
+            <statement name="ELSE">
+              <block type="text_join" id="freebot-o1u6-rec-notice">
+                <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+                <statement name="STACK">
+                  <block type="text_statement" id="freebot-o1u6-rec-notice-label">
+                    <value name="TEXT">
+                      <shadow type="text" id="freebot-o1u6-rec-notice-label-text">
+                        <field name="TEXT">Recovery waiting · last digit</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="text_statement" id="freebot-o1u6-rec-notice-digit">
+                        <value name="TEXT">
+                          <shadow type="text" id="freebot-o1u6-rec-notice-digit-text">
+                            <field name="TEXT"></field>
+                          </shadow>
+                          <block type="last_digit" id="freebot-o1u6-rec-notice-last-digit">
+                          </block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <next>
+                  <block type="notify" id="freebot-o1u6-rec-notify">
+                    <field name="NOTIFICATION_TYPE">warn</field>
+                    <field name="NOTIFICATION_SOUND">silent</field>
+                    <value name="MESSAGE">
+                      <shadow type="text" id="freebot-o1u6-rec-notify-text">
+                        <field name="TEXT">Recovery waiting</field>
+                      </shadow>
+                      <block type="variables_get" id="freebot-o1u6-rec-notify-read">
+                        <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
           </block>
-        </next>
+        </statement>
       </block>
     </statement>
   </block>
@@ -522,7 +498,7 @@
                   </block>
                 </value>
                 <next>
-                  <block type="controls_if" id="freebot-o1u6-ap-take-profit"><mutation else="1"></mutation>
+                  <block type="controls_if" id="freebot-o1u6-ap-take-profit">
                     <value name="IF0">
                       <block type="logic_compare" id="freebot-o1u6-ap-tp-compare">
                         <field name="OP">GTE</field>
@@ -533,6 +509,9 @@
                         </value>
                         <value name="B">
                           <shadow type="math_number"><field name="NUM">10</field></shadow>
+                          <block type="variables_get" id="freebot-o1u6-ap-tp-read">
+                            <field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field>
+                          </block>
                         </value>
                       </block>
                     </value>
@@ -540,14 +519,14 @@
                       <block type="variables_set" id="freebot-o1u6-ap-stop-on-profit">
                         <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                         <value name="VALUE">
-                          <block type="logic_boolean" id="freebot-o1u6-bool-true-2">
+                          <block type="logic_boolean" id="freebot-o1u6-ap-bool-tp">
                             <field name="BOOL">TRUE</field>
                           </block>
                         </value>
                       </block>
                     </statement>
                     <next>
-                      <block type="controls_if" id="freebot-o1u6-ap-stop-loss"><mutation else="1"></mutation>
+                      <block type="controls_if" id="freebot-o1u6-ap-stop-loss">
                         <value name="IF0">
                           <block type="logic_compare" id="freebot-o1u6-ap-sl-compare">
                             <field name="OP">LTE</field>
@@ -558,6 +537,9 @@
                             </value>
                             <value name="B">
                               <shadow type="math_number"><field name="NUM">-20</field></shadow>
+                              <block type="variables_get" id="freebot-o1u6-ap-sl-read">
+                                <field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field>
+                              </block>
                             </value>
                           </block>
                         </value>
@@ -565,146 +547,91 @@
                           <block type="variables_set" id="freebot-o1u6-ap-stop-on-loss">
                             <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                             <value name="VALUE">
-                              <block type="logic_boolean" id="freebot-o1u6-bool-true-3">
+                              <block type="logic_boolean" id="freebot-o1u6-ap-bool-sl">
                                 <field name="BOOL">TRUE</field>
                               </block>
                             </value>
                           </block>
                         </statement>
                         <next>
-                          <block type="controls_if" id="freebot-o1u6-ap-nine-exit">
+                          <block type="controls_if" id="freebot-o1u6-ap-loss-count"><mutation else="1"></mutation>
                             <value name="IF0">
-                              <block type="logic_compare" id="freebot-o1u6-ap-nine-compare">
-                                <field name="OP">EQ</field>
-                                <value name="A">
-                                  <block type="last_digit" id="freebot-o1u6-ap-nine-digit"></block>
-                                </value>
-                                <value name="B">
-                                  <shadow type="math_number"><field name="NUM">9</field></shadow>
-                                </value>
+                              <block type="variables_get" id="freebot-o1u6-ap-read-won">
+                                <field name="VAR" id="freebot-won" variabletype="">freebot:won</field>
                               </block>
                             </value>
                             <statement name="DO0">
-                              <block type="variables_set" id="freebot-o1u6-ap-stop-on-nine">
-                                <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
+                              <block type="variables_set" id="freebot-o1u6-ap-reset-stake">
+                                <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                                 <value name="VALUE">
-                                  <block type="logic_boolean" id="freebot-o1u6-bool-true-5">
-                                    <field name="BOOL">TRUE</field>
+                                  <block type="math_number" id="freebot-o1u6-ap-num-stake">
+                                    <field name="NUM">10</field>
                                   </block>
                                 </value>
+                                <next>
+                                  <block type="variables_set" id="freebot-o1u6-ap-reset-loss-count">
+                                    <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="freebot-o1u6-ap-num-zero">
+                                        <field name="NUM">0</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <statement name="ELSE">
+                              <block type="variables_set" id="freebot-o1u6-ap-multiply-stake">
+                                <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+                                <value name="VALUE">
+                                  <block type="math_arithmetic" id="freebot-o1u6-ap-stake-multiplier">
+                                    <field name="OP">MULTIPLY</field>
+                                    <value name="A">
+                                      <block type="variables_get" id="freebot-o1u6-ap-read-stake">
+                                        <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <shadow type="math_number"><field name="NUM">2</field></shadow>
+                                    </value>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="freebot-o1u6-ap-add-loss-count">
+                                    <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
+                                    <value name="VALUE">
+                                      <block type="math_arithmetic" id="freebot-o1u6-ap-loss-count-sum">
+                                        <field name="OP">ADD</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="freebot-o1u6-ap-read-loss-count">
+                                            <field name="VAR" id="freebot-loss-count" variabletype="">freebot:loss-count</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="math_number"><field name="NUM">1</field></shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </next>
                               </block>
                             </statement>
                             <next>
-                            <block type="controls_if" id="freebot-o1u6-ap-run-limit"><mutation else="1"></mutation>
-                              <value name="IF0">
-                                <block type="logic_compare" id="freebot-o1u6-ap-run-compare">
-                                  <field name="OP">GTE</field>
-                                  <value name="A">
-                                    <block type="variables_get" id="freebot-o1u6-ap-read-run">
-                                      <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                                    </block>
-                                  </value>
-                                  <value name="B">
-                                    <shadow type="math_number"><field name="NUM">3</field></shadow>
-                                  </value>
-                                </block>
-                              </value>
-                              <statement name="DO0">
-                                <block type="variables_set" id="freebot-o1u6-ap-stop-on-runs">
-                                  <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
-                                  <value name="VALUE">
-                                    <block type="logic_boolean" id="freebot-o1u6-bool-true-4">
-                                      <field name="BOOL">TRUE</field>
-                                    </block>
-                                  </value>
-                                </block>
-                              </statement>
-                              <next>
-                                <block type="controls_if" id="freebot-o1u6-ap-stake-step">
-                                  <mutation else="1"></mutation>
-                                  <value name="IF0">
-                                    <block type="variables_get" id="freebot-o1u6-ap-read-won">
-                                      <field name="VAR" id="freebot-won" variabletype="">freebot:won</field>
-                                    </block>
-                                  </value>
-                                  <statement name="DO0">
-                                    <block type="variables_set" id="freebot-o1u6-ap-reset-stake">
-                                      <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
-                                      <value name="VALUE">
-                                        <block type="math_number" id="freebot-o1u6-num-10-2">
-                                          <field name="NUM">10</field>
-                                        </block>
-                                      </value>
-                                      <next>
-                                        <block type="variables_set" id="freebot-o1u6-ap-reset-run">
-                                          <field name="VAR" id="freebot-run" variabletype="">freebot:run</field>
-                                          <value name="VALUE">
-                                            <block type="math_number" id="freebot-o1u6-num-0-3">
-                                              <field name="NUM">0</field>
-                                            </block>
-                                          </value>
-                                          <next>
-                                            <block type="variables_set" id="freebot-o1u6-ap-back-to-over1">
-                                              <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                                              <value name="VALUE">
-                                                <block type="logic_boolean" id="freebot-o1u6-bool-false-4">
-                                                  <field name="BOOL">FALSE</field>
-                                                </block>
-                                              </value>
-                                            </block>
-                                          </next>
-                                        </block>
-                                      </next>
-                                    </block>
-                                  </statement>
-                                  <statement name="ELSE">
-                                    <block type="variables_set" id="freebot-o1u6-ap-multiply-stake">
-                                      <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
-                                      <value name="VALUE">
-                                        <block type="math_arithmetic" id="freebot-o1u6-ap-stake-multiplier">
-                                          <field name="OP">MULTIPLY</field>
-                                          <value name="A">
-                                            <block type="variables_get" id="freebot-o1u6-ap-read-stake">
-                                              <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
-                                            </block>
-                                          </value>
-                                          <value name="B">
-                                            <shadow type="math_number"><field name="NUM">2</field></shadow>
-                                          </value>
-                                        </block>
-                                      </value>
-                                      <next>
-                                        <block type="variables_set" id="freebot-o1u6-ap-arm-recovery">
-                                          <field name="VAR" id="freebot-recovery" variabletype="">freebot:recovery</field>
-                                          <value name="VALUE">
-                                            <block type="logic_boolean" id="freebot-o1u6-ap-arm-recovery-true">
-                                              <field name="BOOL">TRUE</field>
-                                            </block>
-                                          </value>
-                                        </block>
-                                      </next>
-                                    </block>
-                                  </statement>
-                                  <next>
-                                    <block type="controls_if" id="freebot-o1u6-ap-trade-again">
-                                      <value name="IF0">
-                                        <block type="logic_negate" id="freebot-o1u6-ap-not-stopped">
-                                          <value name="BOOL">
-                                            <block type="variables_get" id="freebot-o1u6-ap-read-stop">
-                                              <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
-                                            </block>
-                                          </value>
-                                        </block>
-                                      </value>
-                                      <statement name="DO0">
-                                        <block type="trade_again" id="freebot-o1u6-trade-again">
-                                        </block>
-                                      </statement>
-                                    </block>
-                                  </next>
-                                </block>
-                              </next>
-                            </block>
+                              <block type="controls_if" id="freebot-o1u6-ap-trade-again">
+                                <value name="IF0">
+                                  <block type="logic_negate" id="freebot-o1u6-ap-not-stopped">
+                                    <value name="BOOL">
+                                      <block type="variables_get" id="freebot-o1u6-ap-read-stop">
+                                        <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="trade_again" id="freebot-o1u6-trade-again">
+                                  </block>
+                                </statement>
+                              </block>
                             </next>
                           </block>
                         </next>

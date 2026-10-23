@@ -16,9 +16,12 @@
  * `over1_under6_recovery` is the only two-leg template: its trade definition
  * carries the `both` contract type, so its purchase conditions buy Over 1 in the
  * primary branch and Under 6 in the recovery branch, with the shared prediction
- * variable set per branch. Its extra gates come from the Digits analysis blocks
- * (`Digits above in a row`, `Two digits below a share`, `Digit bar is neutral`)
- * rather than the observer blocks.
+ * variable set per branch. Run on Start seeds every number those blocks call —
+ * OVER 1, UNDER PREDICTION 6, LOSS COUNT 0, TAKE PROFIT 10, STOP LOSS −20 and the
+ * three-tick run — and the purchase conditions branch on the loss count itself
+ * rather than on a recovery flag. Its extra gates come from the Digits analysis
+ * blocks (`Digits above in a row`, `Two digits below a share`, `Digit bar is
+ * neutral`) rather than the observer blocks.
  */
 
 import { multiMarketById } from './multi-market';
@@ -554,7 +557,8 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         recoveryLeg: {
             contractType: 'DIGITUNDER',
             prediction: 6,
-            trigger: 'three ticks in a row ended in 6, 7, 8 or 9 — a 9 counts like the others',
+            trigger:
+                'the loss count is 1 or more and the last three ticks each ended 6, 7, 8 or 9 — a 9 counts like the others',
         },
         prediction: 1,
         durationTicks: 1,
@@ -568,13 +572,12 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryRule:
             'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.5% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
         buyCondition:
-            'Over 1 needs the newest digit to be 5 or 6, both digit 0 and digit 1 under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carrying a green (hottest) or red (coldest) bar. After a loss it switches to the Under 6 recovery and buys as soon as the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not) with the same neutral-bar gate, and a 9 on the newest tick counts as a high digit like 6, 7 and 8 — the recovery buys Under 6 on it. While either leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
+            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6, digit 0 and digit 1 are both under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carries a green (hottest) or red (coldest) bar. At 1 or more it waits for the Under 6 recovery instead: the last three ticks in a row each ended 6, 7, 8 or 9 (6, 8, 7 counts, 6, 5, 9 does not), and a 9 on the newest tick counts as a high digit like 6, 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
         afterPurchase:
-            'Win → stake back to 10 and back to Over 1 · Loss → stake × 2 · stops for good when the exit tick ends in 9, at +10, −20 or after the third Over 1 run',
+            'Win → stake back to 10 and the loss count back to 0 (Over 1 again) · Loss → stake × 2 and the loss count + 1 (Under 6 recovery) · the session exits on the take-profit or stop-loss variable',
         restartCondition:
-            'Straight after each contract settles it trades again while none of the stops is set: a win resets the stake to 10, clears the recovery and returns the bot to Over 1; a loss lifts the stake ×2 and arms the Under 6 recovery. The three-run limit stops the bot once three Over 1 runs have settled — the recovery trade does not count as a run — and while a leg waits for its setup the journal shows the last digit that failed the gate. An exit tick whose last digit is 9 sets the stop, so the bot does not trade again after a 9.',
-        blocksUsed:
-            'Digits above in a row · Two digits below a share · Digit bar is neutral · Notify · Create text with · AND',
+            'Straight after each contract settles it trades again while the stop is not set, so it keeps running through losses until the take profit — or the stop loss — is hit. The barrier comes from the prediction variable, which Run on Start recalculates from the loss count: 0 buys Over 1, 1 or more buys Under 6. While a leg waits for its setup the journal shows the last digit that failed the gate.',
+        blocksUsed: 'Digits above in a row · Two digits below a share · Digit bar is neutral · Notify · Create text with · AND',
     },
 ];
 

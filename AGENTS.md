@@ -153,7 +153,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
   **66** for the plain Over/Under templates, **63** for Even/Odd, **77** for every template with an
   extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **151** for the two-leg
+  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **133** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
@@ -181,23 +181,41 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `block[type="before_purchase"] block[type="purchase"]` — `before_purchase` is a block *type*, so a
   `before_purchase` tag selector matches nothing and silently reports zero purchases. Mind `logic_and`
   too: this builder registers `logic_operation` only, so an AND must be `logic_operation` with
-  `OP=AND`, otherwise the load reports an unsupported block type. Its gates: the Over 1 leg needs the
-  newest digit to be 5 or 6 (two nested compares, `last digit ≥ 5` then `last digit ≤ 6` — the entry
-  inspector reads the first `last_digit` compare, so that one must stay the outer one) with digit 0 and
-  digit 1 both under 10.5% of the last 1000 ticks and `digits_bar_neutral` on digit 5 AND digit 6
-  (neither may carry the green/hottest or red/coldest bar — one `logic_operation` with `OP=AND` over two
-  neutral reads, sample 100). The Under 6 leg is its own step of the before-purchase stack, chained
-  AFTER the Over 1 gate and never as its ELSE — an ELSE only runs when the newest digit is below 5, so a
-  7, 8 or 9 could never reach the recovery. It only runs while `freebot:recovery` is set: three ticks in
-  a row at or above 6 plus the same neutral gate, and a 9 on the newest tick counts like 6, 7 and 8 —
-  the leg buys `DIGITUNDER` on it. When
-  that run is not met the leg does not buy — it logs a `notify` block (warn, silent) with
-  `Recovery waiting · last digit N` (a `text_join` over the `freebot:notice` text variable), so a waiting
-  recovery is visible in the journal. A loss lifts the stake ×2 and arms that
-  recovery; a win resets the stake to 10, clears the recovery and returns the bot to Over 1.
-  **The exit rule is digit 9:** the `after_purchase` stack compares `last_digit` with 9 and sets
-  `freebot:stop`, so an exit tick ending in 9 ends the session instead of calling `trade_again`
-  (it sits between the take-profit/stop-loss checks and the three-run limit).
+  `OP=AND`, otherwise the load reports an unsupported block type.
+- **Bot 15 keeps every number in a variable seeded by "Run once at start".** `INITIALIZATION` sets
+  `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 10,
+  `freebot:stop-loss` −20 and `freebot:runs` 3 (plus stake/profit/stop/trades/initialised), and the
+  blocks call those variables instead of repeating literals. Only the digit gates keep literal numbers
+  (10.5% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
+  straight from the shadow.
+  - **The prediction gate sits OUTSIDE the `not initialised` guard**, chained as its `<next>`: the guard
+    seeds once, while the gate must run on every trade loop — `Bot.start()` reads the trade options
+    (amount *and* barrier) at the top of each loop, so `freebot:prediction` has to be current there.
+    It reads `freebot:loss-count`: `EQ 0` sets prediction ← `freebot:over`, `ELSEIF GTE 1` sets it ←
+    `freebot:under-prediction`.
+  - **Purchase conditions branch on the loss count, not on a flag.** `before_purchase` is one
+    `controls_if` with `elseif="1"`: `IF0` `freebot:loss-count EQ 0` → the Over 1 leg, `IF1`
+    `freebot:loss-count GTE 1` → the Under 6 recovery. The Over 1 leg needs the newest digit to be 5 or
+    6 (two nested compares, `last digit ≥ 5` then `last digit ≤ 6` — the entry inspector reads the first
+    `last_digit` compare, so that one must stay the outer one and the loss-count compare above it must
+    stay `last_digit`-free) with digit 0 and digit 1 both under 10.5% of the last 1000 ticks and
+    `digits_bar_neutral` on digit 5 AND digit 6 (one `logic_operation` with `OP=AND` over two neutral
+    reads, sample 100). The recovery leg only needs `digits_high_run` (`at_or_above` 6, COUNT ←
+    `freebot:runs`): three ticks in a row at or above 6, where a 9 counts like 6, 7 and 8, then it buys
+    `DIGITUNDER`. Keeping the two legs as IF/ELSE-IF branches is what lets a 7, 8 or 9 reach the
+    recovery — as a trailing step with the Over gate's ELSE it could never run on those digits.
+  - **Both legs journal what they skip.** The recovery's `ELSE` logs `Recovery waiting · last digit N`
+    (warn, silent), the Over 1 leg's `ELSE` logs `Waiting · last digit N` (info, silent), both through
+    `text_join` into `freebot:notice`.
+  - **`after_purchase`**: result + profit first, then `profit >= freebot:take-profit` and
+    `profit <= freebot:stop-loss` both set `freebot:stop`; a win resets the stake to 10 and the loss
+    count to 0, a loss lifts the stake ×2 and adds 1 to the loss count; `trade_again` runs while the stop
+    is not set. The session therefore keeps trading through losses until the take profit (or the stop
+    loss) is hit — there is no run cap and no digit-9 exit any more, and `freebot:recovery`/`freebot:run`
+    are gone.
+  - `inspectFreeBotXml`'s `findThreshold` resolves a compare whose `B` input is a `variables_get` to the
+    number the run-once block seeds for it, so the validation checklist still reports take profit 10 and
+    stop loss −20 for this template.
 - **The stake must be initialised in "Run once at start".** `Bot.start()` is called by
   `BinaryBotPrivateStart` (dbot.js) at the top of every trade loop, *before* `before_purchase` runs, and
   the generator reads the `AMOUNT` input into `amount` right there. Every template keeps its stake in the
@@ -212,8 +230,8 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   that builds `Waiting · last digit N` with `text_join` into `freebot:notice` and logs it through
   `notify` (info, silent); the observer-gated templates carry the same `ELSE` on their inner gate too, so
   a failing digit filter and a failing observer filter both show up. Every template therefore declares
-  the `freebot:notice` variable, and `over1_under6_recovery` guards its Over 1 notice with
-  `not freebot:recovery` so the two legs never log twice on one tick.
+  the `freebot:notice` variable, and `over1_under6_recovery` carries one `ELSE` per leg (Over 1 and the
+  Under 6 recovery) so a waiting leg is always visible in the journal.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
   card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.
