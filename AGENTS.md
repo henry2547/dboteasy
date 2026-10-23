@@ -153,7 +153,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
   **66** for the plain Over/Under templates, **63** for Even/Odd, **77** for every template with an
   extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **145** for the two-leg
+  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **151** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
@@ -195,6 +195,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `Recovery waiting · last digit N` (a `text_join` over the `freebot:notice` text variable), so a waiting
   recovery is visible in the journal. A loss lifts the stake ×2 and arms that
   recovery; a win resets the stake to 10, clears the recovery and returns the bot to Over 1.
+  **The exit rule is digit 9:** the `after_purchase` stack compares `last_digit` with 9 and sets
+  `freebot:stop`, so an exit tick ending in 9 ends the session instead of calling `trade_again`
+  (it sits between the take-profit/stop-loss checks and the three-run limit).
 - **The stake must be initialised in "Run once at start".** `Bot.start()` is called by
   `BinaryBotPrivateStart` (dbot.js) at the top of every trade loop, *before* `before_purchase` runs, and
   the generator reads the `AMOUNT` input into `amount` right there. Every template keeps its stake in the
