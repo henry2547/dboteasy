@@ -1,5 +1,6 @@
 import TradeEngine from '../trade';
 import getBotInterface from './BotInterface';
+import getEvenOddInterface, { getEvenOddAsyncInterface } from './EvenOddInterface';
 import getLearningInterface from './LearningInterface';
 import getMarketIntelligenceInterface from './MarketIntelligenceInterface';
 import getMarketScanInterface from './MarketScanInterface';
@@ -36,9 +37,16 @@ const Interface = $scope => {
             // Session reads, the program's own stop request and journal notes — synchronous, so they
             // work inside an ordinary condition or statement.
             ...getSessionControlInterface(tradeEngine),
+            // Even/Odd strategy: the rolling tick window, parity percentages, the threshold test and
+            // the once-per-signal gate — synchronous reads of genuine ticks, so they work inside an
+            // ordinary condition.
+            ...getEvenOddInterface(tradeEngine),
             getTicksInterface: getTicksInterface(tradeEngine),
             // The one promise: the program suspends until the open contract settles.
             getSessionControlAsyncInterface: getSessionControlAsyncInterface(tradeEngine),
+            // Waiting for a tick suspends the program until a genuine one arrives; the two buys
+            // suspend until the engine has really confirmed the purchase.
+            getEvenOddAsyncInterface: getEvenOddAsyncInterface(tradeEngine),
             // Exposed as its own surface: every entry is a promise, wrapped as an async native
             // function by the interpreter (see utils/interpreter.js).
             getMarketScanInterface: getMarketScanInterface(tradeEngine),

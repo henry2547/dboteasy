@@ -1,0 +1,303 @@
+/**
+ * Even/Odd strategy rules behind the Digits palette's Even/Odd blocks.
+ *
+ * Everything here is a pure function over the digits the trade engine genuinely received, so the
+ * rolling window, the parity percentages, the threshold test, the BOTH conflict policy and the
+ * once-per-signal gate are all measurable without a WebSocket or a login. Nothing invents a tick:
+ * a window that is not full is "not ready" and never signals, and a percentage below the threshold
+ * never qualifies.
+ */
+
+export const EO_DEFAULT_TICKS = 20;
+export const EO_DEFAULT_PERCENT = 65;
+export const EO_MIN_TICKS = 1;
+/** Sanity cap: the window is a rolling slice of the live feed, never an unbounded buffer. */
+export const EO_MAX_TICKS = 1000;
+export const EO_DIRECTIONS = ['even', 'odd', 'both'];
+export const EO_EVEN = 'EVEN';
+export const EO_ODD = 'ODD';
+export const EO_NO_SIGNAL = 'NO SIGNAL';
+/** The contract type each direction buys — an ODD signal never asks for an EVEN contract. */
+export const EO_CONTRACT_TYPES = { even: 'DIGITEVEN', odd: 'DIGITODD' };
+/** How many signal identifiers are kept to stop a repeated entry on the same signal. */
+export const EO_MAX_REMEMBERED_SIGNALS = 200;
+
+export const EO_CONFLICT_POLICY =
+    'when BOTH qualifies, the higher parity percentage wins and an exact tie resolves to EVEN';
+
+/** Digits only, as whole numbers 0–9 — anything else is ignored rather than guessed at. */
+export const toDigitList = digits => {
+    if (!Array.isArray(digits)) return [];
+    return digits
+        .map(value => Number(value))
+        .filter(digit => Number.isInteger(digit) && digit >= 0 && digit <= 9);
+};
+
+export const normalizeParity = value => (String(value ?? '').toLowerCase() === 'odd' ? 'odd' : 'even');
+
+export const normalizeDirection = value => {
+    const direction = String(value ?? '').toLowerCase();
+    return EO_DIRECTIONS.includes(direction) ? direction : 'both';
+};
+
+export const createEvenOddConfig = () => ({
+    ticks: EO_DEFAULT_TICKS,
+    percent: EO_DEFAULT_PERCENT,
+    direction: 'both',
+});
+
+/**
+ * Validates what the "Configure Even/Odd strategy" block carries. An unusable value falls back to
+ * the documented default and is reported, so a mistake is visible in the run log instead of being
+ * traded on.
+ */
+export const validateEvenOddConfig = ({ ticks, percent, direction } = {}) => {
+    const errors = [];
+
+    const wanted_ticks = Number(ticks);
+    const ticks_ok = Number.isInteger(wanted_ticks) && wanted_ticks >= EO_MIN_TICKS && wanted_ticks <= EO_MAX_TICKS;
+    if (!ticks_ok) {
+        errors.push(
+            `Ticks to monitor must be a whole number between ${EO_MIN_TICKS} and ${EO_MAX_TICKS}; "${ticks}" is not, so ${EO_DEFAULT_TICKS} ticks is used.`
+        );
+    }
+
+    const wanted_percent = Number(percent);
+    const percent_ok = Number.isFinite(wanted_percent) && wanted_percent > 0 && wanted_percent <= 100;
+    if (!percent_ok) {
+        errors.push(
+            `The percentage threshold must be greater than 0 and no more than 100; "${percent}" is not, so ${EO_DEFAULT_PERCENT}% is used.`
+        );
+    }
+
+    const wanted_direction = String(direction ?? '').toLowerCase();
+    const direction_ok = EO_DIRECTIONS.includes(wanted_direction);
+    if (!direction_ok) {
+        errors.push(
+            `Signal direction must be EVEN, ODD or BOTH; "${direction}" is not, so BOTH is used.`
+        );
+    }
+
+    return {
+        ok: errors.length === 0,
+        errors,
+        config: {
+            ticks: ticks_ok ? wanted_ticks : EO_DEFAULT_TICKS,
+            percent: percent_ok ? wanted_percent : EO_DEFAULT_PERCENT,
+            direction: direction_ok ? wanted_direction : 'both',
+        },
+    };
+};
+
+/** Even and odd counts of a plain list of last digits. */
+export const parityCounts = digits => {
+    const list = toDigitList(digits);
+    const even = list.filter(digit => digit % 2 === 0).length;
+    return { even, odd: list.length - even, total: list.length };
+};
+
+/**
+ * Even/odd percentage of the window: `(count × 100) / total`.
+ *
+ * Multiplying first keeps a whole-number window exact — 13 of 20 even is 65, not 65.00000000000001 —
+ * so "at least 65%" means exactly 65% qualifies.
+ */
+export const parityPercentages = digits => {
+    const { even, odd, total } = parityCounts(digits);
+    if (!total) return { even: 0, odd: 0, total: 0 };
+    return { even: (even * 100) / total, odd: (odd * 100) / total, total };
+};
+
+/** True only for a measured percentage at or above the threshold — never for missing data. */
+export const meetsThreshold = (percentage, threshold) => {
+    const value = Number(percentage);
+    const limit = Number(threshold);
+    if (!Number.isFinite(value) || !Number.isFinite(limit)) return false;
+    return value >= limit;
+};
+
+/**
+ * The signal the configured direction really produces from the observed percentages.
+ *
+ * BOTH never submits two opposite purchases for one signal: it resolves to the higher parity and
+ * reports the conflict in its reason (a tie resolves to EVEN, deterministically).
+ */
+export const resolveSignal = ({ evenPercent, oddPercent, threshold, direction } = {}) => {
+    const config_direction = normalizeDirection(direction);
+    const limit = Number(threshold);
+    const even_meets = meetsThreshold(evenPercent, limit);
+    const odd_meets = meetsThreshold(oddPercent, limit);
+    const observed = `even ${evenPercent}%, odd ${oddPercent}%`;
+
+    if (config_direction === 'even') {
+        return even_meets
+            ? { direction: EO_EVEN, reason: `even ${evenPercent}% reached the ${limit}% threshold` }
+            : { direction: EO_NO_SIGNAL, reason: `even ${evenPercent}% is below the ${limit}% threshold (${observed})` };
+    }
+
+    if (config_direction === 'odd') {
+        return odd_meets
+            ? { direction: EO_ODD, reason: `odd ${oddPercent}% reached the ${limit}% threshold` }
+            : { direction: EO_NO_SIGNAL, reason: `odd ${oddPercent}% is below the ${limit}% threshold (${observed})` };
+    }
+
+    if (even_meets && odd_meets) {
+        const winner = Number(oddPercent) > Number(evenPercent) ? EO_ODD : EO_EVEN;
+        return {
+            direction: winner,
+            conflict: true,
+            reason: `both parities reached ${limit}% (${observed}) — ${EO_CONFLICT_POLICY}, resolved to ${winner}`,
+        };
+    }
+    if (even_meets) return { direction: EO_EVEN, reason: `even ${evenPercent}% reached the ${limit}% threshold` };
+    if (odd_meets) return { direction: EO_ODD, reason: `odd ${oddPercent}% reached the ${limit}% threshold` };
+
+    return { direction: EO_NO_SIGNAL, reason: `neither parity reached ${limit}% (${observed})` };
+};
+
+/** The window size the strategy actually monitors: the monitor block's number, else the config. */
+export const evenOddWindowSize = state => {
+    const size = Number(state?.window_size);
+    if (Number.isInteger(size) && size >= EO_MIN_TICKS && size <= EO_MAX_TICKS) return size;
+    return Number(state?.config?.ticks) || EO_DEFAULT_TICKS;
+};
+
+export const createEvenOddState = () => ({
+    config: createEvenOddConfig(),
+    /** The rolling window: genuine digits in arrival order, newest last. */
+    window: [],
+    window_size: 0,
+    monitoring: false,
+    last_epoch: null,
+    symbol: '',
+    /** Set when continuity could not be trusted; cleared by the next accepted tick. */
+    stale: false,
+    one_entry_per_signal: false,
+    /** Signal identifiers already used, newest first. */
+    used_signals: [],
+    last_purchase: null,
+});
+
+export const configureEvenOdd = (state, next) => {
+    const { config, errors, ok } = validateEvenOddConfig(next);
+    return { state: { ...state, config }, errors, ok };
+};
+
+/**
+ * Arms the rolling window. Re-arming with the same size keeps what was already collected, so the
+ * block can sit inside the trade loop without throwing the window away on every pass.
+ */
+export const startEvenOddMonitoring = (state, ticks) => {
+    const wanted = Number(ticks);
+    const usable = Number.isInteger(wanted) && wanted >= EO_MIN_TICKS && wanted <= EO_MAX_TICKS;
+    const size = usable ? wanted : evenOddWindowSize({ ...state, window_size: 0 });
+
+    if (state.monitoring && state.window_size === size) return state;
+
+    return { ...state, monitoring: true, window_size: size, window: [], last_epoch: null, stale: false };
+};
+
+/**
+ * Adds one genuine tick to the window.
+ *
+ * A repeated epoch is dropped (the same tick is never processed twice), an epoch older than the
+ * newest one invalidates the window (continuity cannot be trusted), and a different market starts a
+ * fresh window — the previous market's digits never count towards the new one.
+ */
+export const feedEvenOddTick = (state, { digit, epoch, symbol } = {}) => {
+    const value = Number(digit);
+    if (!Number.isInteger(value) || value < 0 || value > 9) {
+        return { state: { ...state, stale: true }, accepted: false, reason: 'unusable digit' };
+    }
+
+    const tick_epoch = Number(epoch);
+    if (!Number.isFinite(tick_epoch)) {
+        return { state: { ...state, stale: true }, accepted: false, reason: 'missing tick epoch' };
+    }
+
+    const next_symbol = symbol || state.symbol;
+    if (state.symbol && next_symbol && next_symbol !== state.symbol) {
+        const size = evenOddWindowSize(state);
+        return {
+            state: { ...state, symbol: next_symbol, window: [value].slice(-size), last_epoch: tick_epoch, stale: false },
+            accepted: true,
+            reason: 'market changed — window restarted',
+        };
+    }
+
+    if (tick_epoch === state.last_epoch) {
+        return { state, accepted: false, reason: 'tick already processed' };
+    }
+
+    if (state.last_epoch !== null && tick_epoch < state.last_epoch) {
+        return {
+            state: { ...state, window: [], last_epoch: null, stale: true },
+            accepted: false,
+            reason: 'tick arrived out of order — window invalidated',
+        };
+    }
+
+    const size = evenOddWindowSize(state);
+    const window = [...state.window, value].slice(-size);
+    return { state: { ...state, symbol: next_symbol, window, last_epoch: tick_epoch, stale: false }, accepted: true };
+};
+
+export const invalidateEvenOdd = (state, reason = 'feed interrupted') => ({
+    ...state,
+    window: [],
+    last_epoch: null,
+    stale: true,
+    invalid_reason: reason,
+});
+
+/**
+ * What the blocks read. `ready` is true only for a full window of genuine ticks on a live
+ * connection, so an incomplete, stale or disconnected feed never produces a signal.
+ */
+export const evenOddSnapshot = (state, { connected = true } = {}) => {
+    const size = evenOddWindowSize(state);
+    const window = toDigitList(state.window).slice(-size);
+    const { even, odd, total } = parityPercentages(window);
+    const ready = Boolean(state.monitoring) && size > 0 && total >= size && !state.stale && connected;
+
+    const signal = ready
+        ? resolveSignal({ evenPercent: even, oddPercent: odd, threshold: state.config.percent, direction: state.config.direction })
+        : { direction: EO_NO_SIGNAL, reason: 'the tick window is not complete yet' };
+
+    return {
+        ready,
+        monitoring: Boolean(state.monitoring),
+        symbol: state.symbol || '',
+        window: size,
+        collected: total,
+        digits: window,
+        evenPercent: even,
+        oddPercent: odd,
+        threshold: state.config.percent,
+        configuredDirection: normalizeDirection(state.config.direction),
+        stale: Boolean(state.stale),
+        connected,
+        signal: signal.direction,
+        signalReason: signal.reason,
+        conflict: Boolean(signal.conflict),
+    };
+};
+
+/**
+ * A stable identifier for one signal event: the market, the window and threshold it was read with,
+ * the configured direction and the tick it was observed on. A new tick is a new signal; the same
+ * tick is the same one.
+ */
+export const signalKey = ({ symbol, window, threshold, direction, epoch } = {}) =>
+    [symbol || 'unknown-market', `${window}t`, `${threshold}%`, normalizeDirection(direction), epoch ?? 'no-tick'].join('|');
+
+export const signalUsed = (state, key) => state.used_signals.includes(key);
+
+export const rememberSignal = (state, key) => {
+    if (!key || state.used_signals.includes(key)) return state;
+    return { ...state, used_signals: [key, ...state.used_signals].slice(0, EO_MAX_REMEMBERED_SIGNALS) };
+};
+
+/** The parity the observed percentages point at, used to describe a decision in the journal. */
+export const describeWindow = snapshot =>
+    `${snapshot.collected}/${snapshot.window} ${snapshot.symbol || 'market'} ticks · even ${snapshot.evenPercent}% · odd ${snapshot.oddPercent}% · threshold ${snapshot.threshold}%`;

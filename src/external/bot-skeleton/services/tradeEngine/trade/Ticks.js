@@ -6,7 +6,7 @@ import { getLast } from '../../../utils/binary-utils';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { observerRuntime } from '../../observer';
-import { getDirection, getLastDigit } from '../utils/helpers';
+import { getDirection, getLastDigit, getLastDigitForList } from '../utils/helpers';
 import {
     areDigitsBelowShare,
     digitBarState,
@@ -40,6 +40,9 @@ export default Engine =>
                 // behind for every market the session has visited.
                 const previous_symbol = this.symbol;
                 this.symbol = symbol;
+                // The Even/Odd window belongs to the market it was collected on: switching markets
+                // invalidates it, and the first genuine tick of the new market starts a fresh one.
+                this.eoInvalidate?.(`the market changed from ${previous_symbol} to ${symbol}`);
                 const { ticksService } = this.$scope;
 
                 await ticksService.stopMonitor({
@@ -58,6 +61,13 @@ export default Engine =>
                         price: lastTick.quote,
                         epoch,
                         pip_size: this.getPipSize(),
+                    });
+                    // The Even/Odd window is built from the same genuine tick, with the engine's own
+                    // quote precision, so it never needs a second subscription or an interpolated tick.
+                    this.eoFeedTick?.({
+                        symbol,
+                        epoch,
+                        digit: Number(getLastDigitForList(lastTick.quote, this.getPipSize())),
                     });
                     this.store.dispatch({ type: constants.NEW_TICK, payload: epoch });
                 };

@@ -10,6 +10,7 @@ import { proposalsReady, start } from './state/actions';
 import * as constants from './state/constants';
 import rootReducer from './state/reducers';
 import Balance from './Balance';
+import EvenOdd from './EvenOdd';
 import OpenContract from './OpenContract';
 import Proposal from './Proposal';
 import Purchase from './Purchase';
@@ -69,10 +70,14 @@ const watchScope = ({ store, stopScope, passScope, passFlag }) => {
 
 // `MarketIntelligence` wraps `MarketScan`, so readiness, ranking and cooldowns can read the scan
 // state (`getScanState`, `isTickSubscriptionActive`, …) the market switch already maintains.
-export default class TradeEngine extends SessionControl(
-    StrategyLearning(
-        RiskManagement(
-            MarketIntelligence(MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))))
+// `EvenOdd` is the outermost wrapper: its entry checks read the risk session and the session scope,
+// and its buys go through the same `purchase` path every other entry uses.
+export default class TradeEngine extends EvenOdd(
+    SessionControl(
+        StrategyLearning(
+            RiskManagement(
+                MarketIntelligence(MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))))
+            )
         )
     )
 ) {
