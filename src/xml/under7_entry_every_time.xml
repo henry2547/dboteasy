@@ -84,7 +84,7 @@
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
-                      </block>
+                      <next><block type="risk_set_limits" id="freebot-under7-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-under7-risk-reset"><next><block type="learn_set_strategy" id="freebot-under7-learn-strategy"><field name="NAME">Under 7 — Entry Every Time</field><next><block type="market_discover_eligible" id="freebot-under7-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-under7-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block>
                     </next>
                   </block>
                 </next>
@@ -137,11 +137,9 @@
             </value>
           </block>
         </value>
-        <statement name="DO0">
-          <block type="purchase" id="freebot-under7-purchase">
+        <statement name="DO0"><block type="controls_if" id="freebot-under7-strategy-entry"><mutation else="1"></mutation><value name="IF0"><block type="logic_operation" id="freebot-under7-session-guards"><field name="OP">AND</field><value name="A"><block type="logic_operation" id="freebot-under7-session-guards-strategy"><field name="OP">AND</field><value name="A"><block type="digits_bar_neutral" id="freebot-under7-digit-bar-neutral"><field name="DIGIT">7</field><value name="SAMPLE"><shadow type="math_number" id="freebot-under7-digit-bar-sample"><field name="NUM">100</field></shadow></value></block></value><value name="B"><block type="risk_can_trade" id="freebot-under7-risk-guard"></block></value></block></value><value name="B"><block type="logic_operation" id="freebot-under7-session-guards-execution"><field name="OP">AND</field><value name="A"><block type="logic_negate" id="freebot-under7-no-open-contract"><value name="BOOL"><block type="exec_has_open_contract" id="freebot-under7-open-contract"></block></value></block></value><value name="B"><block type="logic_negate" id="freebot-under7-trade-limit-ok"><value name="BOOL"><block type="bot_trade_limit_reached" id="freebot-under7-trade-limit"><value name="LIMIT"><shadow type="math_number" id="freebot-under7-trade-limit-value"><field name="NUM">250</field></shadow></value></block></value></block></value></block></value></block></value><statement name="DO0"><block type="controls_if" id="freebot-under7-observer-entry"><mutation else="1"></mutation><value name="IF0"><block type="obs_and" id="freebot-under7-observer-gate"><value name="A"><block type="obs_compare_gte" id="freebot-under7-prev-digit"><value name="A"><block type="obs_ago" id="freebot-under7-prev-digit-ago"><field name="N">1</field></block></value><value name="B"><block type="obs_number" id="freebot-under7-prev-digit-limit"><field name="VALUE">7</field></block></value></block></value><value name="B"><block type="obs_and" id="freebot-under7-monitor-gates"><value name="A"><block type="obs_and" id="freebot-under7-data-gates"><value name="A"><block type="obs_fresh" id="freebot-under7-data-fresh"></block></value><value name="B"><block type="obs_require_sample" id="freebot-under7-entry-sample"><field name="N">100</field></block></value></block></value><value name="B"><block type="obs_parity_switched" id="freebot-under7-parity-switch"></block></value></block></value></block></value><statement name="DO0"><block type="purchase" id="freebot-under7-purchase">
             <field name="PURCHASE_LIST">DIGITUNDER</field>
-          </block>
-        </statement>
+          </block></statement><statement name="ELSE"><block type="notify" id="freebot-under7-observer-wait-notify"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field><value name="MESSAGE"><shadow type="text" id="freebot-under7-observer-wait-notify-text"><field name="TEXT">Waiting · observer gate</field></shadow></value></block></statement></block></statement><statement name="ELSE"><block type="notify" id="freebot-under7-strategy-wait-notify"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field><value name="MESSAGE"><shadow type="text" id="freebot-under7-strategy-wait-notify-text"><field name="TEXT">Waiting · strategy guard</field></shadow></value></block></statement></block></statement>
         <statement name="ELSE">
           <block type="text_join" id="freebot-under7-entry-wait-notice">
             <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
@@ -211,7 +209,7 @@
               </block>
             </value>
             <next>
-              <block type="controls_if" id="freebot-under7-take-profit"><mutation else="1"></mutation>
+              <block type="report_journal" id="freebot-under7-result-report"><field name="LEVEL">info</field><value name="MESSAGE"><shadow type="text" id="freebot-under7-result-report-text"><field name="TEXT">Result</field></shadow><block type="exec_last_result" id="freebot-under7-result-report-value"></block></value><next><block type="report_journal" id="freebot-under7-session-report"><field name="LEVEL">info</field><value name="MESSAGE"><shadow type="text" id="freebot-under7-session-report-text"><field name="TEXT">Session report</field></shadow><block type="report_session" id="freebot-under7-session-report-value"></block></value><next><block type="controls_if" id="freebot-under7-take-profit"><mutation else="1"></mutation>
                 <value name="IF0">
                   <block type="logic_compare" id="freebot-under7-take-profit-compare">
                     <field name="OP">GTE</field>
@@ -322,7 +320,7 @@
                     </next>
                   </block>
                 </next>
-              </block>
+              </block></next></block></next></block>
             </next>
           </block>
         </next>
