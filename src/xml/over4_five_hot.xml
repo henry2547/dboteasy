@@ -140,12 +140,33 @@
         <statement name="DO0">
           <block type="controls_if" id="freebot-over4-observer-entry"><mutation else="1"></mutation>
   <value name="IF0">
+<block type="obs_and" id="freebot-over4-all-gates">
+  <value name="A">
 <block type="obs_and" id="freebot-over4-filters">
   <value name="A">
     <block type="obs_min_sample" id="freebot-over4-sample"><field name="N">100</field></block>
   </value>
   <value name="B">
     <block type="obs_freq_above" id="freebot-over4-five-hot"><field name="DIGIT">5</field><field name="PERCENT">12</field></block>
+  </value>
+</block>
+  </value>
+  <value name="B">
+    <block type="obs_and" id="freebot-over4-monitor-gates">
+      <value name="A">
+        <block type="obs_and" id="freebot-over4-data-gates">
+          <value name="A">
+            <block type="obs_fresh" id="freebot-over4-data-fresh"></block>
+          </value>
+          <value name="B">
+            <block type="obs_require_sample" id="freebot-over4-entry-sample"><field name="N">100</field></block>
+          </value>
+        </block>
+      </value>
+      <value name="B">
+        <block type="obs_parity_switched" id="freebot-over4-parity-switch"></block>
+      </value>
+    </block>
   </value>
 </block>
   </value>

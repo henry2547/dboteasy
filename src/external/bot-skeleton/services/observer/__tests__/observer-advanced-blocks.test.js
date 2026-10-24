@@ -156,6 +156,9 @@ describe('palette pruning', () => {
             'obs_min_sample',
             'obs_freq_below',
             'obs_freq_above',
+            'obs_parity_switched',
+            'obs_fresh',
+            'obs_require_sample',
         ].forEach(type => expect(listed.map(block => block.type)).toContain(type));
     });
 });

@@ -139,6 +139,34 @@ describe('Free Bots templates', () => {
         });
     });
 
+    it('every observer-gated template gates on all four block groups', () => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const catalog = require('@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog');
+        const specOf = new Map<string, { category: string }>(
+            (catalog.BLOCKS as { type: string; category: string }[]).map(spec => [spec.type, spec])
+        );
+        const groupOfCategory = catalog.GROUP_OF_CATEGORY as Map<string, { id: string }>;
+        const allGroups = (catalog.GROUPS as { id: string }[]).map(group => group.id).sort();
+
+        const gated = FREE_BOT_TEMPLATES.filter(template =>
+            /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed)
+        );
+
+        expect(gated.length).toBeGreaterThanOrEqual(3);
+        gated.forEach(template => {
+            const report = inspectFreeBotXml(assetOf(template), template, isKnown);
+            const groups = new Set(
+                report.blockTypes
+                    .map(type => specOf.get(type)?.category)
+                    .filter((category): category is string => !!category)
+                    .map(category => groupOfCategory.get(category)?.id)
+                    .filter((id): id is string => !!id)
+            );
+            // A gate is only "from all groups" when every palette group really contributes a block.
+            expect([...groups].sort()).toEqual(allGroups);
+        });
+    });
+
     it('the two-leg template buys both contracts and sets its own barrier', () => {
         const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
         const report = inspectFreeBotXml(assetOf(template), template, isKnown);

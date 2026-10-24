@@ -160,9 +160,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **77** for every template with an
-  extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **133** for the two-leg
+  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **83** for every template with an
+  extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
+  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **133** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
@@ -175,7 +175,14 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
   `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares), `under7_rare_nine` /
   `under5_nine_rare` (`obs_and` over `obs_min_sample` + `obs_freq_below`) and `over4_five_hot`
-  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). Those observer blocks sit NESTED inside the
+  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). **Each of those six gates draws on
+  all four palette groups**: the digit/frequency condition (`obs_ago`, `obs_compare_*`, `obs_number`,
+  `obs_min_sample`, `obs_freq_*`) is ANDed — through three nested `obs_and` — with `obs_parity_switched`
+  (Pattern detection & parity), `obs_fresh` (Observer control, market data within the 15 s freshness limit)
+  and `obs_require_sample` N=100 (Entry & monitoring). The gate blocks therefore add six blocks per template
+  (83/87 canvas count above), and `templates.test.ts` ("gates on all four block groups") maps every `obs_*`
+  type in the asset through the catalogue's `GROUP_OF_CATEGORY` and fails unless all four `GROUPS` ids
+  contribute — so a template cannot silently drop back to one group. Those observer blocks sit NESTED inside the
   `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
   then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
   gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`

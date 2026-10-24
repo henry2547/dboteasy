@@ -10,8 +10,11 @@
  * ("Over 1 with Entry every time.xml" / "Under 8 with Entry every time.xml");
  * `sourceFile` records that origin. The later four are derived from those two
  * and add an extra confirmation gate built from the Bot Builder's observer
- * blocks (`Read Digit N Ticks Ago`, `Check Minimum Sample Size`,
- * `Digit Frequency Below`), which is why each card lists the blocks it uses.
+ * blocks, which is why each card lists the blocks it uses. That gate draws on
+ * all four Blocks-menu groups: the digit/frequency condition (`Read Digit N
+ * Ticks Ago`, `Digit Frequency Below`, …) is ANDed with a pattern/parity read
+ * (`Parity Switched`), a data-quality guard (`Check Market Data Freshness`) and
+ * an entry monitor (`Require Minimum Sample Size`).
  *
  * `over1_under6_recovery` is the only two-leg template: its trade definition
  * carries the `both` contract type, so its purchase conditions buy Over 1 in the
@@ -346,15 +349,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 1.5,
         entryOperator: 'LTE',
         triggerDigit: 1,
-        entryRule: 'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1',
+        entryRule:
+            'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1 · parity switched on the newest tick · fresh market data · 100-tick sample',
         buyCondition:
-            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago.',
+            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — and the newest tick switched parity, the market data is fresh and at least 100 genuine ticks have been seen.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that shows another double low run, until ' +
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that shows another double low run and still passes every gate, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number · Notify · Create text with',
+        blocksUsed:
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Notify · Create text with',
     },
     {
         id: 'under8_two_high_digits',
@@ -373,15 +378,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 2,
         entryOperator: 'GTE',
         triggerDigit: 8,
-        entryRule: 'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8',
+        entryRule:
+            'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8 · parity switched on the newest tick · fresh market data · 100-tick sample',
         buyCondition:
-            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago.',
+            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — and the newest tick switched parity, the market data is fresh and at least 100 genuine ticks have been seen.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that shows another double high run, until ' +
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that shows another double high run and still passes every gate, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Notify · Create text with',
+        blocksUsed:
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Notify · Create text with',
     },
     {
         id: 'over2_three_low_digits',
@@ -400,15 +407,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 1.5,
         entryOperator: 'LTE',
         triggerDigit: 2,
-        entryRule: 'Last digit ≤ 2 AND the two digits before it were also ≤ 2',
+        entryRule:
+            'Last digit ≤ 2 AND the two digits before it were also ≤ 2 · parity switched on the newest tick · fresh market data · 100-tick sample',
         buyCondition:
-            'The last three digits in a row are all 0, 1 or 2 — one tick ago and two ticks ago are both checked with Read Digit N Ticks Ago, then combined with AND.',
+            'The last three digits in a row are all 0, 1 or 2 — one tick ago and two ticks ago are both checked with Read Digit N Ticks Ago, then combined with AND — and the newest tick switched parity, the market data is fresh and at least 100 genuine ticks have been seen.',
         afterPurchase: 'Win → stake back to 5 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 5 after a win, ×1.5 after a loss, and it trades again on the next tick that completes another three-in-a-row run, until ' +
+            'Straight after each contract settles: stake resets to 5 after a win, ×1.5 after a loss, and it trades again on the next tick that completes another three-in-a-row run and still passes every gate, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND · Notify · Create text with',
+        blocksUsed:
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Notify · Create text with',
     },
     {
         id: 'under7_rare_nine',
@@ -427,15 +436,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 2,
         entryOperator: 'GTE',
         triggerDigit: 7,
-        entryRule: 'Last digit ≥ 7 · at least 100 ticks observed · digit 9 under 10% of the window',
+        entryRule:
+            'Last digit ≥ 7 · at least 100 ticks observed · digit 9 under 10% of the window · parity switched on the newest tick · fresh market data',
         buyCondition:
-            'The last digit is 7, 8 or 9, this run has already seen 100 genuine ticks, and digit 9 took less than 10% of the analysis window — checked with Check Minimum Sample Size and Digit Frequency Below.',
+            'The last digit is 7, 8 or 9, this run has already seen 100 genuine ticks, and digit 9 took less than 10% of the analysis window — checked with Check Minimum Sample Size and Digit Frequency Below — and the newest tick switched parity while the market data is fresh.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes every gate, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND · Notify · Create text with',
+        blocksUsed:
+            'Digit & frequency: Check Minimum Sample Size · Digit Frequency Below · AND · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Notify · Create text with',
     },
     {
         id: 'under5_nine_rare',
@@ -454,15 +465,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 2,
         entryOperator: 'LTE',
         triggerDigit: 4,
-        entryRule: 'Last digit ≤ 4 · at least 100 ticks observed · digit 9 under 10% of the window',
+        entryRule:
+            'Last digit ≤ 4 · at least 100 ticks observed · digit 9 under 10% of the window · parity switched on the newest tick · fresh market data',
         buyCondition:
-            'The last digit is 0–4, this run has already seen 100 genuine ticks, and digit 9 took less than 10% of the analysis window — Check Minimum Sample Size and Digit Frequency Below filter the entry. Under 5 wins on 0–4, so the 9 filter only skips entries taken while 9 is unusually common.',
+            'The last digit is 0–4, this run has already seen 100 genuine ticks, and digit 9 took less than 10% of the analysis window — Check Minimum Sample Size and Digit Frequency Below filter the entry — and the newest tick switched parity while the market data is fresh. Under 5 wins on 0–4, so the 9 filter only skips entries taken while 9 is unusually common.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, and it trades again on the next tick that still passes every gate, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Below · AND · Notify · Create text with',
+        blocksUsed:
+            'Digit & frequency: Check Minimum Sample Size · Digit Frequency Below · AND · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Notify · Create text with',
     },
     {
         id: 'over4_five_hot',
@@ -481,15 +494,17 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         multiplier: 1.5,
         entryOperator: 'GTE',
         triggerDigit: 5,
-        entryRule: 'Last digit ≥ 5 · at least 100 ticks observed · digit 5 above 12% of the window',
+        entryRule:
+            'Last digit ≥ 5 · at least 100 ticks observed · digit 5 above 12% of the window · parity switched on the newest tick · fresh market data',
         buyCondition:
-            'The last digit is 5–9, this run has already seen 100 genuine ticks, and digit 5 took more than 12% of the analysis window — Check Minimum Sample Size and Digit Frequency Above. Over 4 wins on 5–9, and 5 is one of those winning digits.',
+            'The last digit is 5–9, this run has already seen 100 genuine ticks, and digit 5 took more than 12% of the analysis window — Check Minimum Sample Size and Digit Frequency Above — and the newest tick switched parity while the market data is fresh. Over 4 wins on 5–9, and 5 is one of those winning digits.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that still passes all three gates, until ' +
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick that still passes every gate, until ' +
             MARTINGALE_STOP +
             '.',
-        blocksUsed: 'Check Minimum Sample Size · Digit Frequency Above · AND · Notify · Create text with',
+        blocksUsed:
+            'Digit & frequency: Check Minimum Sample Size · Digit Frequency Above · AND · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Notify · Create text with',
     },
     {
         id: 'even_odd_window',

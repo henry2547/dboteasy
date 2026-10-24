@@ -140,6 +140,8 @@
         <statement name="DO0">
           <block type="controls_if" id="freebot-under8-observer-entry"><mutation else="1"></mutation>
   <value name="IF0">
+<block type="obs_and" id="freebot-under8-all-gates">
+  <value name="A">
 <block type="obs_compare_gte" id="freebot-under8-prev-gte">
   <value name="A">
     <block type="obs_ago" id="freebot-under8-prev">
@@ -149,6 +151,25 @@
   <value name="B">
     <block type="obs_number" id="freebot-under8-prev-limit">
       <field name="VALUE">8</field>
+    </block>
+  </value>
+</block>
+  </value>
+  <value name="B">
+    <block type="obs_and" id="freebot-under8-monitor-gates">
+      <value name="A">
+        <block type="obs_and" id="freebot-under8-data-gates">
+          <value name="A">
+            <block type="obs_fresh" id="freebot-under8-data-fresh"></block>
+          </value>
+          <value name="B">
+            <block type="obs_require_sample" id="freebot-under8-entry-sample"><field name="N">100</field></block>
+          </value>
+        </block>
+      </value>
+      <value name="B">
+        <block type="obs_parity_switched" id="freebot-under8-parity-switch"></block>
+      </value>
     </block>
   </value>
 </block>
