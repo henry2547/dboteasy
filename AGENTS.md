@@ -8,7 +8,16 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
 - `docker compose -f docker-compose.base44.yml up -d` starts the dev server.
 - Node 22 base image; source is bind-mounted at `/app`; `node_modules` lives in an anonymous volume.
 - Dev server listens on port 4003 inside the container, mapped to host port 3000.
-- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, using the committed `package-lock.json`.
+- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, but **only** when the anonymous
+  volume has no `node_modules/.package-lock.json` or its recorded `node_modules/.base44-lock-hash` no longer
+  matches `md5sum package-lock.json` (see the `command` in `docker-compose.base44.yml`). Re-installing on every
+  start wipes `node_modules` for ~45 s while a container of the same compose project may still be serving, and
+  Rsbuild then dies mid-request with `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/…`.
+- **Never run `npm ci` / `npm install` inside the running `web` container** — it rewrites `node_modules` under the
+  live dev server and kills it the same way. Run tooling with `exec` instead, e.g.
+  `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots` (no install step). If the
+  dev server does crash this way, `docker compose -f docker-compose.base44.yml up -d` brings it back; the
+  conditional install above then re-syncs `node_modules` before serving.
 
 ### Sandbox-only dev override: eager compilation
 Rsbuild turns on Rspack's lazy ("compile on demand") dev compilation by default. Here the browser
