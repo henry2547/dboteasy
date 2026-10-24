@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">46.93% </span>
+                <span class="strong">46.56% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>207/441</span>
+                <span class='fraction'>210/451</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">64.17% </span>
+                <span class="strong">63.23% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>43/67</span>
+                <span class='fraction'>43/68</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">46.93% </span>
+                <span class="strong">46.56% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>207/441</span>
+                <span class='fraction'>210/451</span>
             </div>
         
             
@@ -504,7 +504,17 @@
 <a name='L439'></a><a href='#L439'>439</a>
 <a name='L440'></a><a href='#L440'>440</a>
 <a name='L441'></a><a href='#L441'>441</a>
-<a name='L442'></a><a href='#L442'>442</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L442'></a><a href='#L442'>442</a>
+<a name='L443'></a><a href='#L443'>443</a>
+<a name='L444'></a><a href='#L444'>444</a>
+<a name='L445'></a><a href='#L445'>445</a>
+<a name='L446'></a><a href='#L446'>446</a>
+<a name='L447'></a><a href='#L447'>447</a>
+<a name='L448'></a><a href='#L448'>448</a>
+<a name='L449'></a><a href='#L449'>449</a>
+<a name='L450'></a><a href='#L450'>450</a>
+<a name='L451'></a><a href='#L451'>451</a>
+<a name='L452'></a><a href='#L452'>452</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -553,6 +563,16 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -953,7 +973,7 @@ import { getLast } from '../../../utils/binary-utils';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { observerRuntime } from '../../observer';
-import { getDirection, getLastDigit } from '../utils/helpers';
+import { getDirection, getLastDigit, getLastDigitForList } from '../utils/helpers';
 import {
     areDigitsBelowShare,
     digitBarState,
@@ -987,6 +1007,9 @@ export default Engine =&gt;
                 // behind for every market the session has visited.
                 const previous_symbol = this.symbol;
                 this.symbol = symbol;
+                // The Even/Odd window belongs to the market it was collected on: switching markets
+                // invalidates it, and the first genuine tick of the new market starts a fresh one.
+                this.eoInvalidate<span class="branch-0 cbranch-no" title="branch not covered" >?.(`the market changed from ${p</span>revious_symbol} to ${symbol}`);
                 const { ticksService } = this.$scope;
 &nbsp;
                 await ticksService.stopMonitor({
@@ -1005,6 +1028,13 @@ export default Engine =&gt;
 <span class="cstat-no" title="statement not covered" >                        price: lastTick.quote,</span>
 <span class="cstat-no" title="statement not covered" >                        epoch,</span>
 <span class="cstat-no" title="statement not covered" >                        pip_size: this.getPipSize(),</span>
+<span class="cstat-no" title="statement not covered" >                    });</span>
+<span class="cstat-no" title="statement not covered" >                    // The Even/Odd window is built from the same genuine tick, with the engine's own</span>
+<span class="cstat-no" title="statement not covered" >                    // quote precision, so it never needs a second subscription or an interpolated tick.</span>
+<span class="cstat-no" title="statement not covered" >                    this.eoFeedTick?.({</span>
+<span class="cstat-no" title="statement not covered" >                        symbol,</span>
+<span class="cstat-no" title="statement not covered" >                        epoch,</span>
+<span class="cstat-no" title="statement not covered" >                        digit: Number(getLastDigitForList(lastTick.quote, this.getPipSize())),</span>
 <span class="cstat-no" title="statement not covered" >                    });</span>
 <span class="cstat-no" title="statement not covered" >                    this.store.dispatch({ type: constants.NEW_TICK, payload: epoch });</span>
                 };
@@ -1393,7 +1423,7 @@ export default Engine =&gt;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-22T22:08:44.288Z
+                at 2026-10-24T08:04:45.127Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>
