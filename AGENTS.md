@@ -8,7 +8,16 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
 - `docker compose -f docker-compose.base44.yml up -d` starts the dev server.
 - Node 22 base image; source is bind-mounted at `/app`; `node_modules` lives in an anonymous volume.
 - Dev server listens on port 4003 inside the container, mapped to host port 3000.
-- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, using the committed `package-lock.json`.
+- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, but **only** when the anonymous
+  volume has no `node_modules/.package-lock.json` or its recorded `node_modules/.base44-lock-hash` no longer
+  matches `md5sum package-lock.json` (see the `command` in `docker-compose.base44.yml`). Re-installing on every
+  start wipes `node_modules` for ~45 s while a container of the same compose project may still be serving, and
+  Rsbuild then dies mid-request with `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/…`.
+- **Never run `npm ci` / `npm install` inside the running `web` container** — it rewrites `node_modules` under the
+  live dev server and kills it the same way. Run tooling with `exec` instead, e.g.
+  `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots` (no install step). If the
+  dev server does crash this way, `docker compose -f docker-compose.base44.yml up -d` brings it back; the
+  conditional install above then re-syncs `node_modules` before serving.
 
 ### Sandbox-only dev override: eager compilation
 Rsbuild turns on Rspack's lazy ("compile on demand") dev compilation by default. Here the browser
@@ -151,7 +160,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **76** for `even_odd_window`, **77** for every template with an
+  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **77** for every template with an
   extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
   `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **133** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
@@ -173,6 +182,13 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
   the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
   round, or every observer-gated template fails the loader inspection.
+- **`even_odd_window` re-scans the market after a loss.** The market-scan guard is the
+  `freebot:market-scanned` variable, tested in `before_purchase` by `freebot-eo-market-pick`: when it is
+  unset the loop runs `switch_best_parity_market` and then sets it, so the scan happens once. The
+  `after_purchase` loss branch (`freebot-eo-rescan-after-loss`) sets it back to `FALSE`, so the next
+  trade loop measures every market again and re-picks the best one before looking for an entry — a win
+  leaves it set, so a winning run stays on the market it picked. Those two blocks are why the canvas
+  count is 83 for this template (see the block-count note above).
 - **Two-leg bot (`over1_under6_recovery`):** the only template whose trade definition carries
   `contractType: 'both'`. Its `trade_definition_tradeoptions` PREDICTION input holds the
   `freebot:prediction` variable, so the primary branch sets it to 1 and buys `DIGITOVER` while the

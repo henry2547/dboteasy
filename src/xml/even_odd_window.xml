@@ -365,6 +365,16 @@
                                 </value>
                               </block>
                             </value>
+                            <next>
+                              <block type="variables_set" id="freebot-eo-rescan-after-loss">
+                                <field name="VAR" id="freebot-market-scanned" variabletype="">freebot:market-scanned</field>
+                                <value name="VALUE">
+                                  <block type="logic_boolean" id="freebot-eo-rescan-after-loss-value">
+                                    <field name="BOOL">FALSE</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </next>
                           </block>
                         </statement>
                         <next>
