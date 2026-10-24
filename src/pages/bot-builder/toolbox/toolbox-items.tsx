@@ -240,6 +240,15 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                {/* The parity scan: it measures every eligible market's own recent ticks and keeps the
+                    most lopsided one, instead of stopping at the first market whose condition passes. */}
+                <Block type='switch_best_parity_market'>
+                    <Value name='TICKS'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
                 {/* Even/Odd strategy: configure the window it reads, then the conditions above the
                     two entries. Every value is the engine call the block generates. */}
                 <Block type='eo_configure'>

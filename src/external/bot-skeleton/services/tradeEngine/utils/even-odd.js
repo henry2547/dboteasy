@@ -10,6 +10,8 @@
 
 export const EO_DEFAULT_TICKS = 20;
 export const EO_DEFAULT_PERCENT = 65;
+/** Ticks read from each market's own history when a scan compares the parity of every market. */
+export const EO_BEST_MARKET_TICKS = 100;
 export const EO_MIN_TICKS = 1;
 /** Sanity cap: the window is a rolling slice of the live feed, never an unbounded buffer. */
 export const EO_MAX_TICKS = 1000;
@@ -107,6 +109,60 @@ export const parityPercentages = digits => {
     if (!total) return { even: 0, odd: 0, total: 0 };
     return { even: (even * 100) / total, odd: (odd * 100) / total, total };
 };
+
+/**
+ * The parity split of one sample of digits: which parity leads, its share of the sample and how far
+ * the two parities are apart. `null` for an empty sample, so nothing is ever compared on no data.
+ *
+ * This describes the ticks already seen — it is never a forecast of the next digit.
+ */
+export const paritySplit = digits => {
+    const list = toDigitList(digits);
+    if (!list.length) return null;
+
+    const { even, odd, total } = parityCounts(list);
+    const parity = even >= odd ? 'even' : 'odd';
+    const winner = parity === 'even' ? even : odd;
+
+    return {
+        total,
+        even,
+        odd,
+        parity,
+        evenPercent: (even * 100) / total,
+        oddPercent: (odd * 100) / total,
+        share: (winner * 100) / total,
+        margin: (Math.abs(even - odd) * 100) / total,
+    };
+};
+
+/** One plain-language line for a measured split, for the journal. */
+export const describeParitySplit = split =>
+    split
+        ? `${split.parity} ${split.share}% over ${split.total} tick(s) (even ${split.evenPercent}% · odd ${split.oddPercent}%)`
+        : 'no ticks to measure';
+
+/**
+ * The number of ticks a best-market scan reads from each market, clamped to the same range the
+ * rolling window accepts. A missing or unusable number falls back to `EO_BEST_MARKET_TICKS`.
+ */
+export const resolveBestMarketSample = value => {
+    const wanted = Number(value);
+    if (!Number.isInteger(wanted) || wanted < EO_MIN_TICKS) return EO_BEST_MARKET_TICKS;
+    return Math.min(wanted, EO_MAX_TICKS);
+};
+
+/**
+ * Orders measured markets by how lopsided their parity split is: the market whose leading parity
+ * holds the largest share of its own sample comes first, a larger sample breaking a tie. Every
+ * entry keeps the measurement it was ranked on, so the choice can always be checked against it.
+ */
+export const rankParityMarkets = (measurements = []) =>
+    (Array.isArray(measurements) ? measurements : [])
+        .filter(entry => entry && entry.symbol && entry.split && Number.isFinite(entry.split.share))
+        .slice()
+        .sort((a, b) => b.split.share - a.split.share || b.split.total - a.split.total)
+        .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
 /** True only for a measured percentage at or above the threshold — never for missing data. */
 export const meetsThreshold = (percentage, threshold) => {

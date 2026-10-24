@@ -47,7 +47,12 @@ function FreeBotCard({
                   : `${template.contractType} · ${template.entryParity ?? 'parity'} digits`,
         ],
         ['Duration', `${template.durationTicks} tick`],
-        ['Default market in the XML', `${template.defaultMarket} — replaced by the market you pick`],
+        [
+            template.marketScan ? 'Starting market in the XML' : 'Default market in the XML',
+            template.marketScan
+                ? `${template.defaultMarket} — the bot measures every volatility market itself and moves to the best one`
+                : `${template.defaultMarket} — replaced by the market you pick`,
+        ],
         ['Initial stake', `${template.stake} USD`],
         ['Take profit', `${template.takeProfit} USD`],
         ['Stop loss', `${template.stopLoss} USD`],

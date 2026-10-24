@@ -8,6 +8,7 @@
 const getMarketScanInterface = tradeEngine => {
     return {
         marketScanBegin: (...args) => tradeEngine.marketScanBegin(...args),
+        marketScanBestParity: (...args) => tradeEngine.marketScanBestParity(...args),
         marketScanNext: (...args) => tradeEngine.marketScanNext(...args),
         marketScanLock: (...args) => tradeEngine.marketScanLock(...args),
         marketScanReport: (...args) => tradeEngine.marketScanReport(...args),
