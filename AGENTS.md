@@ -151,7 +151,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **76** for `even_odd_window`, **77** for every template with an
+  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **77** for every template with an
   extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
   `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **133** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
@@ -173,6 +173,13 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
   the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
   round, or every observer-gated template fails the loader inspection.
+- **`even_odd_window` re-scans the market after a loss.** The market-scan guard is the
+  `freebot:market-scanned` variable, tested in `before_purchase` by `freebot-eo-market-pick`: when it is
+  unset the loop runs `switch_best_parity_market` and then sets it, so the scan happens once. The
+  `after_purchase` loss branch (`freebot-eo-rescan-after-loss`) sets it back to `FALSE`, so the next
+  trade loop measures every market again and re-picks the best one before looking for an entry — a win
+  leaves it set, so a winning run stays on the market it picked. Those two blocks are why the canvas
+  count is 83 for this template (see the block-count note above).
 - **Two-leg bot (`over1_under6_recovery`):** the only template whose trade definition carries
   `contractType: 'both'`. Its `trade_definition_tradeoptions` PREDICTION input holds the
   `freebot:prediction` variable, so the primary branch sets it to 1 and buys `DIGITOVER` while the
