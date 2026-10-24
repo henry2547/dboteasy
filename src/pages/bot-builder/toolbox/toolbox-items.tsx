@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDomServer from 'react-dom/server';
-import { BLOCKS, GROUPS } from '@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog';
+import { GROUPS, subcategoriesInGroup } from '@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog';
 import { localize } from '@deriv-com/translations';
 
 const Arg = ({ ...props }) => {
@@ -50,6 +50,13 @@ const Value = ({ ...props }) => {
 const Xml = ({ ...props }) => {
     return React.createElement('xml', props);
 };
+
+/** A stable, id-safe key for a nested category: the palette must not repeat a category id. */
+const categorySlug = (category: string) =>
+    category
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
 
 export const ToolboxItems = () =>
     ReactDomServer.renderToStaticMarkup(
@@ -417,18 +424,29 @@ export const ToolboxItems = () =>
                 </Block>
             </Category>
 
-            {/* Observational digit blocks, grouped the same way as the observer palette they
-                were migrated from. Each item drags the block onto the canvas with its defaults. */}
+            {/* Observational digit blocks, grouped the same way as the observer palette they were
+                migrated from — but one flyout per catalogue category, so a group of forty-odd
+                blocks is browsed a handful at a time instead of one long list. Each item drags the
+                block onto the canvas with its defaults; a superseded duplicate is not listed
+                (`blocksInGroup` skips it) even though it stays registered for older workspaces. */}
             {GROUPS.map(group => (
                 <Category key={group.id} id={group.id} name={localize(group.name)}>
-                    {BLOCKS.filter(spec => group.categories.includes(spec.category)).map(spec => (
-                        <Block key={spec.type} type={spec.type}>
-                            {spec.fields.map(field => (
-                                <Field key={field.name} name={field.name}>
-                                    {String(field.value)}
-                                </Field>
+                    {subcategoriesInGroup(group).map(entry => (
+                        <Category
+                            key={`${group.id}__${entry.category}`}
+                            id={`${group.id}__${categorySlug(entry.category)}`}
+                            name={localize(entry.category)}
+                        >
+                            {entry.blocks.map(spec => (
+                                <Block key={spec.type} type={spec.type}>
+                                    {spec.fields.map(field => (
+                                        <Field key={field.name} name={field.name}>
+                                            {String(field.value)}
+                                        </Field>
+                                    ))}
+                                </Block>
                             ))}
-                        </Block>
+                        </Category>
                     ))}
                 </Category>
             ))}

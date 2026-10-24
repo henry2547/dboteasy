@@ -474,6 +474,41 @@ export const EVALUATORS = {
     },
     pattern_stage: ctx => read(ctx.stage, `Pattern stage is ${ctx.stage}.`),
     adv_stage: ctx => read(ctx.stage, `Pattern stage is ${ctx.stage}.`),
+
+    // Advanced window reads: gaps, runs, repetition, ranking and how clustered the window is.
+    adv_gap: (ctx, block) => {
+        const gap = values.gapSinceDigit(ctx.digits, Number(block.fields.DIGIT));
+        if (gap === null) return unknown(`Inconclusive: digit ${block.fields.DIGIT} has not appeared in the observed ticks yet.`);
+        return read(gap, gap === 0 ? `Digit ${block.fields.DIGIT} is on the newest tick.` : `Digit ${block.fields.DIGIT} last appeared ${gap} tick(s) ago.`);
+    },
+    adv_parity_run: ctx =>
+        ctx.digits.length ? read(values.currentParityRun(ctx.digits), 'Length of the parity run ending at the newest tick.') : unknown(NO_TICK),
+    adv_parity_switches: (ctx, block) =>
+        ctx.digits.length
+            ? read(values.paritySwitchCount(ctx.digits, Number(block.fields.N)), 'Parity changes inside the window.')
+            : unknown(NO_TICK),
+    adv_repeat_rate: (ctx, block) =>
+        finite(values.repeatRate(ctx.digits, Number(block.fields.N)), 'Share of adjacent tick pairs that ended in the same digit.'),
+    adv_frequency_rank: (ctx, block) => {
+        const window = windowDigits(ctx);
+        if (!window.length) return unknown(EMPTY_WINDOW);
+        const rank = String(block.fields.RANK).toLowerCase();
+        const ranked = values.isDigitInFrequencyRank(window, Number(block.fields.DIGIT), rank, Number(block.fields.N));
+        return ranked
+            ? pass(true, `Digit ${block.fields.DIGIT} is among the ${rank} ${block.fields.N} digits of the window.`)
+            : fail(`Digit ${block.fields.DIGIT} is not among the ${rank} ${block.fields.N} digits of the window.`);
+    },
+    adv_entropy: ctx => finite(values.windowEntropy(windowDigits(ctx)), 'Shannon entropy of the analysis window in bits.'),
+    adv_entropy_state: (ctx, block) => {
+        const entropy = values.windowEntropy(windowDigits(ctx));
+        if (!Number.isFinite(entropy)) return unknown(EMPTY_WINDOW);
+        const clustered = entropy < values.STRUCTURAL_CLUSTER_BITS;
+        const wanted = String(block.fields.STATE).toLowerCase().startsWith('clustered');
+        const shown = entropy.toFixed(2);
+        return clustered === wanted
+            ? pass(true, `Window entropy ${shown} bits is ${clustered ? 'clustered' : 'random'}, against the ${values.STRUCTURAL_CLUSTER_BITS}-bit boundary.`)
+            : fail(`Window entropy ${shown} bits is ${clustered ? 'clustered' : 'random'}, not ${wanted ? 'clustered' : 'random'}.`);
+    },
 };
 
 export default EVALUATORS;
