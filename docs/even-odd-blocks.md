@@ -1,6 +1,6 @@
 # Even/Odd strategy blocks
 
-These twelve blocks live in the existing Bot Builder's **Digits** category. They do not add a tab or a separate trading interface.
+These twelve blocks live in the existing Bot Builder's **Digits** category, alongside **Use the best even/odd market**, which picks the market the strategy runs on. They do not add a tab or a separate trading interface.
 
 ## Connecting a strategy
 
@@ -28,6 +28,14 @@ These twelve blocks live in the existing Bot Builder's **Digits** category. They
 
 The threshold-reading blocks do not override the configured buy signal: a Buy block still checks the configured threshold and direction. When both parities qualify, the higher share wins; an exact tie selects EVEN. Percentages describe past ticks, not a guarantee about the next digit.
 
+## Choosing the best Even/Odd market
+
+| Block type | Behaviour |
+| --- | --- |
+| `switch_best_parity_market` | Scans every eligible volatility market, measures each one's own latest ticks, and moves the bot to the market whose even/odd split is the most lopsided. Generates `Bot.marketScanBestParity({ ticks })`; the number is the per-market sample (1–1000, default 100 when nothing is connected). |
+
+Place it once, in the branch that runs before an entry (the shipped `even_odd_window` free bot runs it on the first trade loop of the run and remembers that it has scanned). The scan subscribes to each market through the trade engine's ordinary tick path, skips closed, suspended, cooling-down or contract-less markets with the reason in the run log, and journalling every measurement it made — so the market it kept can be checked against the ticks it was chosen on. It never places a trade and refuses to change the market while a contract is open; the entries, stake, risk limits and Demo/Real protections stay where they were. A split describes the ticks already seen, never the next digit, and stopping and starting the bot scans again.
+
 ## Execution and safety
 
 The window uses the trade engine's existing tick subscription, not the Digits dashboard feed or a second socket. Repeated ticks are ignored, out-of-order ticks invalidate the window, market changes restart it, and disconnected feeds cannot qualify. Buys also check the existing session state, stake, risk limits, selected contract and open contract. A signal is marked used only after the existing purchase path records a contract id.
@@ -37,7 +45,7 @@ The window uses the trade engine's existing tick subscription, not the Digits da
 Run in the development container:
 
 ```sh
-npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__/even-odd.test.js src/external/bot-skeleton/services/tradeEngine/utils/__tests__/even-odd-runtime.test.js src/external/bot-skeleton/services/observer/__tests__/observer-generation.test.js --runInBand --coverage=false
+npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__/even-odd.test.js src/external/bot-skeleton/services/tradeEngine/utils/__tests__/even-odd-runtime.test.js src/external/bot-skeleton/services/tradeEngine/utils/__tests__/market-parity-scan.test.js src/external/bot-skeleton/services/observer/__tests__/observer-generation.test.js --runInBand --coverage=false
 npm run type-check
 ```
 

@@ -493,7 +493,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'even_odd_window',
-        name: 'Even / Odd — Window Signal',
+        name: 'Even / Odd — Best Volatility Market',
         sourceFile: 'Built from the Even/Odd strategy blocks',
         asset: 'even_odd_window.xml',
         strategy: 'even',
@@ -504,6 +504,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         prediction: null,
         entryParity: 'both',
         entryBlocks: 'even-odd-window',
+        // The bot does not stay on the market it was loaded with: it measures every volatility
+        // market itself on the first trade loop of the run and moves to the best one.
+        marketScan: true,
         durationTicks: 1,
         defaultMarket: '1HZ25V',
         stake: 10,
@@ -513,16 +516,16 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'The last 20 valid ticks show even or odd digits at 65% or more — the signal direction picks the contract',
+            'Every volatility market is measured on the last 100 ticks of its own history · the bot keeps the market whose even/odd split is the most lopsided · on that market the last 20 valid ticks then need one parity at 65% or more',
         buyCondition:
-            'Nothing is bought until the rolling window holds 20 genuine ticks of the subscribed market and one parity reached 65% of them. With the direction set to BOTH the higher parity wins (an exact tie resolves to EVEN), and Buy EVEN or Buy ODD sends that contract through the engine\'s own purchase path. One entry per signal, so the same tick can never enter twice; a window that is incomplete, stale or disconnected never signals. While it waits the journal shows the current signal.',
+            'Nothing is bought on the market the bot was loaded with. On the first trade loop of the run it scans every volatility market the app offers, reads the last 100 ticks of each market with that market\'s own price precision, and moves to the one where a parity holds the largest share — the best market of the pool. Closed, suspended and cooldown markets are skipped with their reason, and the measurement behind every market it looked at is journalled. Then nothing is bought until the rolling window of that market holds 20 genuine ticks and one parity reached 65% of them. With the direction set to BOTH the higher parity wins (an exact tie resolves to EVEN), and Buy EVEN or Buy ODD sends that contract through the engine\'s own purchase path. One entry per signal, so the same tick can never enter twice; a window that is incomplete, stale or disconnected never signals. While it waits the journal shows the current signal.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next tick whose 20-tick window still reaches the threshold, until ' +
             MARTINGALE_STOP +
-            '.',
+            '. The market scan runs once per run — stopping and starting the bot scans the markets again.',
         blocksUsed:
-            'Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Buy EVEN · Buy ODD · Allow one entry per signal · Notify · Create text with',
+            'Use the best even/odd market · Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Buy EVEN · Buy ODD · Allow one entry per signal · Notify · Create text with',
     },
     {
         id: 'over1_under6_recovery',

@@ -24,6 +24,8 @@
  */
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { describeParitySplit, paritySplit, rankParityMarkets, resolveBestMarketSample } from '../utils/even-odd';
+import { getLastDigitForList } from '../utils/helpers';
 import {
     MARKET_SCAN_ORDER,
     MARKET_SCAN_STATES,
@@ -250,6 +252,209 @@ export default Engine =>
             );
         }
 
+        /**
+         * Scans every eligible volatility market and moves the engine to the one whose own last
+         * ticks are the most lopsided between even and odd — the best market of the pool for a
+         * parity entry — instead of the first market whose condition happens to pass.
+         *
+         * Each candidate is subscribed through the same path the ordinary scan uses (its own tick
+         * subscription, its own history, a genuine live tick), then its last `ticks` digits are read
+         * with that market's own quote precision and turned into a parity split. A market that is
+         * closed, cooling down, missing the configured contract types, unsubscribable or without
+         * usable history is skipped with its reason and stays visible in the report. Every split is
+         * journalled, so the choice can be checked against the measurement it was made on.
+         *
+         * If no market can be measured the engine is left on the market it was already trading and
+         * the reason is reported — the scan never invents a market and never leaves the bot
+         * subscribed to a market it did not measure.
+         */
+        async marketScanBestParity(options = {}) {
+            const scan = this.getScanState();
+            const sample = resolveBestMarketSample(options?.ticks);
+            const measurements = [];
+
+            if (this.isMarketScanStopped()) {
+                return this.scanRefused(MARKET_SCAN_STATES.STOPPED, 'Stopped by the user.');
+            }
+
+            scan.order = MARKET_SCAN_ORDER.SEQUENTIAL;
+            scan.max_switches = 0;
+            scan.switches = 0;
+            scan.cycles = 0;
+            scan.cursor = 0;
+            scan.analysed = [];
+            scan.skipped = [];
+            scan.eligible = [];
+            scan.position = 0;
+            scan.entry_found = false;
+            scan.frozen = false;
+            scan.data_ready = false;
+            scan.tick_count = 0;
+            scan.started_at = Date.now();
+            scan.active_symbol = null;
+            scan.active_display = '';
+
+            this.transitionScanState(
+                MARKET_SCAN_STATES.DISCOVERING_MARKETS,
+                'Looking for the volatility markets to compare.'
+            );
+
+            let pool;
+            try {
+                pool = await discoverEligibleMarkets();
+            } catch (error) {
+                return this.scanRefused(
+                    MARKET_SCAN_STATES.DATA_UNAVAILABLE,
+                    describeMarketFailure(error, 'The market list could not be loaded.')
+                );
+            }
+
+            if (!pool.length) {
+                return this.scanRefused(
+                    MARKET_SCAN_STATES.NO_ELIGIBLE_MARKETS,
+                    'No open volatility market is available right now.'
+                );
+            }
+
+            scan.eligible = pool;
+            scan.limit = pool.length;
+            journal(
+                `Market scan: comparing ${pool.length} volatility market(s) on the last ${sample} tick(s) of each.`
+            );
+
+            for (const market of pool) {
+                if (this.isMarketScanStopped()) break;
+
+                scan.active_symbol = market.apiSymbol;
+                scan.active_display = market.displayName;
+                scan.position = scan.eligible.findIndex(item => item.apiSymbol === market.apiSymbol) + 1;
+                scan.data_ready = false;
+                scan.tick_count = 0;
+
+                this.transitionScanState(
+                    MARKET_SCAN_STATES.SELECTING_MARKET,
+                    `Measuring ${describeMarket(market)} (${scan.position}/${scan.eligible.length}).`
+                );
+
+                if (!isMarketTradable(market.apiSymbol)) {
+                    this.skipMarket(scan, market, 'Market closed or suspended');
+                    continue;
+                }
+
+                const cooling = this.cooldownFor?.(market.apiSymbol);
+                if (cooling?.cooling) {
+                    this.skipMarket(scan, market, `In cooldown — ${cooling.entry.reason}`);
+                    continue;
+                }
+
+                const contract_check = await supportsContractTypes(market.apiSymbol, this.options?.contractTypes);
+                if (!contract_check.supported) {
+                    this.skipMarket(scan, market, contract_check.reason);
+                    continue;
+                }
+
+                this.transitionScanState(MARKET_SCAN_STATES.SUBSCRIBING, `Subscribing to ${describeMarket(market)}.`);
+                const subscribed = await this.subscribeToMarket(market.apiSymbol);
+                if (!subscribed.ok) {
+                    this.skipMarket(scan, market, subscribed.reason);
+                    continue;
+                }
+
+                const readiness = await this.waitForMarketData(market.apiSymbol);
+                if (!readiness.ready) {
+                    this.skipMarket(scan, market, readiness.reason);
+                    continue;
+                }
+
+                const split = await this.marketParitySplit(market.apiSymbol, sample);
+                if (!split) {
+                    this.skipMarket(scan, market, 'The market’s own digit history could not be read');
+                    continue;
+                }
+
+                scan.switches += 1;
+                scan.data_ready = true;
+                scan.tick_count = readiness.tick_count;
+                this.markAnalysed(market.apiSymbol);
+                this.recordMarketEvidence?.(market.apiSymbol, {
+                    tick_count: readiness.tick_count,
+                    data_ready: true,
+                    parity: split.parity,
+                    parity_share: split.share,
+                });
+
+                measurements.push({
+                    symbol: market.apiSymbol,
+                    display_name: market.displayName,
+                    split,
+                    tick_count: readiness.tick_count,
+                });
+                journal(`Market scan: ${describeMarket(market)} — ${describeParitySplit(split)}`);
+
+                await delay(SWITCH_PACING_MS);
+            }
+
+            const ranked = rankParityMarkets(measurements);
+            if (!ranked.length) {
+                return this.scanRefused(
+                    MARKET_SCAN_STATES.NO_ELIGIBLE_MARKETS,
+                    'No volatility market could be measured, so the market was left unchanged.'
+                );
+            }
+
+            // The best measured market has to be the one the engine really trades on, and a market
+            // that cannot be re-subscribed is passed over for the next best one instead of silently
+            // leaving the strategy on a market it never measured.
+            let chosen = null;
+            for (const candidate of ranked) {
+                if (this.isMarketScanStopped()) break;
+                if (candidate.symbol === this.symbol) {
+                    chosen = candidate;
+                    break;
+                }
+                const subscribed = await this.subscribeToMarket(candidate.symbol);
+                if (subscribed.ok) {
+                    chosen = candidate;
+                    break;
+                }
+                journal(
+                    `Market scan: ${candidate.display_name} could not be subscribed for the entry — trying the next best market.`,
+                    'warn'
+                );
+            }
+
+            if (!chosen) {
+                return this.scanRefused(
+                    MARKET_SCAN_STATES.DATA_UNAVAILABLE,
+                    'The best market could not be subscribed for the entry, so the market was left unchanged.'
+                );
+            }
+
+            scan.entry_found = true;
+            scan.frozen = true;
+            scan.active_symbol = chosen.symbol;
+            scan.active_display = chosen.display_name;
+            scan.data_ready = true;
+            scan.tick_count = chosen.tick_count;
+            scan.position = scan.eligible.findIndex(item => item.apiSymbol === chosen.symbol) + 1;
+            this.recordMarketEvidence?.(chosen.symbol, { entry_met: true });
+
+            const payload = this.transitionScanState(
+                MARKET_SCAN_STATES.ENTRY_FOUND,
+                `Best parity market picked: ${describeMarket(
+                    this.findScanMarket(chosen.symbol)
+                )} — ${describeParitySplit(chosen.split)}; the market is frozen for this run.`
+            );
+
+            return { ...payload, ok: true, reason: '', best: { ...chosen }, measurements: ranked };
+        }
+
+        /** A scan that could not produce a market: the reason is reported and the market is left alone. */
+        scanRefused(state, message, extra = {}) {
+            const payload = this.transitionScanState(state, message);
+            return { ...payload, ok: false, reason: message, measurements: [], ...extra };
+        }
+
         /** Re-publishes the outcome the generated loop finished on (never duplicates a journal line). */
         async marketScanReport(status = {}) {
             const scan = this.getScanState();
@@ -459,6 +664,40 @@ export default Engine =>
         findScanMarket(symbol) {
             const scan = this.getScanState();
             return scan.eligible.find(market => market.apiSymbol === symbol) || null;
+        }
+
+        /**
+         * The even/odd split of a market's own latest ticks.
+         *
+         * Digits are read from the trade engine's own tick history for the market it is currently
+         * subscribed to, with that market's own quote precision (`getPipSize`), so the split of one
+         * market is never computed from another market's ticks or from an assumed precision. A
+         * market the engine is not subscribed to, or one without usable history, answers `null`
+         * rather than a made-up number.
+         */
+        async marketParitySplit(symbol, sample) {
+            if (!symbol || symbol !== this.symbol) return null;
+
+            const { ticksService } = this.$scope || {};
+            if (!ticksService?.request) return null;
+
+            let ticks;
+            try {
+                ticks = await ticksService.request({ symbol });
+            } catch (error) {
+                return null;
+            }
+            if (!Array.isArray(ticks) || !ticks.length) return null;
+
+            const pip_size = Number(this.getPipSize());
+            if (!Number.isFinite(pip_size)) return null;
+
+            const digits = ticks
+                .slice(-Math.max(1, Number(sample) || 1))
+                .map(tick => Number(getLastDigitForList(tick?.quote, pip_size)))
+                .filter(digit => Number.isInteger(digit) && digit >= 0 && digit <= 9);
+
+            return paritySplit(digits);
         }
 
         /**

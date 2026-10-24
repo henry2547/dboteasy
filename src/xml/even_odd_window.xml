@@ -6,6 +6,7 @@
     <variable type="" id="freebot-won" islocal="false" iscloud="false">freebot:won</variable>
     <variable type="" id="freebot-stop" islocal="false" iscloud="false">freebot:stop</variable>
     <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
+    <variable type="" id="freebot-market-scanned" islocal="false" iscloud="false">freebot:market-scanned</variable>
   </variables>
   <block type="trade_definition" id="freebot-eo-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
@@ -137,81 +138,113 @@
   </block>
   <block type="before_purchase" id="freebot-eo-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-eo-entry"><mutation else="1"></mutation>
+      <block type="controls_if" id="freebot-eo-market-pick">
         <value name="IF0">
-          <block type="logic_compare" id="freebot-eo-entry-even">
-            <field name="OP">EQ</field>
-            <value name="A">
-              <block type="eo_signal_direction" id="freebot-eo-entry-even-signal"></block>
-            </value>
-            <value name="B">
-              <shadow type="text" id="freebot-eo-entry-even-text">
-                <field name="TEXT">EVEN</field>
-              </shadow>
+          <block type="logic_negate" id="freebot-eo-market-pick-not-scanned">
+            <value name="BOOL">
+              <block type="variables_get" id="freebot-eo-market-pick-read-scanned">
+                <field name="VAR" id="freebot-market-scanned" variabletype="">freebot:market-scanned</field>
+              </block>
             </value>
           </block>
         </value>
         <statement name="DO0">
-          <block type="eo_buy_even" id="freebot-eo-buy-even"></block>
-        </statement>
-        <statement name="ELSE">
-          <block type="controls_if" id="freebot-eo-entry-odd"><mutation else="1"></mutation>
-            <value name="IF0">
-              <block type="logic_compare" id="freebot-eo-entry-odd-compare">
-                <field name="OP">EQ</field>
-                <value name="A">
-                  <block type="eo_signal_direction" id="freebot-eo-entry-odd-signal"></block>
-                </value>
-                <value name="B">
-                  <shadow type="text" id="freebot-eo-entry-odd-text">
-                    <field name="TEXT">ODD</field>
+          <block type="variables_set" id="freebot-eo-market-pick-set-scanned">
+            <field name="VAR" id="freebot-market-scanned" variabletype="">freebot:market-scanned</field>
+            <value name="VALUE">
+              <block type="logic_boolean" id="freebot-eo-market-pick-scanned-true">
+                <field name="BOOL">TRUE</field>
+              </block>
+            </value>
+            <next>
+              <block type="switch_best_parity_market" id="freebot-eo-market-pick-scan">
+                <value name="TICKS">
+                  <shadow type="math_number" id="freebot-eo-market-pick-ticks">
+                    <field name="NUM">100</field>
                   </shadow>
                 </value>
               </block>
-            </value>
-            <statement name="DO0">
-              <block type="eo_buy_odd" id="freebot-eo-buy-odd"></block>
-            </statement>
-            <statement name="ELSE">
-              <block type="text_join" id="freebot-eo-entry-wait-notice">
-                <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
-                <statement name="STACK">
-                  <block type="text_statement" id="freebot-eo-entry-wait-notice-label">
-                    <value name="TEXT">
-                      <shadow type="text" id="freebot-eo-entry-wait-notice-label-text">
-                        <field name="TEXT">Waiting · signal</field>
-                      </shadow>
-                    </value>
-                    <next>
-                      <block type="text_statement" id="freebot-eo-entry-wait-notice-signal">
-                        <value name="TEXT">
-                          <shadow type="text" id="freebot-eo-entry-wait-notice-signal-text">
-                            <field name="TEXT"></field>
-                          </shadow>
-                          <block type="eo_signal_direction" id="freebot-eo-entry-wait-notice-signal-block"></block>
-                        </value>
-                      </block>
-                    </next>
-                  </block>
-                </statement>
-                <next>
-                  <block type="notify" id="freebot-eo-entry-wait-notify">
-                    <field name="NOTIFICATION_TYPE">info</field>
-                    <field name="NOTIFICATION_SOUND">silent</field>
-                    <value name="MESSAGE">
-                      <shadow type="text" id="freebot-eo-entry-wait-notify-text">
-                        <field name="TEXT">Waiting · signal</field>
-                      </shadow>
-                      <block type="variables_get" id="freebot-eo-entry-wait-notify-read">
-                        <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
-                      </block>
-                    </value>
-                  </block>
-                </next>
-              </block>
-            </statement>
+            </next>
           </block>
         </statement>
+        <next>
+            <block type="controls_if" id="freebot-eo-entry"><mutation else="1"></mutation>
+              <value name="IF0">
+                <block type="logic_compare" id="freebot-eo-entry-even">
+                  <field name="OP">EQ</field>
+                  <value name="A">
+                    <block type="eo_signal_direction" id="freebot-eo-entry-even-signal"></block>
+                  </value>
+                  <value name="B">
+                    <shadow type="text" id="freebot-eo-entry-even-text">
+                      <field name="TEXT">EVEN</field>
+                    </shadow>
+                  </value>
+                </block>
+              </value>
+              <statement name="DO0">
+                <block type="eo_buy_even" id="freebot-eo-buy-even"></block>
+              </statement>
+              <statement name="ELSE">
+                <block type="controls_if" id="freebot-eo-entry-odd"><mutation else="1"></mutation>
+                  <value name="IF0">
+                    <block type="logic_compare" id="freebot-eo-entry-odd-compare">
+                      <field name="OP">EQ</field>
+                      <value name="A">
+                        <block type="eo_signal_direction" id="freebot-eo-entry-odd-signal"></block>
+                      </value>
+                      <value name="B">
+                        <shadow type="text" id="freebot-eo-entry-odd-text">
+                          <field name="TEXT">ODD</field>
+                        </shadow>
+                      </value>
+                    </block>
+                  </value>
+                  <statement name="DO0">
+                    <block type="eo_buy_odd" id="freebot-eo-buy-odd"></block>
+                  </statement>
+                  <statement name="ELSE">
+                    <block type="text_join" id="freebot-eo-entry-wait-notice">
+                      <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+                      <statement name="STACK">
+                        <block type="text_statement" id="freebot-eo-entry-wait-notice-label">
+                          <value name="TEXT">
+                            <shadow type="text" id="freebot-eo-entry-wait-notice-label-text">
+                              <field name="TEXT">Waiting · signal</field>
+                            </shadow>
+                          </value>
+                          <next>
+                            <block type="text_statement" id="freebot-eo-entry-wait-notice-signal">
+                              <value name="TEXT">
+                                <shadow type="text" id="freebot-eo-entry-wait-notice-signal-text">
+                                  <field name="TEXT"></field>
+                                </shadow>
+                                <block type="eo_signal_direction" id="freebot-eo-entry-wait-notice-signal-block"></block>
+                              </value>
+                            </block>
+                          </next>
+                        </block>
+                      </statement>
+                      <next>
+                        <block type="notify" id="freebot-eo-entry-wait-notify">
+                          <field name="NOTIFICATION_TYPE">info</field>
+                          <field name="NOTIFICATION_SOUND">silent</field>
+                          <value name="MESSAGE">
+                            <shadow type="text" id="freebot-eo-entry-wait-notify-text">
+                              <field name="TEXT">Waiting · signal</field>
+                            </shadow>
+                            <block type="variables_get" id="freebot-eo-entry-wait-notify-read">
+                              <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                            </block>
+                          </value>
+                        </block>
+                      </next>
+                    </block>
+                  </statement>
+                </block>
+              </statement>
+            </block>
+        </next>
       </block>
     </statement>
   </block>
