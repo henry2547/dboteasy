@@ -61,6 +61,44 @@ function registeredBlockTypes(): Set<string> {
     return types;
 }
 
+/** The eleven groups the Bot Builder palette shows: four observer groups and seven engine categories. */
+const PALETTE_GROUPS = [
+    'observer_digit_frequency',
+    'observer_pattern_parity',
+    'observer_control',
+    'observer_entry_monitoring',
+    'digits',
+    'market_intelligence',
+    'risk_management',
+    'strategy_learning',
+    'trading_execution',
+    'bot_control',
+    'session_reporting',
+];
+
+/**
+ * The block types each flat engine category of the palette lists, read from the palette source so a
+ * block that moves category moves with the test instead of leaving a stale copy here.
+ */
+function enginePaletteGroups(): Map<string, Set<string>> {
+    const source = fs.readFileSync(
+        path.join(repo_root, 'src/pages/bot-builder/toolbox/toolbox-items.tsx'),
+        'utf8'
+    );
+    const groups = new Map<string, Set<string>>();
+
+    source
+        .split(/<Category id='/)
+        .slice(1)
+        .forEach(section => {
+            const id = section.slice(0, section.indexOf("'"));
+            const types = new Set(Array.from(section.matchAll(/<Block type='([a-z0-9_]+)'/g), match => match[1]));
+            if (types.size && PALETTE_GROUPS.includes(id)) groups.set(id, types);
+        });
+
+    return groups;
+}
+
 const assetOf = (template: FreeBotTemplate) =>
     fs.readFileSync(path.join(repo_root, 'src/xml', template.asset), 'utf8');
 
@@ -167,6 +205,32 @@ describe('Free Bots templates', () => {
         });
     });
 
+    it.each(FREE_BOT_TEMPLATES)('$name draws on every palette group', template => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const catalog = require('@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog');
+        const group_of_category = catalog.GROUP_OF_CATEGORY as Map<string, { id: string }>;
+
+        const group_types = new Map<string, Set<string>>();
+        const add = (group: string, type: string) => group_types.set(group, (group_types.get(group) ?? new Set()).add(type));
+        (catalog.BLOCKS as { type: string; category: string }[]).forEach(spec => {
+            const group = group_of_category.get(spec.category)?.id;
+            if (group) add(group, spec.type);
+        });
+        enginePaletteGroups().forEach((types, group) => types.forEach(type => add(group, type)));
+
+        const report = inspectFreeBotXml(assetOf(template), template, isKnown);
+        const used = new Set(report.blockTypes);
+        // Every template must reach into all eleven palette groups — the four observer groups plus the
+        // Digits, Market intelligence, Risk management, Strategy learning, Trading & execution, Bot
+        // control and Reporting categories — so the card's "Blocks used" list cannot drift from the XML.
+        const missing = PALETTE_GROUPS.filter(group => {
+            const types = group_types.get(group);
+            return !!types && ![...types].some(type => used.has(type));
+        });
+
+        expect(missing).toEqual([]);
+    });
+
     it('the two-leg template buys both contracts and sets its own barrier', () => {
         const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
         const report = inspectFreeBotXml(assetOf(template), template, isKnown);
@@ -198,11 +262,11 @@ describe('Free Bots templates', () => {
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
-        // 60 real blocks + 7 shadows − 1 shadow replaced by the stake's
-        // `variables_get` = 66. This exact number is what the loader compares
+        // 89 real blocks + 17 shadows − 5 shadows replaced by a real block in
+        // the same input = 101. This exact number is what the loader compares
         // the live workspace against, so a stale canvas cannot look valid.
         const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
-        expect(report.blockCount).toBe(66);
+        expect(report.blockCount).toBe(101);
     });
 
     it.each(FREE_BOT_TEMPLATES)('$name keeps its logic when the market is swapped', template => {

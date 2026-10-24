@@ -148,6 +148,34 @@
                                                         <field name="NUM">5</field>
                                                       </block>
                                                     </value>
+                                                    <next>
+                                                      <block type="risk_set_limits" id="freebot-o1u6-risk-limits">
+                                                        <field name="MAX_LOSSES">6</field>
+                                                        <field name="MAX_GIVE_BACK">0</field>
+                                                        <field name="MAX_EXPOSURE">0</field>
+                                                        <field name="RISK_PERCENT">0</field>
+                                                        <next>
+                                                          <block type="risk_reset_session" id="freebot-o1u6-risk-reset">
+                                                            <next>
+                                                              <block type="learn_set_strategy" id="freebot-o1u6-learn-strategy">
+                                                                <field name="NAME">Over 1 — Under 6 Recovery</field>
+                                                                <next>
+                                                                  <block type="market_discover_eligible" id="freebot-o1u6-market-discover">
+                                                                    <field name="CATEGORY">1-Second Volatility Indices</field>
+                                                                    <field name="VERIFY">no</field>
+                                                                    <value name="MIN_HISTORY">
+                                                                      <shadow type="math_number" id="freebot-o1u6-market-history">
+                                                                        <field name="NUM">20</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
                                                   </block>
                                                 </next>
                                               </block>
@@ -248,6 +276,72 @@
   </block>
   <block type="before_purchase" id="freebot-o1u6-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="freebot-o1u6-session-guard">
+        <value name="IF0">
+          <block type="logic_operation" id="freebot-o1u6-session-guard-and">
+            <field name="OP">AND</field>
+            <value name="A">
+              <block type="risk_can_trade" id="freebot-o1u6-risk-guard"></block>
+            </value>
+            <value name="B">
+              <block type="logic_operation" id="freebot-o1u6-session-guard-execution">
+                <field name="OP">AND</field>
+                <value name="A">
+                  <block type="logic_negate" id="freebot-o1u6-no-open-contract">
+                    <value name="BOOL">
+                      <block type="exec_has_open_contract" id="freebot-o1u6-open-contract"></block>
+                    </value>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="logic_negate" id="freebot-o1u6-trade-limit-ok">
+                    <value name="BOOL">
+                      <block type="bot_trade_limit_reached" id="freebot-o1u6-trade-limit">
+                        <value name="LIMIT">
+                          <shadow type="math_number" id="freebot-o1u6-trade-limit-value">
+                            <field name="NUM">250</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="controls_if" id="freebot-o1u6-observer-gate"><mutation else="1"></mutation>
+            <value name="IF0">
+              <block type="obs_and" id="freebot-o1u6-observer-and">
+                <value name="A">
+                  <block type="obs_freq_below" id="freebot-o1u6-observer-rare-one">
+                    <field name="DIGIT">1</field>
+                    <field name="PERCENT">10.5</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="obs_and" id="freebot-o1u6-observer-monitor">
+                    <value name="A">
+                      <block type="obs_and" id="freebot-o1u6-observer-data">
+                        <value name="A">
+                          <block type="obs_fresh" id="freebot-o1u6-observer-fresh"></block>
+                        </value>
+                        <value name="B">
+                          <block type="obs_require_sample" id="freebot-o1u6-observer-entry-sample">
+                            <field name="N">100</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="obs_parity_switched" id="freebot-o1u6-observer-parity"></block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
       <block type="controls_if" id="freebot-o1u6-conditions"><mutation elseif="1"></mutation>
         <value name="IF0">
           <block type="logic_compare" id="freebot-o1u6-conditions-over-compare">
@@ -452,6 +546,32 @@
           </block>
         </statement>
       </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="notify" id="freebot-o1u6-observer-wait-notify">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="freebot-o1u6-observer-wait-notify-text">
+                    <field name="TEXT">Waiting · observer gate</field>
+                  </shadow>
+                </value>
+              </block>
+            </statement>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="notify" id="freebot-o1u6-session-wait-notify">
+            <field name="NOTIFICATION_TYPE">info</field>
+            <field name="NOTIFICATION_SOUND">silent</field>
+            <value name="MESSAGE">
+              <shadow type="text" id="freebot-o1u6-session-wait-notify-text">
+                <field name="TEXT">Waiting · session guard</field>
+              </shadow>
+            </value>
+          </block>
+        </statement>
+      </block>
     </statement>
   </block>
   <block type="after_purchase" id="freebot-o1u6-after-purchase" x="900" y="0">
@@ -629,6 +749,28 @@
                                 </value>
                                 <statement name="DO0">
                                   <block type="trade_again" id="freebot-o1u6-trade-again">
+                                    <next>
+                                      <block type="report_journal" id="freebot-o1u6-result-report">
+                                        <field name="LEVEL">info</field>
+                                        <value name="MESSAGE">
+                                          <shadow type="text" id="freebot-o1u6-result-report-text">
+                                            <field name="TEXT">Result</field>
+                                          </shadow>
+                                          <block type="exec_last_result" id="freebot-o1u6-result-report-value"></block>
+                                        </value>
+                                        <next>
+                                          <block type="report_journal" id="freebot-o1u6-session-report">
+                                            <field name="LEVEL">info</field>
+                                            <value name="MESSAGE">
+                                              <shadow type="text" id="freebot-o1u6-session-report-text">
+                                                <field name="TEXT">Session report</field>
+                                              </shadow>
+                                              <block type="report_session" id="freebot-o1u6-session-report-value"></block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
                                   </block>
                                 </statement>
                               </block>
