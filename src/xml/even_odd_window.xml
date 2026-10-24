@@ -98,7 +98,36 @@
                                   </shadow>
                                 </value>
                                 <next>
-                                  <block type="eo_one_entry_per_signal" id="freebot-eo-one-entry"></block>
+                                  <block type="eo_one_entry_per_signal" id="freebot-eo-one-entry">
+                                    <next>
+                                      <block type="risk_set_limits" id="freebot-eo-risk-limits">
+                                        <field name="MAX_LOSSES">6</field>
+                                        <field name="MAX_GIVE_BACK">0</field>
+                                        <field name="MAX_EXPOSURE">0</field>
+                                        <field name="RISK_PERCENT">0</field>
+                                        <next>
+                                          <block type="risk_reset_session" id="freebot-eo-risk-reset">
+                                            <next>
+                                              <block type="learn_set_strategy" id="freebot-eo-learn-strategy">
+                                                <field name="NAME">Even / Odd — Best Volatility Market</field>
+                                                <next>
+                                                  <block type="market_discover_eligible" id="freebot-eo-market-discover">
+                                                    <field name="CATEGORY">1-Second Volatility Indices</field>
+                                                    <field name="VERIFY">no</field>
+                                                    <value name="MIN_HISTORY">
+                                                      <shadow type="math_number" id="freebot-eo-market-history">
+                                                        <field name="NUM">20</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
                                 </next>
                               </block>
                             </next>
@@ -168,6 +197,71 @@
           </block>
         </statement>
         <next>
+          <block type="controls_if" id="freebot-eo-session-guard"><mutation else="1"></mutation>
+            <value name="IF0">
+              <block type="logic_operation" id="freebot-eo-session-guard-and">
+                <field name="OP">AND</field>
+                <value name="A">
+                  <block type="risk_can_trade" id="freebot-eo-risk-guard"></block>
+                </value>
+                <value name="B">
+                  <block type="logic_operation" id="freebot-eo-session-guard-execution">
+                    <field name="OP">AND</field>
+                    <value name="A">
+                      <block type="logic_negate" id="freebot-eo-no-open-contract">
+                        <value name="BOOL">
+                          <block type="exec_has_open_contract" id="freebot-eo-open-contract"></block>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_negate" id="freebot-eo-trade-limit-ok">
+                        <value name="BOOL">
+                          <block type="bot_trade_limit_reached" id="freebot-eo-trade-limit">
+                            <value name="LIMIT">
+                              <shadow type="math_number" id="freebot-eo-trade-limit-value">
+                                <field name="NUM">250</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="controls_if" id="freebot-eo-observer-gate"><mutation else="1"></mutation>
+                <value name="IF0">
+                  <block type="obs_and" id="freebot-eo-observer-and">
+                    <value name="A">
+                      <block type="obs_min_sample" id="freebot-eo-window-sample">
+                        <field name="N">20</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="obs_and" id="freebot-eo-observer-monitor">
+                        <value name="A">
+                          <block type="obs_and" id="freebot-eo-observer-data">
+                            <value name="A">
+                              <block type="obs_fresh" id="freebot-eo-observer-fresh"></block>
+                            </value>
+                            <value name="B">
+                              <block type="obs_require_sample" id="freebot-eo-observer-entry-sample">
+                                <field name="N">20</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="obs_parity_switched" id="freebot-eo-observer-parity"></block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
             <block type="controls_if" id="freebot-eo-entry"><mutation else="1"></mutation>
               <value name="IF0">
                 <block type="logic_compare" id="freebot-eo-entry-even">
@@ -244,6 +338,32 @@
                 </block>
               </statement>
             </block>
+                </statement>
+                <statement name="ELSE">
+                  <block type="notify" id="freebot-eo-observer-wait-notify">
+                    <field name="NOTIFICATION_TYPE">info</field>
+                    <field name="NOTIFICATION_SOUND">silent</field>
+                    <value name="MESSAGE">
+                      <shadow type="text" id="freebot-eo-observer-wait-notify-text">
+                        <field name="TEXT">Waiting · observer gate</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </statement>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="notify" id="freebot-eo-session-wait-notify">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="freebot-eo-session-wait-notify-text">
+                    <field name="TEXT">Waiting · session guard</field>
+                  </shadow>
+                </value>
+              </block>
+            </statement>
+          </block>
         </next>
       </block>
     </statement>
@@ -389,7 +509,30 @@
                               </block>
                             </value>
                             <statement name="DO0">
-                              <block type="trade_again" id="freebot-eo-trade-again-block"></block>
+                              <block type="trade_again" id="freebot-eo-trade-again-block">
+                                <next>
+                                  <block type="report_journal" id="freebot-eo-result-report">
+                                    <field name="LEVEL">info</field>
+                                    <value name="MESSAGE">
+                                      <shadow type="text" id="freebot-eo-result-report-text">
+                                        <field name="TEXT">Result</field>
+                                      </shadow>
+                                      <block type="exec_last_result" id="freebot-eo-result-report-value"></block>
+                                    </value>
+                                    <next>
+                                      <block type="report_journal" id="freebot-eo-session-report">
+                                        <field name="LEVEL">info</field>
+                                        <value name="MESSAGE">
+                                          <shadow type="text" id="freebot-eo-session-report-text">
+                                            <field name="TEXT">Session report</field>
+                                          </shadow>
+                                          <block type="report_session" id="freebot-eo-session-report-value"></block>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
                             </statement>
                           </block>
                         </next>

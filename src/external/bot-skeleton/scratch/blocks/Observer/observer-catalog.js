@@ -751,6 +751,146 @@ add('report_digits', 'Explain Digit Window', 21, 'report_value', {
     help: 'Prints the connected digit list into the journal in chronological order, oldest first.',
 });
 
+/* -------------------------------------------------------------------------------------------
+ * Consolidated blocks.
+ *
+ * The palette had grown a family of near-copies: five single-choice "Is Waiting For …" stage
+ * checks, three near-identical "Detect N Consecutive …" starters, two one-choice parity
+ * confirmations, two one-choice parity frequency checks and six "Compare … Pattern" candidates
+ * that differed only in a dropdown value. Each family is now one block whose field says which
+ * case it is, which is both shorter to browse and easier to read on the canvas.
+ * ----------------------------------------------------------------------------------------- */
+const PATTERN_STAGES = ['Waiting for pair', 'Waiting for confirmation', 'Setup detected', 'Evaluation pending', 'Cooldown'];
+
+add('pattern_stage_is', 'Pattern Stage Is', 16, 'adv_state', {
+    output: 'Condition',
+    fields: [pick('STAGE', 'stage', PATTERN_STAGES)],
+    help: 'True when the pattern detector is in the stage you pick — Waiting for pair, Waiting for confirmation, Setup detected, Evaluation pending or Cooldown — so one block decides what to do at each point of the cycle.',
+});
+add('detect_run', 'Detect Consecutive Run', 15, 'pattern_detect_run', {
+    fields: [
+        pick('KIND', 'run of', ['Identical digits', 'Even digits', 'Odd digits']),
+        num('N', 'run length', 3, 1, 1000),
+    ],
+    help: 'Starts watching the detector when the newest N ticks all ended the same way — the same digit, all even, or all odd. The confirmation rule is set separately with Wait For Confirmation Digit or Wait For Configured Parity.',
+});
+add('check_parity_frequency', 'Check Parity Frequency', 18, 'adv_parity_frequency', {
+    output: 'Condition',
+    fields: [pick('PARITY', 'parity', ['Even', 'Odd']), num('PERCENT', 'at least %', 50, 0, 100)],
+    help: 'True when the parity you pick took at least the share you set of the analysis window — the parity counterpart of Digit Frequency At Or Above, in one block instead of one per parity.',
+});
+add('research_candidate', 'Compare Strategy Candidate', 20, 'research_candidate', {
+    output: 'Number',
+    fields: [
+        pick('STRATEGY', 'candidate', ['over', 'under', 'matches', 'differs', 'even', 'odd']),
+        digit(),
+        num('MINIMUM', 'completed setups per half-window', 10, 1, 500),
+    ],
+    help: 'The observed outcome frequency of the candidate you pick, older half-window against newer half, from observations this session really completed. Inconclusive until each half holds the minimum; descriptive frequency only, never a probability.',
+});
+
+/* -------------------------------------------------------------------------------------------
+ * Advanced reads.
+ *
+ * These add what the palette had no block for: how long a digit has been missing (gap), how the
+ * parity of the newest ticks is running, how repetitive the window is, where a digit sits in the
+ * window's ranking, and how clustered the window is (Shannon entropy). Every one is a
+ * deterministic measure of observed ticks and says Inconclusive rather than guessing.
+ * ----------------------------------------------------------------------------------------- */
+add('digit_gap', 'Read Ticks Since Digit Last Appeared', 17, 'adv_gap', {
+    output: 'Number',
+    fields: [digit()],
+    help: 'How many genuine ticks have passed since that digit was last the final digit; 0 means the newest tick ended in it. Inconclusive until that digit has appeared once this session, so it never reads as a fake zero.',
+});
+add('frequency_rank', 'Check Digit Frequency Rank', 17, 'adv_frequency_rank', {
+    output: 'Condition',
+    fields: [digit(), pick('RANK', 'rank', ['top', 'bottom']), num('N', 'digits', 3, 1, 10)],
+    help: 'True when that digit sits among the most (top) or least (bottom) frequent digits of the analysis window. Ties choose the lower digit, so one window always gives the same ranking.',
+});
+add('entropy', 'Get Window Entropy', 17, 'adv_entropy', {
+    output: 'Number',
+    help: 'Shannon entropy of the analysis window in bits: 0 means one digit took every tick, and 3.32 is a perfectly even spread. It describes how clustered the window is — never a prediction of the next tick.',
+});
+add('entropy_state', 'Check Window Randomness', 17, 'adv_entropy_state', {
+    output: 'Condition',
+    fields: [pick('STATE', 'state', ['Clustered', 'Random'])],
+    help: 'True when the window’s entropy says the digits are clustered (below the structural threshold, some digits dominating) or random (at or above it, an even spread). It reads the same 2.95-bit boundary the Digits page uses and guards itself with Inconclusive on an empty window.',
+});
+add('parity_run', 'Read Current Parity Run', 19, 'adv_parity_run', {
+    output: 'Number',
+    help: 'How many of the newest ticks in a row share the same parity — the length of the even run or the odd run the newest tick belongs to. 1 means the parity just changed.',
+});
+add('parity_switches', 'Count Parity Switches', 19, 'adv_parity_switches', {
+    output: 'Number',
+    fields: [num('N', 'ticks (0 = whole window)', 50, 0, 1000)],
+    help: 'How many times parity changed between consecutive ticks inside the newest N ticks; 0 reads the whole observed window. A high count is choppy parity, a low one is long even or odd runs.',
+});
+add('repeat_rate', 'Get Digit Repeat Rate', 19, 'adv_repeat_rate', {
+    output: 'Number',
+    fields: [num('N', 'ticks (0 = whole window)', 50, 0, 1000)],
+    help: 'The share of adjacent tick pairs in the window that ended in the same digit, in percent; 0 reads the whole observed window. A fair window sits near 10%, so a very high or very low reading describes how repetitive the window is.',
+});
+
+/* -------------------------------------------------------------------------------------------
+ * Palette pruning.
+ *
+ * These blocks stay REGISTERED — the flag only keeps them out of the Blocks menu and the Blocks
+ * help, so a saved workspace that still carries one validates and runs exactly as before. Their
+ * ops stay in `services/observer/` for the same reason the renamed ops do (see the
+ * "older saved configurations" tests). Each entry notes the block that replaces it.
+ * ----------------------------------------------------------------------------------------- */
+const SUPERSEDED = [
+    // Kept registered; the listed block already does the same thing.
+    'obs_previous', // Read Digit N Ticks Ago (N = 1)
+    'obs_digit_frequency', // Get Digit Frequency Percentage
+    'obs_digit_count', // Get Digit Occurrence Count
+    'obs_combined_frequency', // Get Combined Digit Frequency
+    'obs_transition', // Get Digit Transition Frequency (the sampled block below)
+    'obs_frequency_transition', // Get Digit Transition Frequency
+    'obs_frequency_stability', // Digit Is Stable Across N Windows
+    'obs_compare_frequency_windows', // Get Digit Frequency Change
+    'obs_read_digit_streak', // Get Current Digit Streak
+    'obs_current_streak_length', // Get Current Digit Streak
+    'obs_find_digit_streak', // Get Longest Digit Streak
+    'obs_longest_historical_streak', // Get Longest Digit Streak
+    'obs_stat_minimum', // Check Minimum Sample Size
+    'obs_pattern_parity_stability', // Check Parity Stability
+    'obs_genuine_tick', // When New Tick Arrives
+    'obs_emit_parity', // Emit Setup Detected
+    'obs_reset_session', // Reset Analysis State
+    'obs_reset_to_pair', // Reset Pattern Detector
+    'obs_new_cycle', // Reset Pattern Detector
+    'obs_continue', // no-op marker: the sequence already carries on to the next block
+    'obs_use_market', // no-op marker: the market is set once, in Trade parameters
+    'obs_next_genuine', // End Current Evaluation
+    'obs_monitor_start', // Resume Monitoring
+    'obs_monitor_pause', // Pause Bot
+    'obs_monitor_stop', // Stop Bot
+    // Replaced by one parameterised block.
+    'obs_waiting_pair', // Pattern Stage Is
+    'obs_waiting_confirmation', // Pattern Stage Is
+    'obs_setup_detected', // Pattern Stage Is
+    'obs_evaluation_pending', // Pattern Stage Is
+    'obs_in_cooldown', // Pattern Stage Is
+    'obs_even_run', // Detect Consecutive Run
+    'obs_odd_run', // Detect Consecutive Run
+    'obs_identical', // Detect Consecutive Run
+    'obs_even_confirmation', // Wait For Configured Parity
+    'obs_odd_confirmation', // Wait For Configured Parity
+    'obs_check_even_frequency', // Check Parity Frequency
+    'obs_check_odd_frequency', // Check Parity Frequency
+    'obs_research_over', // Compare Strategy Candidate
+    'obs_research_under', // Compare Strategy Candidate
+    'obs_research_matches', // Compare Strategy Candidate
+    'obs_research_differs', // Compare Strategy Candidate
+    'obs_research_even', // Compare Strategy Candidate
+    'obs_research_odd', // Compare Strategy Candidate
+];
+const SUPERSEDED_TYPES = new Set(SUPERSEDED);
+BLOCKS.forEach(spec => {
+    if (SUPERSEDED_TYPES.has(spec.type)) spec.hidden = true;
+});
+
 /**
  * The four Blocks-menu groups the observer palette is presented under. Every catalogue category
  * belongs to exactly one group.
@@ -808,6 +948,19 @@ export const GROUPS = [
 
 export const GROUP_OF_CATEGORY = new Map(GROUPS.flatMap(group => group.categories.map(category => [category, group])));
 export const groupFor = spec => GROUP_OF_CATEGORY.get(spec.category);
-export const blocksInGroup = group => BLOCKS.filter(spec => group.categories.includes(spec.category));
+
+/**
+ * The blocks a group offers in the palette: superseded duplicates are left out, since they are
+ * only kept registered so an older saved workspace still validates. The Blocks help reads the same
+ * list, so the guide and the palette can never disagree about what a group holds.
+ */
+export const blocksInGroup = group => BLOCKS.filter(spec => !spec.hidden && group.categories.includes(spec.category));
+
+/** A group's blocks split under one heading per catalogue category, in the order the group lists them. */
+export const subcategoriesInGroup = group =>
+    group.categories
+        .map(category => ({ category, blocks: blocksInGroup(group).filter(spec => spec.category === category) }))
+        .filter(entry => entry.blocks.length > 0);
+
 export const SPEC = new Map(BLOCKS.map(block => [block.type, block]));
 export const defaults = type => Object.fromEntries((SPEC.get(type)?.fields ?? []).map(field => [field.name, field.value]));

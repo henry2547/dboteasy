@@ -66,30 +66,31 @@ const observerCategories = (groupId: string) => {
 
 const GROUP_TEXT: Record<string, { what: string; steps: string[] }> = {
     observer_digit_frequency: {
-        what: 'The detailed digit analysis blocks: counts, percentages, streaks, matches, over/under and stability. Each one reads the live ticks of your selected market and reports Inconclusive when there is not enough genuine data.',
+        what: 'The detailed digit analysis blocks: counts, percentages, streaks, matches, over/under and stability. Each one reads the live ticks of your selected market and reports Inconclusive when there is not enough genuine data. The group opens into its own sub-categories, so you pick the kind of reading first and the block second.',
         steps: [
             'Set the market in 1. Trade parameters — every block in this group analyses that market.',
-            'Expand the group in the Blocks menu and drag the reader you need, for example Get Digit Frequency Percentage or Get Digit Occurrence Count.',
+            'Expand the group, then a sub-category inside it, and drag the reader you need — for example Get Digit Frequency Percentage or Get Digit Occurrence Count.',
             'Compare what it returns with the Logic & Comparison blocks (Greater Than, Is Between …), then feed that condition into an if block.',
             'Guard the reading with Check Minimum Sample Size, or Require Minimum Sample Size for entry, before you trust it — a handful of ticks says very little.',
+            'For a deeper look use Window statistics: set the window with Analyse Last N Ticks, then read gaps (Read Ticks Since Digit Last Appeared), repetition (Get Digit Repeat Rate) or how clustered the window is (Get Window Entropy, Check Window Randomness).',
         ],
     },
     observer_pattern_parity: {
-        what: 'Blocks that watch a pattern build up and confirm, instead of judging one tick: runs of even or odd digits, parity switches and streaks coming to an end.',
+        what: 'Blocks that watch a pattern build up and confirm, instead of judging one tick: runs of even or odd digits, parity switches and streaks coming to an end. The group opens into its own sub-categories.',
         steps: [
-            'Start from a waiting block — Wait For Even Confirmation, Wait For Configured Parity — so the bot waits for the pattern instead of assuming it.',
-            'Describe the pattern with the detection blocks: Detect N Consecutive Even Digits, Parity Pattern (initial run, confirmation, target) or Digit Sequence Matches Pattern.',
-            'Emit the setup with Emit Even/Odd Setup, then judge the next tick with Evaluate Next Tick Parity.',
-            'Read how the pattern ended in Entry & monitoring → Learning & Observation.',
+            'Start from a confirmation rule — Wait For Configured Parity or Wait For Confirmation Digit — so the bot waits for the pattern instead of assuming it.',
+            'Describe the pattern with the detection blocks: Detect Consecutive Run (identical, even or odd digits), Detect Consecutive Digit Pair, Parity Pattern (initial run, confirmation, target) or Digit Sequence Matches Pattern.',
+            'Emit the setup with Emit Setup Detected, then judge the next tick with Evaluate Next Tick Parity or Evaluate Next Tick Against Barrier.',
+            'Follow the cycle with Pattern Stage Is (Waiting for pair, Waiting for confirmation, Setup detected, Evaluation pending, Cooldown), and read the run lengths it sees with Read Current Parity Run, Count Parity Switches or Read Ticks Since Digit Last Appeared.',
         ],
     },
     observer_control: {
-        what: 'The housekeeping of an observational bot: when each group of blocks runs, which market is read, how conditions are combined and where values are remembered.',
+        what: 'The housekeeping of an observational bot: when each group of blocks runs, which market is read, how conditions are combined and where values are remembered. The group opens into its own sub-categories.',
         steps: [
             'Drag an event block first — When Bot Starts, When New Tick Arrives, When Analysis Window Updates — and nest everything that should happen at that moment inside it.',
             'Combine conditions with IF / IF-ELSE, AND, OR and NOT.',
             'Keep a value for a later tick in a variable; Reset Analysis State clears the stored values.',
-            'Leave the market to 1. Trade parameters, or read it with Use Currently Selected Market and react with When Market Changes.',
+            'Leave the market to 1. Trade parameters — the market is set once there — and react to a switch with When Market Changes or read it with Read Market Symbol.',
         ],
     },
     observer_entry_monitoring: {

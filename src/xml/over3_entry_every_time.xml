@@ -84,7 +84,7 @@
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
-                      </block>
+                      <next><block type="risk_set_limits" id="freebot-over3-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-over3-risk-reset"><next><block type="learn_set_strategy" id="freebot-over3-learn-strategy"><field name="NAME">Over 3 — Entry Every Time</field><next><block type="market_discover_eligible" id="freebot-over3-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-over3-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block>
                     </next>
                   </block>
                 </next>
@@ -137,11 +137,9 @@
             </value>
           </block>
         </value>
-        <statement name="DO0">
-          <block type="purchase" id="freebot-over3-purchase">
+        <statement name="DO0"><block type="controls_if" id="freebot-over3-strategy-entry"><mutation else="1"></mutation><value name="IF0"><block type="logic_operation" id="freebot-over3-session-guards"><field name="OP">AND</field><value name="A"><block type="logic_operation" id="freebot-over3-session-guards-strategy"><field name="OP">AND</field><value name="A"><block type="digits_bar_neutral" id="freebot-over3-digit-bar-neutral"><field name="DIGIT">3</field><value name="SAMPLE"><shadow type="math_number" id="freebot-over3-digit-bar-sample"><field name="NUM">100</field></shadow></value></block></value><value name="B"><block type="risk_can_trade" id="freebot-over3-risk-guard"></block></value></block></value><value name="B"><block type="logic_operation" id="freebot-over3-session-guards-execution"><field name="OP">AND</field><value name="A"><block type="logic_negate" id="freebot-over3-no-open-contract"><value name="BOOL"><block type="exec_has_open_contract" id="freebot-over3-open-contract"></block></value></block></value><value name="B"><block type="logic_negate" id="freebot-over3-trade-limit-ok"><value name="BOOL"><block type="bot_trade_limit_reached" id="freebot-over3-trade-limit"><value name="LIMIT"><shadow type="math_number" id="freebot-over3-trade-limit-value"><field name="NUM">250</field></shadow></value></block></value></block></value></block></value></block></value><statement name="DO0"><block type="controls_if" id="freebot-over3-observer-entry"><mutation else="1"></mutation><value name="IF0"><block type="obs_and" id="freebot-over3-observer-gate"><value name="A"><block type="obs_compare_lte" id="freebot-over3-prev-digit"><value name="A"><block type="obs_ago" id="freebot-over3-prev-digit-ago"><field name="N">1</field></block></value><value name="B"><block type="obs_number" id="freebot-over3-prev-digit-limit"><field name="VALUE">3</field></block></value></block></value><value name="B"><block type="obs_and" id="freebot-over3-monitor-gates"><value name="A"><block type="obs_and" id="freebot-over3-data-gates"><value name="A"><block type="obs_fresh" id="freebot-over3-data-fresh"></block></value><value name="B"><block type="obs_require_sample" id="freebot-over3-entry-sample"><field name="N">100</field></block></value></block></value><value name="B"><block type="obs_parity_switched" id="freebot-over3-parity-switch"></block></value></block></value></block></value><statement name="DO0"><block type="purchase" id="freebot-over3-purchase">
             <field name="PURCHASE_LIST">DIGITOVER</field>
-          </block>
-        </statement>
+          </block></statement><statement name="ELSE"><block type="notify" id="freebot-over3-observer-wait-notify"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field><value name="MESSAGE"><shadow type="text" id="freebot-over3-observer-wait-notify-text"><field name="TEXT">Waiting · observer gate</field></shadow></value></block></statement></block></statement><statement name="ELSE"><block type="notify" id="freebot-over3-strategy-wait-notify"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field><value name="MESSAGE"><shadow type="text" id="freebot-over3-strategy-wait-notify-text"><field name="TEXT">Waiting · strategy guard</field></shadow></value></block></statement></block></statement>
         <statement name="ELSE">
           <block type="text_join" id="freebot-over3-entry-wait-notice">
             <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
@@ -211,7 +209,7 @@
               </block>
             </value>
             <next>
-              <block type="controls_if" id="freebot-over3-take-profit"><mutation else="1"></mutation>
+              <block type="report_journal" id="freebot-over3-result-report"><field name="LEVEL">info</field><value name="MESSAGE"><shadow type="text" id="freebot-over3-result-report-text"><field name="TEXT">Result</field></shadow><block type="exec_last_result" id="freebot-over3-result-report-value"></block></value><next><block type="report_journal" id="freebot-over3-session-report"><field name="LEVEL">info</field><value name="MESSAGE"><shadow type="text" id="freebot-over3-session-report-text"><field name="TEXT">Session report</field></shadow><block type="report_session" id="freebot-over3-session-report-value"></block></value><next><block type="controls_if" id="freebot-over3-take-profit"><mutation else="1"></mutation>
                 <value name="IF0">
                   <block type="logic_compare" id="freebot-over3-take-profit-compare">
                     <field name="OP">GTE</field>
@@ -322,7 +320,7 @@
                     </next>
                   </block>
                 </next>
-              </block>
+              </block></next></block></next></block>
             </next>
           </block>
         </next>

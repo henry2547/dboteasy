@@ -84,7 +84,7 @@
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
-                      </block>
+                      <next><block type="risk_set_limits" id="freebot-under8-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-under8-risk-reset"><next><block type="learn_set_strategy" id="freebot-under8-learn-strategy"><field name="NAME">Under 8 — Two High Digits in a Row</field><next><block type="market_discover_eligible" id="freebot-under8-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-under8-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block>
                     </next>
                   </block>
                 </next>
@@ -140,6 +140,8 @@
         <statement name="DO0">
           <block type="controls_if" id="freebot-under8-observer-entry"><mutation else="1"></mutation>
   <value name="IF0">
+<block type="logic_operation" id="freebot-under8-strategy-gate"><field name="OP">AND</field><value name="A"><block type="logic_operation" id="freebot-under8-session-guards"><field name="OP">AND</field><value name="A"><block type="logic_operation" id="freebot-under8-session-guards-strategy"><field name="OP">AND</field><value name="A"><block type="digits_bar_neutral" id="freebot-under8-digit-bar-neutral"><field name="DIGIT">8</field><value name="SAMPLE"><shadow type="math_number" id="freebot-under8-digit-bar-sample"><field name="NUM">100</field></shadow></value></block></value><value name="B"><block type="risk_can_trade" id="freebot-under8-risk-guard"></block></value></block></value><value name="B"><block type="logic_operation" id="freebot-under8-session-guards-execution"><field name="OP">AND</field><value name="A"><block type="logic_negate" id="freebot-under8-no-open-contract"><value name="BOOL"><block type="exec_has_open_contract" id="freebot-under8-open-contract"></block></value></block></value><value name="B"><block type="logic_negate" id="freebot-under8-trade-limit-ok"><value name="BOOL"><block type="bot_trade_limit_reached" id="freebot-under8-trade-limit"><value name="LIMIT"><shadow type="math_number" id="freebot-under8-trade-limit-value"><field name="NUM">250</field></shadow></value></block></value></block></value></block></value></block></value><value name="B"><block type="obs_and" id="freebot-under8-all-gates">
+  <value name="A">
 <block type="obs_compare_gte" id="freebot-under8-prev-gte">
   <value name="A">
     <block type="obs_ago" id="freebot-under8-prev">
@@ -152,6 +154,25 @@
     </block>
   </value>
 </block>
+  </value>
+  <value name="B">
+    <block type="obs_and" id="freebot-under8-monitor-gates">
+      <value name="A">
+        <block type="obs_and" id="freebot-under8-data-gates">
+          <value name="A">
+            <block type="obs_fresh" id="freebot-under8-data-fresh"></block>
+          </value>
+          <value name="B">
+            <block type="obs_require_sample" id="freebot-under8-entry-sample"><field name="N">100</field></block>
+          </value>
+        </block>
+      </value>
+      <value name="B">
+        <block type="obs_parity_switched" id="freebot-under8-parity-switch"></block>
+      </value>
+    </block>
+  </value>
+</block></value></block>
   </value>
   <statement name="DO0">
 <block type="purchase" id="freebot-under8-purchase">
@@ -267,7 +288,7 @@
               </block>
             </value>
             <next>
-              <block type="controls_if" id="freebot-under8-take-profit"><mutation else="1"></mutation>
+              <block type="report_journal" id="freebot-under8-result-report"><field name="LEVEL">info</field><value name="MESSAGE"><shadow type="text" id="freebot-under8-result-report-text"><field name="TEXT">Result</field></shadow><block type="exec_last_result" id="freebot-under8-result-report-value"></block></value><next><block type="report_journal" id="freebot-under8-session-report"><field name="LEVEL">info</field><value name="MESSAGE"><shadow type="text" id="freebot-under8-session-report-text"><field name="TEXT">Session report</field></shadow><block type="report_session" id="freebot-under8-session-report-value"></block></value><next><block type="controls_if" id="freebot-under8-take-profit"><mutation else="1"></mutation>
                 <value name="IF0">
                   <block type="logic_compare" id="freebot-under8-take-profit-compare">
                     <field name="OP">GTE</field>
@@ -378,7 +399,7 @@
                     </next>
                   </block>
                 </next>
-              </block>
+              </block></next></block></next></block>
             </next>
           </block>
         </next>

@@ -160,9 +160,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **77** for every template with an
-  extra digit filter (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **81** for `over2_three_low_digits` and **133** for the two-leg
+  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **83** for every template with an
+  extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
+  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **133** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
@@ -175,7 +175,14 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
   `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares), `under7_rare_nine` /
   `under5_nine_rare` (`obs_and` over `obs_min_sample` + `obs_freq_below`) and `over4_five_hot`
-  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). Those observer blocks sit NESTED inside the
+  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). **Each of those six gates draws on
+  all four palette groups**: the digit/frequency condition (`obs_ago`, `obs_compare_*`, `obs_number`,
+  `obs_min_sample`, `obs_freq_*`) is ANDed — through three nested `obs_and` — with `obs_parity_switched`
+  (Pattern detection & parity), `obs_fresh` (Observer control, market data within the 15 s freshness limit)
+  and `obs_require_sample` N=100 (Entry & monitoring). The gate blocks therefore add six blocks per template
+  (83/87 canvas count above), and `templates.test.ts` ("gates on all four block groups") maps every `obs_*`
+  type in the asset through the catalogue's `GROUP_OF_CATEGORY` and fails unless all four `GROUPS` ids
+  contribute — so a template cannot silently drop back to one group. Those observer blocks sit NESTED inside the
   `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
   then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
   gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`
@@ -337,8 +344,37 @@ Builder palette. `rsbuild.config.ts` has a single `index` entry again.
   a block type `Run` failed with
   `JavaScript generator does not know how to generate code for block type "obs_…"`.
 - The palette entry point is `src/pages/bot-builder/toolbox/toolbox-items.tsx`: right after the
-  legacy `digits` category it maps `GROUPS` to four `<Category>` elements and lists each group's
-  blocks with their default field values. The legacy trading categories are untouched.
+  legacy `digits` category it maps `GROUPS` to four `<Category>` elements — **each group holds one
+  nested `<Category>` per catalogue category** (`subcategoriesInGroup(group)`), so a group of
+  forty-odd blocks is browsed a handful at a time instead of one long flyout. Nested category ids
+  are `<group id>__<slug of the category>`, which keeps them from colliding with the legacy
+  categories (`digits`, `variables`, `notifications`, …); the toolbox store already handled nested
+  categories for `analysis`/`utility`, so its expand rows and its search both pick these up. The
+  legacy trading categories are untouched.
+- **Superseded blocks: registered but not listed.** The catalogue marks a duplicate with
+  `hidden: true` from the `SUPERSEDED` list at the bottom of `observer-catalog.js` (one line per
+  block, naming the block that replaces it), and `blocksInGroup(group)` skips it — the palette and
+  the Blocks help both read that helper, so they cannot disagree. A hidden block keeps its
+  `window.Blockly.Blocks` registration, its generator and its op, so a saved workspace that still
+  carries one validates and runs exactly as it did; that is the same convention the renamed ops
+  follow (`observer-validation.test.js`, "older saved configurations"). Never remove a block from
+  `BLOCKS` to prune the palette — hide it, or `observer-validate.js` starts refusing the run for
+  every workspace that used it.
+- **Consolidated families:** one parameterised block replaced each family of one-choice copies —
+  `obs_pattern_stage_is` (was five "Is Waiting For …" blocks), `obs_detect_run` (was
+  `obs_identical` + `obs_even_run` + `obs_odd_run`), `obs_check_parity_frequency` (was the two
+  parities' blocks) and `obs_research_candidate` (was the six "Compare … Pattern" blocks). The
+  older types stay defined and hidden.
+- **Advanced window reads** (`observer-values.js` holds the maths, `observer-evaluators.js` the
+  ops): `obs_digit_gap` (`adv_gap`), `obs_frequency_rank` (`adv_frequency_rank`, ranks only digits
+  the window really holds, ties to the lower digit), `obs_entropy` / `obs_entropy_state`
+  (`adv_entropy`, `adv_entropy_state`; `STRUCTURAL_CLUSTER_BITS = 2.95` is the same boundary the
+  Digits page's entropy engine uses), `obs_parity_run` (`adv_parity_run`), `obs_parity_switches`
+  (`adv_parity_switches`) and `obs_repeat_rate` (`adv_repeat_rate`). A size field of `0` means "the
+  whole observed window". All of them answer Inconclusive rather than a fabricated zero.
+- Coverage for the pruning, the consolidations and the advanced reads lives in
+  `services/observer/__tests__/observer-advanced-blocks.test.js`, which also pins that every
+  observer block the free-bot XML uses stays in the palette.
 
 | Group id | Palette name | Observer categories inside |
 | --- | --- | --- |

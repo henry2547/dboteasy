@@ -151,6 +151,83 @@ export const frequencyChange = frequencies =>
 export const parityWindowFrequencies = (digits, parity, size) =>
     completeWindows(digits, size).map(window => parityFrequency(window, parity));
 
+/** How many ticks have passed since a digit was last the final digit; 0 is the newest tick, null if never seen. */
+export const gapSinceDigit = (digits, digit) => {
+    for (let index = digits.length - 1; index >= 0; index -= 1) {
+        if (Number(digits[index]) === Number(digit)) return digits.length - 1 - index;
+    }
+    return null;
+};
+
+/** Length of the run of one parity ending at the newest tick — 1 when the parity just changed. */
+export const currentParityRun = digits => {
+    if (!digits.length) return 0;
+    const parity = parityOf(digits[digits.length - 1]);
+    let length = 0;
+    for (let index = digits.length - 1; index >= 0; index -= 1) {
+        if (parityOf(digits[index]) !== parity) break;
+        length += 1;
+    }
+    return length;
+};
+
+/** Parity changes between consecutive ticks inside a window; a size of 0 (or less) reads the whole window. */
+export const paritySwitchCount = (digits, size = 0) => {
+    const window = Number(size) > 0 ? windowOf(digits, size) : digits;
+    let switches = 0;
+    for (let index = 1; index < window.length; index += 1) {
+        if (parityOf(window[index]) !== parityOf(window[index - 1])) switches += 1;
+    }
+    return switches;
+};
+
+/** Share of adjacent tick pairs that ended in the same digit, in percent; NaN below two ticks. */
+export const repeatRate = (digits, size = 0) => {
+    const window = Number(size) > 0 ? windowOf(digits, size) : digits;
+    if (window.length < 2) return NaN;
+    let repeats = 0;
+    for (let index = 1; index < window.length; index += 1) {
+        if (Number(window[index]) === Number(window[index - 1])) repeats += 1;
+    }
+    return percentage(repeats, window.length - 1);
+};
+
+/** The window's digits ordered most frequent first; ties choose the lower digit, so a window has one ranking. */
+export const digitsByFrequency = digits =>
+    countsPerDigit(digits)
+        .map((count, digit) => ({ digit, count }))
+        .sort((a, b) => b.count - a.count || a.digit - b.digit);
+
+/** True when a digit sits among the `size` most (top) or least (bottom) frequent digits; null on an empty window. */
+export const isDigitInFrequencyRank = (digits, digit, rank, size) => {
+    if (!digits.length) return null;
+    const count = Math.min(Math.max(1, Math.trunc(Number(size) || 1)), 10);
+    // Only the digits the window really holds are ranked: an unseen digit has a count of 0 but no
+    // rank, so it is neither "most frequent" nor honestly "least frequent".
+    const observed = digitsByFrequency(digits).filter(entry => entry.count > 0);
+    if (!observed.length) return null;
+    const picks = String(rank).toLowerCase().startsWith('bottom')
+        ? [...observed].sort((a, b) => a.count - b.count || a.digit - b.digit).slice(0, count)
+        : observed.slice(0, count);
+    return picks.some(entry => entry.digit === Number(digit));
+};
+
+/** Shannon entropy of the window in bits; 0 when one digit holds every tick, NaN on an empty window. */
+export const windowEntropy = digits => {
+    if (!digits.length) return NaN;
+    return countsPerDigit(digits).reduce((total, count) => {
+        if (!count) return total;
+        const share = count / digits.length;
+        return total - share * Math.log2(share);
+    }, 0);
+};
+
+/** log2(10): the entropy of a perfectly even ten-digit window — the ceiling every reading sits below. */
+export const MAX_ENTROPY_BITS = Math.log2(10);
+
+/** Below this a window is structurally clustered. The same 2.95-bit boundary the Digits page's entropy engine uses. */
+export const STRUCTURAL_CLUSTER_BITS = 2.95;
+
 /** null when the window is too short to compare, otherwise true/false. */
 export const matchesSequence = (digits, sequence) => {
     if (!sequence.length || digits.length < sequence.length) return null;

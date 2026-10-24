@@ -109,6 +109,14 @@ export const STATEMENTS = {
     pattern_detect_identical: (ctx, block) => ctx.detectRun('digit', Number(block.fields.N)),
     pattern_detect_even: (ctx, block) => ctx.detectRun('even', Number(block.fields.N)),
     pattern_detect_odd: (ctx, block) => ctx.detectRun('odd', Number(block.fields.N)),
+    // `obs_detect_run` says in one dropdown what the three blocks above say in their names.
+    pattern_detect_run: (ctx, block) => {
+        const kind = String(block.fields.KIND);
+        const run = Number(block.fields.N);
+        if (kind.toLowerCase().startsWith('even')) return ctx.detectRun('even', run);
+        if (kind.toLowerCase().startsWith('odd')) return ctx.detectRun('odd', run);
+        return ctx.detectRun('digit', run);
+    },
     pattern_detect_parity: (ctx, block) =>
         ctx.detectParityPattern({
             initial: String(block.fields.INITIAL),
