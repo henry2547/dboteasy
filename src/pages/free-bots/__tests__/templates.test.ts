@@ -269,6 +269,33 @@ describe('Free Bots templates', () => {
         expect(report.blockCount).toBe(101);
     });
 
+    it.each(FREE_BOT_TEMPLATES)('$name keeps "Trade again" as the last block of its stack', template => {
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+        const trade_again = Array.from(doc.querySelectorAll('block[type="trade_again"]'));
+
+        expect(trade_again).toHaveLength(1);
+        // `trade_again` has no next connection at all (`setNextStatement(false)`), so a block chain
+        // hung off its `<next>` aborts the whole import after the first part of after_purchase loaded:
+        // the Bot Builder reports "XML file contains unsupported elements. Please check or modify
+        // file." and every after-purchase block stays unrendered. Anything the settlement has to
+        // journal therefore goes BEFORE `trade_again` in the same statement.
+        trade_again.forEach(block => expect(block.querySelector('next')).toBeNull());
+    });
+
+    it('the recovery bot reads 10.3% on the rare digits and waits for three high digits', () => {
+        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+        const percent_of = (selector: string) => doc.querySelector(selector)?.textContent?.trim();
+
+        // Over 1 waits for digit 0 and digit 1 under 10.3% of the last 1000 ticks ...
+        expect(percent_of('block[id="freebot-o1u6-observer-rare-one"] field[name="PERCENT"]')).toBe('10.3');
+        expect(percent_of('block[id="freebot-o1u6-p1-shares"] value[name="PERCENT"] field[name="NUM"]')).toBe('10.3');
+        // ... and the Under 6 recovery waits for three ticks in a row above 6 (7, 8 or 9).
+        expect(percent_of('block[id="freebot-o1u6-init-num-runs"] field[name="NUM"]')).toBe('3');
+        expect(percent_of('block[id="freebot-o1u6-rec-high-run"] field[name="MODE"]')).toBe('above');
+        expect(percent_of('block[id="freebot-o1u6-rec-high-run"] field[name="DIGIT"]')).toBe('6');
+    });
+
     it.each(FREE_BOT_TEMPLATES)('$name keeps its logic when the market is swapped', template => {
         const patched = applyMarketToXml(assetOf(template), {
             symbol: 'R_100',

@@ -540,7 +540,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             contractType: 'DIGITUNDER',
             prediction: 6,
             trigger:
-                'the loss count is 1 or more and the last five ticks each ended 7, 8 or 9 — digits above 6, with a 9 counting like 7 and 8',
+                'the loss count is 1 or more and the last three ticks each ended 7, 8 or 9 — digits above 6, with a 9 counting like 7 and 8',
         },
         prediction: 1,
         durationTicks: 1,
@@ -552,9 +552,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 5,
         entryRule:
-            'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.5% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
+            'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.3% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
         buyCondition:
-            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6, digit 0 and digit 1 are both under 10.5% of the last 1000 ticks, and neither digit 5 nor digit 6 carries a green (hottest) or red (coldest) bar. At 1 or more it waits for the Under 6 recovery instead: the last five ticks in a row each ended 7, 8 or 9 — every one of them above 6, so a 6 breaks the wait (7, 9, 8, 9, 9 counts, 6, 8, 7, 9, 9 does not), and a 9 on the newest tick counts as a high digit like 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
+            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6, digit 0 and digit 1 are both under 10.3% of the last 1000 ticks, and neither digit 5 nor digit 6 carries a green (hottest) or red (coldest) bar. At 1 or more it waits for the Under 6 recovery instead: the last three ticks in a row each ended 7, 8 or 9 — every one of them above 6, so a 6 breaks the wait (9, 9, 8 counts, 8, 6, 9 does not), and a 9 on the newest tick counts as a high digit like 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
         afterPurchase:
             'Win → stake back to 10 and the loss count back to 0 (Over 1 again) · Loss → stake × 2 and the loss count + 1 (Under 6 recovery) · the session exits on the take-profit or stop-loss variable',
         restartCondition:

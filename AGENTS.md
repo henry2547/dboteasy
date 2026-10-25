@@ -168,7 +168,19 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
   `-3`, …). `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
-  that formula in sync if a template gains blocks (the unit test pins 66 for the first template only).
+  that formula in sync if a template gains blocks (the unit test pins 101 for the first template only).
+- **Never hang a block chain off `trade_again`'s `<next>`.** `trade_again` calls
+  `setNextStatement(false)`, so it has no next connection at all. An asset that nests its
+  `report_journal` chain as `trade_again`'s `<next>` loads as far as that block and then throws
+  `Error: The text content is null.` from `FieldDropdown.render_` — the load aborts, the whole
+  `after_purchase` stack stays unrendered, and the user sees the Bot Builder's
+  "XML file contains unsupported elements. Please check or modify file." with no clue which block is
+  wrong. `even_odd_window` and `over1_under6_recovery` both did this (the tail of `after_purchase`
+  never reached the canvas, and the reports were dead code after `trade_again`'s `return true`); the
+  report chain now sits BEFORE `trade_again` in the same `statement`, which is also the order the
+  working templates use. Keep `trade_again` the last block of any stack, and reach for
+  `python3 -c` / a scratch `Blockly.Workspace` check on `trade_again`'s `<next>` before shipping an
+  asset: the unit tests read block TYPES and counts, so this shape loads "fine" on paper.
 - **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
   two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7) and a second
   entry gate built from
@@ -207,9 +219,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `OP=AND`, otherwise the load reports an unsupported block type.
 - **Bot 15 keeps every number in a variable seeded by "Run once at start".** `INITIALIZATION` sets
   `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 20,
-  `freebot:stop-loss` −50 and `freebot:runs` 5 (plus a stake of 20/profit/stop/trades/initialised), and the
+  `freebot:stop-loss` −50 and `freebot:runs` 3 (plus a stake of 20/profit/stop/trades/initialised), and the
   blocks call those variables instead of repeating literals. Only the digit gates keep literal numbers
-  (10.5% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
+  (10.3% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
   straight from the shadow.
   - **The prediction gate sits OUTSIDE the `not initialised` guard**, chained as its `<next>`: the guard
     seeds once, while the gate must run on every trade loop — `Bot.start()` reads the trade options
@@ -221,10 +233,10 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
     `freebot:loss-count GTE 1` → the Under 6 recovery. The Over 1 leg needs the newest digit to be 5 or
     6 (two nested compares, `last digit ≥ 5` then `last digit ≤ 6` — the entry inspector reads the first
     `last_digit` compare, so that one must stay the outer one and the loss-count compare above it must
-    stay `last_digit`-free) with digit 0 and digit 1 both under 10.5% of the last 1000 ticks and
+    stay `last_digit`-free) with digit 0 and digit 1 both under 10.3% of the last 1000 ticks and
     `digits_bar_neutral` on digit 5 AND digit 6 (one `logic_operation` with `OP=AND` over two neutral
     reads, sample 100). The recovery leg only needs `digits_high_run` (`above` 6, COUNT ←
-    `freebot:runs`): five ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
+    `freebot:runs`): three ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
     newest tick never stops the wait, then it buys
     `DIGITUNDER`. Keeping the two legs as IF/ELSE-IF branches is what lets a 7, 8 or 9 reach the
     recovery — as a trailing step with the Over gate's ELSE it could never run on those digits.
