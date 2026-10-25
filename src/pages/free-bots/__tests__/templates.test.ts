@@ -282,6 +282,31 @@ describe('Free Bots templates', () => {
         trade_again.forEach(block => expect(block.querySelector('next')).toBeNull());
     });
 
+    it.each(FREE_BOT_TEMPLATES)('$name declares every branch its IF blocks use', template => {
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+
+        // Blockly only creates the inputs a `controls_if` mutation declares, and it skips an input
+        // it cannot find without failing the load: an `ELSE` (or `ELSEIF`) statement on a block whose
+        // mutation does not declare it is dropped silently, so the canvas holds fewer blocks than the
+        // template and the loader reports stale blocks instead of loading the bot.
+        Array.from(doc.querySelectorAll('block[type="controls_if"]')).forEach(block => {
+            const mutation = block.querySelector('mutation');
+            const elseif_count = Number(mutation?.getAttribute('elseif') ?? 0);
+            const declared = new Set(['IF0', 'DO0']);
+            for (let index = 1; index <= elseif_count; index++) {
+                declared.add(`IF${index}`);
+                declared.add(`DO${index}`);
+            }
+            if (mutation?.getAttribute('else') === '1') declared.add('ELSE');
+
+            const used = Array.from(block.children)
+                .filter(child => child.tagName === 'value' || child.tagName === 'statement')
+                .map(child => child.getAttribute('name'));
+
+            expect(used.filter(name => !declared.has(name as string))).toEqual([]);
+        });
+    });
+
     it('the recovery bot reads 10.3% on the rare digits and waits for three high digits', () => {
         const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
         const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');

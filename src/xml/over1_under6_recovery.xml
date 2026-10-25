@@ -276,7 +276,7 @@
   </block>
   <block type="before_purchase" id="freebot-o1u6-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-o1u6-session-guard">
+      <block type="controls_if" id="freebot-o1u6-session-guard"><mutation else="1"></mutation>
         <value name="IF0">
           <block type="logic_operation" id="freebot-o1u6-session-guard-and">
             <field name="OP">AND</field>

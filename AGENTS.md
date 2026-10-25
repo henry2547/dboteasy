@@ -162,11 +162,18 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
   **66** for the plain Over/Under templates, **83** for `even_odd_window`, **83** for every template with an
   extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **133** for the two-leg
+  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **163** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
-  `-3`, …). `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  `-3`, …). **A `controls_if` also drops its branch silently when its `<mutation>` does not declare it**:
+  Blockly only creates the inputs the mutation asks for (`IF1`/`DO1` need `elseif="1"`, `ELSE` needs
+  `else="1"`), logs `Ignoring non-existent input ELSE in block controls_if`, and skips the whole branch
+  instead of failing. The recovery asset's `freebot-o1u6-session-guard` had an `ELSE` with
+  `<mutation>` missing, so its "Waiting · session guard" notify never reached the canvas and every load
+  ended in the block-count message (161 held vs 163 in the template) — the
+  `declares every branch its IF blocks use` test now pins the mutation against the branches each asset
+  uses. `loadBot` compares the block count with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
   that formula in sync if a template gains blocks (the unit test pins 101 for the first template only).
 - **Never hang a block chain off `trade_again`'s `<next>`.** `trade_again` calls
