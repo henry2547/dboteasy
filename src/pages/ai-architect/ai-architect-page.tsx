@@ -9,8 +9,10 @@ import {
     ConfigurationPanel,
     FlowPanel,
     ReasoningPanel,
+    RequirementsPanel,
     ValidationPanel,
 } from './components/result-panels';
+import { combineSpecs } from './combine';
 import { botLibrary, inspectImportedXml } from './library';
 import { assemble } from './pipeline';
 import type { SavedBot } from './types';
@@ -71,6 +73,42 @@ const AiArchitectPage = observer(() => {
         setSaveMessage(result.ok ? 'Saved to your library.' : (result.error ?? 'Could not save.'));
     };
 
+    // "Add this bot to another": the chosen bot becomes the second entry rule of the target bot, and
+    // the combination is saved as its own library entry so neither original is changed.
+    const handleCombine = useCallback(
+        (sourceId: string, targetId: string) => {
+            const source = botLibrary.get(sourceId);
+            const target = botLibrary.get(targetId);
+            if (!source || !target) {
+                setLibraryMessage('That bot is no longer in the library.');
+                return;
+            }
+            const outcome = combineSpecs(target.spec, source.spec);
+            if (!outcome.spec) {
+                setLibraryMessage(outcome.message);
+                return;
+            }
+            const assembled = assemble(outcome.spec, architect.getRegistry());
+            if (assembled.ok === false) {
+                setLibraryMessage(`${outcome.message} It could not be built: ${assembled.message}`);
+                return;
+            }
+            const saved = botLibrary.save({
+                name: outcome.spec.name,
+                prompt: outcome.spec.purpose,
+                spec: outcome.spec,
+                xml: assembled.bot.xml,
+                validation: assembled.bot.validation,
+                blockTypes: assembled.bot.validation.blockTypes,
+            });
+            setLibraryMessage(
+                saved.ok ? `${outcome.message} Saved to your library as “${outcome.spec.name}”.` : (saved.error ?? 'Could not save the combined bot.')
+            );
+            architect.refreshLibrary();
+        },
+        [architect]
+    );
+
     // Imported XML is only checked here (every block type must be registered); it is never loaded
     // behind the user's back.
     const handleImport = async (file: File) => {
@@ -113,6 +151,7 @@ const AiArchitectPage = observer(() => {
 
             {bot && (
                 <>
+                    <RequirementsPanel requirements={state.requirements} />
                     <ReasoningPanel reasoning={state.reasoning} summary={bot.explanation.summary} />
                     <ConfigurationPanel explanation={bot.explanation} defaults={state.defaults} />
                     <FlowPanel explanation={bot.explanation} />
@@ -181,6 +220,7 @@ const AiArchitectPage = observer(() => {
                 }}
                 onExport={saved => download(`${saved.name}.xml`, saved.xml)}
                 onImport={handleImport}
+                onCombine={handleCombine}
             />
         </div>
     );

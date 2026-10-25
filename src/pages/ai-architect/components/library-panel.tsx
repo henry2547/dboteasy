@@ -17,10 +17,24 @@ interface Props {
     onRestore: (id: string, version: number) => void;
     onExport: (bot: SavedBot) => void;
     onImport: (file: File) => void;
+    /** Add this bot as the second entry rule of another saved bot. */
+    onCombine: (sourceId: string, targetId: string) => void;
     message: string | null;
 }
 
-export default function LibraryPanel({ bots, onOpen, onLoad, onRename, onDuplicate, onDelete, onRestore, onExport, onImport, message }: Props) {
+export default function LibraryPanel({
+    bots,
+    onOpen,
+    onLoad,
+    onRename,
+    onDuplicate,
+    onDelete,
+    onRestore,
+    onExport,
+    onImport,
+    onCombine,
+    message,
+}: Props) {
     const fileInput = useRef<HTMLInputElement>(null);
     const [editing, setEditing] = useState<string | null>(null);
     const [draft, setDraft] = useState('');
@@ -114,6 +128,25 @@ export default function LibraryPanel({ bots, onOpen, onLoad, onRename, onDuplica
                                 <button type='button' className='aa-button aa-button--small' onClick={() => onExport(bot)}>
                                     Export XML
                                 </button>
+                                {bots.length > 1 && (
+                                    <select
+                                        className='aa-input aa-input--inline'
+                                        aria-label={`Add ${bot.name} to another bot`}
+                                        value=''
+                                        onChange={event => {
+                                            if (event.target.value) onCombine(bot.id, event.target.value);
+                                        }}
+                                    >
+                                        <option value=''>Add this bot to…</option>
+                                        {bots
+                                            .filter(other => other.id !== bot.id)
+                                            .map(other => (
+                                                <option key={other.id} value={other.id}>
+                                                    {other.name}
+                                                </option>
+                                            ))}
+                                    </select>
+                                )}
                                 <button type='button' className='aa-button aa-button--small aa-button--danger' onClick={() => onDelete(bot.id)}>
                                     Delete
                                 </button>

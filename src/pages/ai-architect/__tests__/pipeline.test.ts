@@ -37,7 +37,7 @@ describe('planner: prompt -> strategy specification', () => {
         const { spec } = planStrategy('Scan all volatility markets, check the last 250 digits, Over 2, only when digit 0 is below 10%.');
         expect(spec?.entry.barrier).toBe(2);
         expect(spec?.filters.window).toBe(250);
-        expect(spec?.filters.frequency).toEqual({ digit: 0, operator: 'below', percent: 10 });
+        expect(spec?.filters.frequencies).toEqual([{ digit: 0, operator: 'below', percent: 10 }]);
     });
 
     it('never reads a percentage filter as a second contract', () => {

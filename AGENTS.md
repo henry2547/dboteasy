@@ -801,4 +801,41 @@ The page is `src/pages/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss
   export breaks the whole dev build).
 - Verify: open the tab, press Generate on an example prompt (expect a "Validation Passed" card), then Load —
   the app switches to `#bot_builder` and the canvas holds the generated blocks.
-  `docker compose exec web npx jest src/pages/ai-architect` (83 tests); `npx tsc --noEmit` is clean.
+  `docker compose exec web npx jest src/pages/ai-architect` (116 tests); `npx tsc --noEmit` is clean.
+
+### Every condition the prompt states (planner + builder)
+The deterministic planner reads all of a request, not just the first match of each concept:
+- `filters.frequencies` is a **list** of digit-frequency filters ("digits 8 and 9 should have at least
+  10.3%"), one block per digit, all ANDed. The old single `filters.frequency` is still read —
+  `normalizeSpec` in `spec-model.ts` upgrades a saved spec in `assemble`, so a bot saved before the
+  change still opens. Keep that upgrade when adding fields.
+- `filters.barNeutral` holds the digits that must carry neither the green nor the red bar, built with
+  `digits_bar_neutral` (registry entry added with the block; it reads the same grid the Digits page
+  draws). The parser binds the digit list nearest *before* the bar rule ("digits 5 and 6 should not
+  have the green or red bar").
+- `entry.digits` holds the digits the user listed for the entry ("entry is 5 and 6", "entry digits
+  7, 8 or 9", "any 2 digits above or equal 7"). The builder then makes the entry an OR of
+  `last_digit == d` compares instead of the barrier comparison; the contract barrier is unchanged.
+- `PlanResult.requirements` is one entry per clause (split on `, ; . and or then also but`, never
+  inside a decimal), each `applied` / `unsupported` / `unapplied`. The page renders it as
+  **Everything you asked for**, so a clause the planner could not build is visible instead of being
+  silently dropped — do not add a concept reader without a matching entry in `CLAUSE_CONCEPTS`, or
+  its clauses will show as unapplied.
+- `spec-model.ts` must not be named `spec.ts`: the jest config treats `*.spec.ts` as a test file.
+
+### "Add this bot to another" (combine)
+`combine.ts` `combineSpecs(target, addition)` puts the added bot in `spec.secondLeg`. The engine
+reads the trade options (amount **and** barrier) at the top of every loop, so a bot cannot pick its
+contract from the tick it trades: the two rules alternate like the shipped two-leg recovery template.
+The target trades while it is winning, the added bot takes over after a loss, and `after_purchase`
+writes `architect:leg` + `architect:prediction` before `trade_again` so the next loop's
+`Bot.start` carries the right barrier (which is why the two-leg form uses a `variables_get` in
+`PREDICTION` and `contracttype = both`). The combination is refused, with the reason, when the two
+bots are not both Demo trading, do not share the market selection, or need different Trade types
+(different contract families) — never silently drop half a bot.
+- `validator.ts` therefore allows one Purchase **per leg**, requires **every** `if` that directly
+  holds a Purchase to check `risk_can_trade`, and lets the market-consistency check match an OR scan
+  condition operand by operand.
+- The UI entry point is the "Add this bot to…" `<select>` on each saved-bot card
+  (`library-panel.tsx`); the page saves the combination as its own library entry, so neither
+  original bot changes.

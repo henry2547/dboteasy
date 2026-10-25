@@ -1,4 +1,4 @@
-import type { AppliedDefault, Explanation, ValidationReport } from '../types';
+import type { AppliedDefault, Explanation, Requirement, ValidationReport } from '../types';
 
 const STAGE_LABEL: Record<string, string> = {
     discovery: 'Market discovery',
@@ -32,6 +32,41 @@ export function ReasoningPanel({ reasoning, summary }: { reasoning: string[]; su
                     </ul>
                 </details>
             )}
+        </section>
+    );
+}
+
+const REQUIREMENT_MARK: Record<Requirement['status'], string> = { applied: '✓', unsupported: '!', unapplied: '✕' };
+
+/**
+ * Every clause of the message the user wrote, and what the bot does with it. A clause the planner
+ * could not build is listed here rather than disappearing from the request.
+ */
+export function RequirementsPanel({ requirements }: { requirements: Requirement[] }) {
+    if (!requirements.length) return null;
+    const pending = requirements.filter(item => item.status !== 'applied').length;
+
+    return (
+        <section className='aa-card' aria-labelledby='aa-requirements-title'>
+            <h3 id='aa-requirements-title' className='aa-card__title'>
+                Everything you asked for{' '}
+                <span className={`aa-badge ${pending ? 'aa-badge--bad' : 'aa-badge--ok'}`}>
+                    {pending ? `${pending} not built` : 'All built'}
+                </span>
+            </h3>
+            <ul className='aa-requirements'>
+                {requirements.map((item, index) => (
+                    <li key={`${item.clause}-${index}`} className={`aa-requirement aa-requirement--${item.status}`}>
+                        <span className='aa-requirement__mark' aria-hidden='true'>
+                            {REQUIREMENT_MARK[item.status]}
+                        </span>
+                        <span className='aa-requirement__body'>
+                            <span className='aa-requirement__clause'>{item.clause}</span>
+                            <span className='aa-requirement__detail'>{item.detail}</span>
+                        </span>
+                    </li>
+                ))}
+            </ul>
         </section>
     );
 }

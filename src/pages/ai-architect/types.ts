@@ -82,17 +82,40 @@ export interface EntryPlan {
     strategy: StrategyKind;
     /** Contract barrier / target digit. `null` for Even/Odd. */
     barrier: number | null;
+    /**
+     * Explicit last digits the entry accepts, exactly as the user listed them ("entry is 5 and 6",
+     * "entry digits 7, 8 or 9"). Empty means "the barrier rule decides".
+     */
+    digits: number[];
     /** The trigger the bot waits for on the last digit — separate from the barrier. */
     trigger: 'last_digit_entry' | 'none';
+}
+
+/** One digit-frequency condition: the digit's share (%) must be at most / at least `percent`. */
+export interface FrequencyFilter {
+    digit: number;
+    operator: 'below' | 'above';
+    percent: number;
 }
 
 export interface FilterPlan {
     /** Historical analysis window in ticks. */
     window: number;
-    /** Optional digit-frequency filter: the digit's share (%) must be at most / at least `percent`. */
-    frequency: { digit: number; operator: 'below' | 'above'; percent: number } | null;
+    /** Every digit-frequency condition the request stated; each one is ANDed into the entry. */
+    frequencies: FrequencyFilter[];
     /** Optional streak filter: ticks in a row with the same last digit. */
     streakAtMost: number | null;
+    /** Digits that must carry neither the hot (green) nor the cold (red) bar of the digit grid. */
+    barNeutral: number[];
+}
+
+/** One entry rule of a bot. A single-rule bot has one; a combined bot has a primary and a second. */
+export interface StrategyLeg {
+    strategy: StrategyKind;
+    barrier: number | null;
+    digits: number[];
+    filters: FilterPlan;
+    label: string;
 }
 
 export interface ObservationPlan {
@@ -122,6 +145,11 @@ export interface StrategySpec {
     filters: FilterPlan;
     observation: ObservationPlan;
     risk: RiskPlan;
+    /**
+     * A second entry rule added with "Add this bot to another". The primary rule stays in `entry` /
+     * `filters`; the bot trades the primary while it is winning and the second leg after a loss.
+     */
+    secondLeg?: StrategyLeg;
     /** Demo is always the default; Real needs explicit confirmation at run time, never at build time. */
     account: 'demo';
     /** The default market written into the trade definition until the scan moves it. */
@@ -142,6 +170,17 @@ export interface Clarification {
     options: string[];
 }
 
+/**
+ * One clause of the user's prompt, and what the planner did with it. Every clause gets an entry, so
+ * nothing the user said is silently dropped: it is either built, reported as impossible, or shown as
+ * a part the planner could not turn into a block.
+ */
+export interface Requirement {
+    clause: string;
+    status: 'applied' | 'unsupported' | 'unapplied';
+    detail: string;
+}
+
 export interface PlanResult {
     spec: StrategySpec | null;
     defaults: AppliedDefault[];
@@ -150,6 +189,8 @@ export interface PlanResult {
     unsupported: string[];
     /** What the planner understood, stage by stage, for the reasoning summary. */
     reasoning: string[];
+    /** Every clause of the prompt and whether the bot implements it. */
+    requirements: Requirement[];
 }
 
 // ── Block tree ─────────────────────────────────────────────────────────────────────────────────

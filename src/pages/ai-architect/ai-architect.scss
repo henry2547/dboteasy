@@ -354,6 +354,45 @@ button.aa-chip {
     }
 }
 
+.aa-input--inline {
+    width: auto;
+    min-height: 2.8rem;
+    font-size: 1.2rem;
+}
+
+.aa-requirements {
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.aa-requirement {
+    display: flex;
+    gap: 0.8rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--general-section-1);
+
+    &__mark {
+        flex: none;
+        font-weight: 700;
+    }
+
+    &__clause {
+        font-weight: 600;
+    }
+
+    &__detail {
+        display: block;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    &--unapplied .aa-requirement__mark,
+    &--unsupported .aa-requirement__mark {
+        color: var(--status-danger);
+    }
+}
+
 .aa-changelog {
     margin: 1rem 0 0;
     padding: 0;

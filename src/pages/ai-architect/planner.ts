@@ -20,7 +20,9 @@ import type {
     AppliedDefault,
     Clarification,
     ExecutionMode,
+    FrequencyFilter,
     PlanResult,
+    Requirement,
     StrategyKind,
     StrategySpec,
 } from './types';
@@ -96,11 +98,20 @@ interface ContractRead {
  * "last N digits" in them are not read as a contract. "digit 0 is below 10%" is a filter on a
  * percentage; it is never an Under contract.
  */
+/** A comma/and/or separated run of single digits, e.g. `8, 9` or `5 and 6`. */
+const DIGIT_LIST = '\\d(?:\\s*(?:,|and|or|&)\\s*\\d)*';
+
 function maskNonContractPhrases(text: string): string {
     return text
-        .replace(/\d+(?:\.\d+)?\s*%/g, ' PERCENT ')
+        .replace(/\d+(?:\.\d+)?\s*(?:%|percent\w*|percentage\w*)/g, ' PERCENT ')
+        .replace(new RegExp(`\\b(?:digits?|numbers?)\\s*${DIGIT_LIST}[^.]{0,45}?(?:below|under|above|over|less than|more than|at least|at most)\\s*PERCENT`, 'g'), ' FILTER ')
         .replace(new RegExp(`digit\\s*${NUMBER_TOKEN}\\s*(?:frequency|share|percentage)?\\s*(?:is\\s*)?(?:below|under|above|over|less than|more than|at least|at most)\\s*PERCENT`, 'g'), ' FILTER ')
         .replace(new RegExp(`(?:below|under|above|over|less than|more than)\\s*PERCENT`, 'g'), ' FILTER ')
+        // "digits 5 and 6 should not have the green or red bar" is a bar rule, never a contract.
+        .replace(/\b(?:no|not|without|neither|never)\b[^.]{0,40}?\b(?:green|red|hot|cold)\b/g, ' BARFILTER ')
+        .replace(/\bbars?\b[^.]{0,20}?\b(?:green|red|hot|cold)\b/g, ' BARFILTER ')
+        // "entry is 5 and 6" lists the last digits the bot waits for; it is not a contract either.
+        .replace(new RegExp(`\\bentr(?:y|ies)\\b[^.]{0,30}?\\b${DIGIT_LIST}`, 'g'), ' ENTRY ')
         .replace(new RegExp(`streak[^,.;]{0,20}?(?:at most|no more than|below|under|<=?)\\s*${NUMBER_TOKEN}`, 'g'), ' STREAKFILTER ')
         .replace(new RegExp(`(?:last|past|previous|latest|recent)\\s+${NUMBER_TOKEN}\\s*(?:digits?|ticks?|samples?)`, 'g'), ' WINDOW ');
 }
@@ -192,15 +203,164 @@ function readSymbol(text: string): string | null {
     return match ? match[1].toUpperCase() : null;
 }
 
-function readFrequencyFilter(text: string): { digit: number; operator: 'below' | 'above'; percent: number } | null {
-    const match =
-        text.match(new RegExp(`digit\\s*${NUMBER_TOKEN}\\s*(?:frequency|share|percentage)?\\s*(?:is\\s*)?(below|under|above|over|less than|more than|at least|at most)\\s*(\\d+(?:\\.\\d+)?)\\s*%`)) ??
-        null;
-    if (!match) return null;
-    const digit = readNumber(match[1]);
-    if (digit === null || digit < 0 || digit > 9) return null;
-    const below = /below|under|less|at most/.test(match[2]);
-    return { digit, operator: below ? 'below' : 'above', percent: Number(match[3]) };
+/**
+ * Every digit-frequency condition in the prompt, not just the first one. "digits 8 and 9 should have
+ * at least 10.3%" yields one filter per digit; all of them are ANDed into the entry.
+ */
+function readFrequencies(text: string): FrequencyFilter[] {
+    const filters: FrequencyFilter[] = [];
+    const add = (digit: number, operator: 'below' | 'above', percent: number) => {
+        if (digit < 0 || digit > 9 || !Number.isFinite(percent) || percent < 0 || percent > 100) return;
+        if (!filters.some(item => item.digit === digit && item.operator === operator && item.percent === percent)) {
+            filters.push({ digit, operator, percent });
+        }
+    };
+    const pattern = new RegExp(
+        `\\b(?:digits?|numbers?)\\s*(${DIGIT_LIST})[^.]{0,45}?` +
+            `(below|under|above|over|less than|more than|at least|at most|>=?|<=?)\\s*` +
+            `(\\d+(?:\\.\\d+)?)\\s*(?:%|percent\\w*|percentage\\w*)?`,
+        'g'
+    );
+    for (const match of text.matchAll(pattern)) {
+        const below = /below|under|less|at most|<=/.test(match[2]);
+        (match[1].match(/\d/g) ?? []).forEach(digit => add(Number(digit), below ? 'below' : 'above', Number(match[3])));
+    }
+    return filters;
+}
+
+/** Every digit list in `text`, with the offset it starts at. */
+function digitGroups(text: string): { index: number; digits: number[] }[] {
+    const groups: { index: number; digits: number[] }[] = [];
+    for (const match of text.matchAll(new RegExp(`\\b(?:digits?|numbers?)\\s*(${DIGIT_LIST})`, 'g'))) {
+        groups.push({ index: match.index ?? 0, digits: (match[1].match(/\d/g) ?? []).map(Number) });
+    }
+    for (const match of text.matchAll(/(?:\b(?:entry|entries|is|are|only|be)\b\s*)(\d(?:\s*(?:,|and|or)\s*\d)+)/g)) {
+        groups.push({ index: (match.index ?? 0) + match[0].indexOf(match[1]), digits: (match[1].match(/\d/g) ?? []).map(Number) });
+    }
+    return groups.sort((a, b) => a.index - b.index);
+}
+
+/**
+ * The digits the user said must carry neither the hot (green) nor the cold (red) bar. The digits are
+ * the nearest list stated before the bar rule ("digits 5 and 6 should not have a green or red bar").
+ */
+function readBarNeutral(text: string): number[] {
+    const digits: number[] = [];
+    for (const clause of text.split(/[.;]/)) {
+        const bar = Math.min(
+            ...[clause.search(/\bbars?\b/), clause.search(/\bgreen\b/), clause.search(/\bred\b/)].filter(index => index >= 0)
+        );
+        if (!Number.isFinite(bar) || bar < 0) continue;
+        if (!/\b(no|not|without|neither|never)\b/.test(clause)) continue;
+        const before = clause.slice(0, clause.search(/\bbars?\b/) >= 0 ? clause.search(/\bbars?\b/) : bar);
+        const group = digitGroups(before).pop();
+        if (group) digits.push(...group.digits);
+    }
+    return [...new Set(digits)];
+}
+
+/**
+ * The last digits the entry accepts when the user states them ("entry is 5 and 6", "entries are
+ * 7, 4 or 8", "entry is any 2 digits above or equal 7"). Empty when the contract rule decides.
+ */
+function readEntryDigits(text: string): number[] {
+    // A list needs at least two digits and a separator — "entry is any 2 digits" is not a list.
+    const listed = text.match(new RegExp(`\\bentr(?:y|ies)\\b[^.]{0,30}?\\b(\\d(?:\\s*(?:,|and|or|&)\\s*\\d)+)`));
+    if (listed) return [...new Set((listed[1].match(/\d/g) ?? []).map(Number))];
+
+    const range = text.match(
+        /\bentr(?:y|ies)\b[^.]{0,45}?\b(above|over|below|under|at least|at most|less than|more than)\b(?:\s+or\s+equal\s*(?:to\s*)?)?\s*(\d)\b/
+    );
+    if (range) {
+        const edge = Number(range[2]);
+        const inclusive = /or\s+equal/i.test(range[0]);
+        const above = /above|over|at least|more than/.test(range[1]);
+        const digits: number[] = [];
+        for (let digit = 0; digit <= 9; digit += 1) {
+            if (above ? (inclusive ? digit >= edge : digit > edge) : inclusive ? digit <= edge : digit < edge) digits.push(digit);
+        }
+        return digits;
+    }
+
+    const single = text.match(/\bentr(?:y|ies)\b[^.]{0,20}?\b(?:is|are|=|:)\s*(?:digit\s*)?(\d)\b/);
+    return single ? [Number(single[1])] : [];
+}
+
+// ── Coverage: every clause the user wrote, and what became of it ───────────────────────────────
+
+const CLAUSE_CONCEPTS: { test: RegExp; detail: string }[] = [
+    { test: /\b(over|under|above|below|matches?|differs?|even|odd)\b/, detail: 'Contract' },
+    { test: /\b(markets?|volatilit\w*|symbols?|indices|1hz\d+|r_\d+|jd\d+)\b/, detail: 'Market' },
+    { test: /\b(last|past|previous|recent|window|history|sample|lookback|analy[sz]e)\b|\b\d+\s*(?:digits?|ticks?)\b/, detail: 'History window' },
+    { test: /\d(?:\.\d+)?\s*(?:%|percent\w*|percentage\w*)/, detail: 'Digit frequency' },
+    { test: /\bbars?\b|\bgreen\b|\bred\b/, detail: 'Digit bar rule' },
+    { test: /\bstreak\b/, detail: 'Streak rule' },
+    { test: /\bentr(?:y|ies)\b/, detail: 'Entry digits' },
+    { test: /\bvirtual hook\b|\bobserv\w*\b|\bnext (?:genuine )?tick\b|\brecord\b/, detail: 'Setup observation' },
+    { test: /\bstake\b|\btake[- ]profit\b|\bstop[- ]loss\b|\bloss\w*\b|\btrades?\b|\bmartingale\b|\bmultiplier\b|\bcool[- ]?down\b/, detail: 'Risk controls' },
+    { test: /\b(observation[- ]only|signal[- ]only|do not trade|don'?t trade|without trading|demo|real (?:account|money)|buy|purchase|trade)\b/, detail: 'Execution mode' },
+];
+
+const FILLER_WORDS = new Set([
+    'a', 'an', 'the', 'bot', 'build', 'make', 'create', 'me', 'my', 'please', 'i', 'want', 'need', 'it', 'that', 'which',
+    'this', 'these', 'those', 'then', 'also', 'and', 'or', 'so', 'with', 'for', 'on', 'in', 'to', 'of', 'is', 'are', 'be',
+    'should', 'must', 'would', 'can', 'will', 'all', 'every', 'each', 'supported', 'use', 'using', 'only', 'when', 'if',
+    'they', 'them', 'have', 'has', 'at', 'least', 'most', 'not', 'no', 'as', 'like', 'from', 'into', 'up', 'very', 'just',
+]);
+
+/** Marks a clause that is only a digit list; it is merged into the rule beside it and never shown. */
+const PART_OF_LIST = '\u0000digit-list';
+const isFiller = (clause: string): boolean => {
+    if (/\d/.test(clause)) return false;
+    return clause
+        .toLowerCase()
+        .replace(/[^a-z' ]/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean)
+        .every(word => FILLER_WORDS.has(word));
+};
+
+/** One entry per clause, so the user can see that nothing they wrote was dropped. */
+function readRequirements(text: string, unsupported: { pattern: RegExp; message: string }[]): Requirement[] {
+    // Split on sentence and clause boundaries, and on joining words — but never inside a decimal
+    // number ("10.3%") and never inside a digit list, whose fragments are matched below.
+    const clauses = text
+        .split(/[;,]|\.(?!\d)|\b(?:and|or|then|also|but)\b/)
+        .map(clause => clause.trim())
+        .filter(clause => clause.length > 1);
+
+    const entries: Requirement[] = clauses.map(clause => {
+        const blocked = unsupported.find(item => item.pattern.test(clause));
+        if (blocked) return { clause, status: 'unsupported', detail: blocked.message };
+        if (/^(?:\d+|digits?\s*\d+(?:\s*(?:,|or)\s*\d+)*)$/.test(clause)) {
+            return { clause, status: 'applied', detail: PART_OF_LIST };
+        }
+        const concept = CLAUSE_CONCEPTS.find(item => item.test.test(clause));
+        if (concept) return { clause, status: 'applied', detail: concept.detail };
+        if (isFiller(clause)) return { clause, status: 'applied', detail: 'Wording, not a rule.' };
+        return {
+            clause,
+            status: 'unapplied',
+            detail: 'I could not turn this into a registered block. Name the digit, market, window, filter or risk rule it means, and I will build it.',
+        };
+    });
+
+    // "digits 0 and 1 should be above 10%" splits into a bare list and its rule; show them together.
+    const merged: Requirement[] = [];
+    entries.forEach((entry, index) => {
+        if (entry.detail !== PART_OF_LIST) {
+            merged.push(entry);
+            return;
+        }
+        const next = entries[index + 1];
+        if (next && next.detail !== PART_OF_LIST) {
+            entries[index + 1] = { ...next, clause: `${entry.clause} ${next.clause}` };
+            return;
+        }
+        const previous = merged[merged.length - 1];
+        if (previous) merged[merged.length - 1] = { ...previous, clause: `${previous.clause} ${entry.clause}` };
+    });
+    return merged;
 }
 
 function readStreak(text: string): number | null {
@@ -270,7 +430,9 @@ export function createSpec(
         tradeLimit: number;
         cooldownMinutes: number;
         cooldownCycles: number;
-        frequency: { digit: number; operator: 'below' | 'above'; percent: number } | null;
+        frequencies: FrequencyFilter[];
+        digits: number[];
+        barNeutral: number[];
         streakAtMost: number | null;
         reporting: boolean;
         purpose: string;
@@ -294,11 +456,12 @@ export function createSpec(
             maxSwitches: 0,
             minHistory: 20,
         },
-        entry: { strategy, barrier, trigger: 'last_digit_entry' },
+        entry: { strategy, barrier, digits: partial.digits ?? [], trigger: 'last_digit_entry' },
         filters: {
             window: clamp(Math.round(partial.window ?? DEFAULT_WINDOW), MIN_WINDOW, MAX_WINDOW),
-            frequency: partial.frequency ?? null,
+            frequencies: partial.frequencies ?? [],
             streakAtMost: partial.streakAtMost ?? null,
+            barNeutral: partial.barNeutral ?? [],
         },
         observation: { virtualHook: hook, strategyLabel: `${STRATEGY_LABEL[strategy]}${barrier !== null ? ` ${barrier}` : ''}` },
         risk: {
@@ -337,6 +500,7 @@ export const deterministicPlanner: StrategyPlanner = {
                 ],
                 unsupported: [],
                 reasoning: ['The request was too short to identify a strategy.'],
+                requirements: readRequirements(text, UNSUPPORTED_ASKS),
             };
         }
 
@@ -389,6 +553,7 @@ export const deterministicPlanner: StrategyPlanner = {
                 clarifications,
                 unsupported,
                 reasoning: ['A detail the strategy cannot be built without is missing or unclear, so no workspace was generated.'],
+                requirements: readRequirements(text, UNSUPPORTED_ASKS),
             };
         }
 
@@ -423,15 +588,26 @@ export const deterministicPlanner: StrategyPlanner = {
         }
         reasoning.push(`Historical analysis: the last ${window} genuine ticks.`);
 
-        // ── Filters ───────────────────────────────────────────────────────────────────────────────
-        const frequency = readFrequencyFilter(text);
+        // ── Filters and entry digits: every condition the request states, not just the first ──────
+        const frequencies = readFrequencies(text);
         const streakAtMost = readStreak(text);
-        if (frequency) {
+        const barNeutral = readBarNeutral(text);
+        const digits = readEntryDigits(text);
+
+        frequencies.forEach(filter => {
             reasoning.push(
-                `Statistical filter: digit ${frequency.digit} share ${frequency.operator} ${frequency.percent}% over the window (a filter, not the barrier).`
+                `Statistical filter: digit ${filter.digit} share ${filter.operator} ${filter.percent}% over the window (a filter, not the barrier).`
+            );
+        });
+        if (barNeutral.length) {
+            reasoning.push(
+                `Digit bar filter: digit${barNeutral.length > 1 ? 's' : ''} ${barNeutral.join(', ')} must carry neither the green (hottest) nor the red (coldest) bar of the grid.`
             );
         }
         if (streakAtMost !== null) reasoning.push(`Streak filter: at most ${streakAtMost} identical digits in a row.`);
+        if (digits.length) {
+            reasoning.push(`Entry digits: the last digit must be ${digits.join(' or ')} (the digits you listed, kept separate from the contract barrier).`);
+        }
 
         // ── Observation (Virtual Hook) ────────────────────────────────────────────────────────────
         const hook = /\bvirtual hook\b|\bsetup observer\b|\brecord(?:s|ed|ing)?\b[^.]{0,30}\bsetup\b|\bobserve(?:s|d)?\b[^.]{0,30}\bnext\b[^.]{0,15}\b(?:genuine\s+)?tick\b|\bnext[- ]tick\b/.test(text);
@@ -486,13 +662,15 @@ export const deterministicPlanner: StrategyPlanner = {
             tradeLimit: tradeLimit ?? undefined,
             cooldownMinutes: cooldown ? 1 : undefined,
             cooldownCycles: cooldown ? 1 : undefined,
-            frequency,
+            frequencies,
+            digits,
+            barNeutral,
             streakAtMost,
             reporting: !/\bno (?:report|log|journal)/.test(text),
             purpose,
         });
 
-        return { spec, defaults, clarifications: [], unsupported, reasoning };
+        return { spec, defaults, clarifications: [], unsupported, reasoning, requirements: readRequirements(text, UNSUPPORTED_ASKS) };
     },
 };
 

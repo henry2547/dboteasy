@@ -11,7 +11,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { botLibrary } from './library';
 import { assemble, generateBot, refineBot, type GeneratedBot } from './pipeline';
 import { buildRegistry, type Registry } from './registry';
-import type { AppliedDefault, Clarification, SavedBot } from './types';
+import type { AppliedDefault, Clarification, Requirement, SavedBot } from './types';
 import type { SpecChange } from './refiner';
 
 export interface ChangeLog {
@@ -30,6 +30,8 @@ export interface ArchitectState {
     clarifications: Clarification[];
     unsupported: string[];
     reasoning: string[];
+    /** Every clause of the prompt and whether the bot implements it. */
+    requirements: Requirement[];
     changeLog: ChangeLog[];
     libraryId: string | null;
 }
@@ -43,6 +45,7 @@ const INITIAL: ArchitectState = {
     clarifications: [],
     unsupported: [],
     reasoning: [],
+    requirements: [],
     changeLog: [],
     libraryId: null,
 };
@@ -77,7 +80,17 @@ export function useArchitect() {
                         if (token.current !== mine) return previous;
                         const next: ArchitectState = { ...previous };
                         if (result.clarifications.length) {
-                            return { ...next, status: 'needs_input', prompt, message: result.message ?? null, clarifications: result.clarifications, defaults: result.defaults, unsupported: result.unsupported, reasoning: result.reasoning };
+                            return {
+                                ...next,
+                                status: 'needs_input',
+                                prompt,
+                                message: result.message ?? null,
+                                clarifications: result.clarifications,
+                                defaults: result.defaults,
+                                unsupported: result.unsupported,
+                                reasoning: result.reasoning,
+                                requirements: result.requirements,
+                            };
                         }
                         return {
                             ...next,
@@ -89,6 +102,7 @@ export function useArchitect() {
                             clarifications: [],
                             unsupported: result.unsupported,
                             reasoning: result.reasoning,
+                            requirements: result.requirements,
                             changeLog: [],
                             libraryId: null,
                         };

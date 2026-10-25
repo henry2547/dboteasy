@@ -263,6 +263,17 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         inputs: [value('SAMPLE', ['Number'])],
         requires: ['ticks'],
     }),
+    BOOLEAN_VALUE(
+        'digits_bar_neutral',
+        'Digit has no hot / cold bar',
+        'digits',
+        'True only when the digit carries neither the green (hottest) nor the red (coldest) bar of the digit grid; a bar that cannot be read answers false.',
+        {
+            fields: [dropdown('DIGIT', DIGITS)],
+            inputs: [value('SAMPLE', ['Number'])],
+            requires: ['ticks'],
+        }
+    ),
     NUMBER_VALUE('digits_streak', 'Same-digit streak', 'digits', 'Ticks in a row with the same last digit.', { requires: ['ticks'] }),
     cap({
         type: 'switch_active_market',
