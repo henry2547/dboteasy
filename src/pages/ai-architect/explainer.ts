@@ -71,6 +71,12 @@ export function explainBot(input: StrategySpec, workspace: BuiltWorkspace, regis
         ...(spec.secondLeg
             ? [
                   { label: 'Second leg', value: spec.secondLeg.label },
+                  {
+                      label: 'Second leg entry',
+                      value: spec.secondLeg.digits.length
+                          ? `Last digit is ${spec.secondLeg.digits.join(' or ')}`
+                          : 'Last digit rule for the chosen contract',
+                  },
                   { label: 'Second leg filters', value: filterText(spec.secondLeg.filters) },
               ]
             : []),

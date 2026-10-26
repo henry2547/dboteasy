@@ -241,6 +241,30 @@ button.aa-chip {
     }
 }
 
+.aa-add-bot {
+    &__row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        align-items: center;
+        margin-top: 0.8rem;
+
+        .aa-input {
+            flex: 1 1 20rem;
+            width: auto;
+        }
+
+        &--stacked {
+            align-items: flex-start;
+            flex-direction: column;
+
+            .aa-prompt__input {
+                margin-top: 0;
+            }
+        }
+    }
+}
+
 .aa-list {
     margin: 0;
     padding-left: 1.8rem;

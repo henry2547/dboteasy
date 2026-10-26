@@ -839,3 +839,21 @@ bots are not both Demo trading, do not share the market selection, or need diffe
 - The UI entry point is the "Add this bot to…" `<select>` on each saved-bot card
   (`library-panel.tsx`); the page saves the combination as its own library entry, so neither
   original bot changes.
+- **"Add a bot to this one" (`components/add-bot-panel.tsx`)** is the same combine, started from the
+  bot on screen: `use-architect.ts`'s `addBot({ savedId | prompt })` plans a described addition (or
+  reads a saved bot), runs `combineSpecs(currentSpec, addition)`, assembles and puts the combined
+  bot on screen. It is only rendered once a bot exists, and a combination is refused with the
+  reason when `combineSpecs` refuses it. Nothing is loaded or run by this action.
+
+### Two rules from one prompt
+A prompt that names two contracts of the same Trade type ("Over 1 ... recovery with Under 6") is
+planned as ONE two-rule bot instead of asking which contract to drop: `contractMentions` returns
+every contract with its offset, `distinctMentions` keeps the first mention of each, and the prompt is
+split at the second contract's offset so each rule keeps the entry digits, frequency filters and bar
+rules written beside it (the second rule's window is its own when it states one). Both rules must
+share `CONTRACTS[...].tradeType` (Over/Under, Even/Odd, Matches/Differs); otherwise the planner still
+asks `contract_conflict`. A second rule is only attached to a Demo-trading bot — an observation- or
+signal-only request reports it under "Not built". Keep `maskNonContractPhrases` **length-preserving**
+(blank/padding replacements): the offsets it produces are what splits the prompt, and
+`readFrequencies` never lets a digit sit between a digit list and its own operator, so a filter
+written after an entry list binds to the list nearest the operator.

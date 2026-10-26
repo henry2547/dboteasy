@@ -69,10 +69,43 @@ describe('planner: prompt -> strategy specification', () => {
         expect(result.clarifications[0].options.length).toBeGreaterThan(1);
     });
 
-    it('asks which contract when the request names conflicting ones', () => {
+    it('builds two rules when the request names two contracts of the same Trade type', () => {
         const result = planStrategy('Trade Over 1 and also Under 8 on all markets');
+        expect(result.clarifications).toEqual([]);
+        expect(result.spec?.entry).toMatchObject({ strategy: 'over', barrier: 1 });
+        expect(result.spec?.secondLeg).toMatchObject({ strategy: 'under', barrier: 8 });
+    });
+
+    it('gives each rule the digits and filters written beside it', () => {
+        const result = planStrategy(
+            'Scan all markets for Over 1, entry is 5 and 6, digits 0 and 1 should have at least 10.3% frequency. ' +
+                'Recovery with Under 6, entry digits 7, 8 or 9, digits 8 and 9 at least 10.3%.'
+        );
+        expect(result.spec?.entry.digits).toEqual([5, 6]);
+        expect(result.spec?.filters.frequencies).toEqual([
+            { digit: 0, operator: 'above', percent: 10.3 },
+            { digit: 1, operator: 'above', percent: 10.3 },
+        ]);
+        expect(result.spec?.secondLeg).toMatchObject({ strategy: 'under', barrier: 6, digits: [7, 8, 9] });
+        expect(result.spec?.secondLeg?.filters.frequencies).toEqual([
+            { digit: 8, operator: 'above', percent: 10.3 },
+            { digit: 9, operator: 'above', percent: 10.3 },
+        ]);
+    });
+
+    it('asks which contract when the two contracts need different Trade types', () => {
+        const result = planStrategy('Trade Over 1 and also Even on all markets');
         expect(result.spec).toBeNull();
         expect(result.clarifications[0].id).toBe('contract_conflict');
+    });
+
+    it('assembles and validates a two-rule bot planned from one prompt', () => {
+        const result = generateBot('Scan all markets for Over 1, entry is 5 and 6. Recovery with Under 6, entry digits 7, 8 or 9.', { registry });
+        expect(result.ok).toBe(true);
+        expect(result.bot?.spec.secondLeg).toMatchObject({ strategy: 'under', barrier: 6 });
+        expect(result.bot?.validation.ok).toBe(true);
+        const purchases = allBlocks(result.bot!.workspace).filter(block => block.type === 'purchase');
+        expect(purchases.length).toBe(2);
     });
 
     it('asks again when the barrier is outside the contract range', () => {

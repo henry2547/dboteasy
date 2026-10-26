@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
+import AddBotPanel from './components/add-bot-panel';
 import LibraryPanel from './components/library-panel';
 import PromptPanel from './components/prompt-panel';
 import RefinePanel from './components/refine-panel';
@@ -44,6 +45,7 @@ const AiArchitectPage = observer(() => {
     const loader = useArchitectLoader(architect.getRegistry);
     const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
+    const [addBotMessage, setAddBotMessage] = useState<string | null>(null);
 
     const generating = state.status === 'generating';
     const bot = state.bot;
@@ -106,6 +108,18 @@ const AiArchitectPage = observer(() => {
             );
             architect.refreshLibrary();
         },
+        [architect]
+    );
+
+    // "Add a bot to this one": the bot on screen keeps its rule and the added bot becomes its second
+    // entry rule. `addBot` builds the combination and puts it on screen; nothing is loaded or run.
+    const handleAddSaved = useCallback(
+        (id: string) => setAddBotMessage(architect.addBot({ savedId: id }).message),
+        [architect]
+    );
+
+    const handleAddPrompt = useCallback(
+        (text: string) => setAddBotMessage(architect.addBot({ prompt: text }).message),
         [architect]
     );
 
@@ -188,6 +202,8 @@ const AiArchitectPage = observer(() => {
                             </p>
                         )}
                     </section>
+
+                    <AddBotPanel bots={library} message={addBotMessage} onAddSaved={handleAddSaved} onAddPrompt={handleAddPrompt} />
 
                     <RefinePanel disabled={generating} log={state.changeLog} onRefine={architect.refine} />
                 </>
