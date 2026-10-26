@@ -16,6 +16,7 @@
  * registry, builder or validator: they only ever see a `StrategySpec`.
  */
 
+import { menuBlockNamedIn, menuBlocksNamedIn } from './block-menu';
 import { CONTRACTS } from './builder';
 import type {
     AppliedDefault,
@@ -374,6 +375,18 @@ function readRequirements(text: string, unsupported: { pattern: RegExp; message:
     const entries: Requirement[] = clauses.map(clause => {
         const blocked = unsupported.find(item => item.pattern.test(clause));
         if (blocked) return { clause, status: 'unsupported', detail: blocked.message };
+        // A clause that names a block from the Blocks menu is answered with that block, not with a
+        // concept of the planner's own. Whether the generated bot really places it is decided
+        // against the built workspace (`alignWithBlocksMenu` in the pipeline), never assumed here.
+        const menuBlock = menuBlockNamedIn(clause);
+        if (menuBlock) {
+            return {
+                clause,
+                status: 'unsupported',
+                detail: `Blocks menu · ${menuBlock.label} (${menuBlock.category}) — not placed by the Architect.`,
+                menuBlock,
+            };
+        }
         if (/^(?:\d+|digits?\s*\d+(?:\s*(?:,|or)\s*\d+)*)$/.test(clause)) {
             return { clause, status: 'applied', detail: PART_OF_LIST };
         }
@@ -410,6 +423,9 @@ function readStreak(text: string): number | null {
     const value = readNumber(match?.[1]);
     return value !== null && value >= 1 ? Math.floor(value) : null;
 }
+
+/** The Blocks-menu blocks that scan markets; naming one of them asks for the multi-market bot. */
+const SCAN_BLOCKS = new Set(['switch_active_market', 'market_discover_eligible']);
 
 /** The ways a prompt can say "scan more than one market". */
 const MULTI_MARKET = /\b(all|every|each|multiple|several|many)\b[^.]{0,40}\b(markets?|volatilit\w*|symbols?|indices|synthetics?)\b|\bscan(?:s|ning)?\b[^.]{0,30}\bmarkets?\b|\bswitch(?:es|ing)?\b[^.]{0,30}\bmarkets?\b|\bnext market\b/;
@@ -639,9 +655,16 @@ export const deterministicPlanner: StrategyPlanner = {
 
         // ── Discovery / market ────────────────────────────────────────────────────────────────────
         const symbol = readSymbol(text);
-        const multi = !symbol && MULTI_MARKET.test(text);
+        // Naming a scan block in the Blocks menu asks for the scan, even when the request never says
+        // "scan all markets".
+        const namedScanBlock = menuBlocksNamedIn(text).find(block => SCAN_BLOCKS.has(block.type)) ?? null;
+        const multi = !symbol && (MULTI_MARKET.test(text) || !!namedScanBlock);
         if (multi) {
-            reasoning.push('Market discovery: every supported volatility market is discovered dynamically and scanned with Switch active market.');
+            reasoning.push(
+                `Market discovery: every supported volatility market is discovered dynamically and scanned with Switch active market${
+                    namedScanBlock && !MULTI_MARKET.test(text) ? `, the Blocks-menu block “${namedScanBlock.label}” the request names` : ''
+                }.`
+            );
         } else if (symbol) {
             reasoning.push(`Market: the single market ${symbol}.`);
         } else {

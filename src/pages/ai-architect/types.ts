@@ -179,6 +179,23 @@ export interface Requirement {
     clause: string;
     status: 'applied' | 'unsupported' | 'unapplied';
     detail: string;
+    /**
+     * Set when the clause named a block from the Bot Builder's Blocks menu. The pipeline then says
+     * whether the generated bot really holds that block, so the alignment is read from the
+     * workspace instead of being assumed.
+     */
+    menuBlock?: MenuBlock;
+}
+
+/** One block as the Bot Builder's Blocks menu lists it. */
+export interface MenuBlock {
+    type: string;
+    /** The name the menu shows for the block. */
+    label: string;
+    /** The menu category the block is listed under. */
+    category: string;
+    /** The Blocks-menu group the category sits in, for the observer groups; `null` otherwise. */
+    group: string | null;
 }
 
 export interface PlanResult {

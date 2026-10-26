@@ -6,7 +6,7 @@
  * leaves the user's existing workspace alone; loading is a separate, explicit step.
  */
 
-import { buildBotXml } from './builder';
+import { allBlocks, buildBotXml } from './builder';
 import { explainBot } from './explainer';
 import { planStrategy, type StrategyPlanner } from './planner';
 import { refineSpec, type RefineResult } from './refiner';
@@ -76,6 +76,42 @@ export function assemble(input: StrategySpec, registry: Registry): { ok: true; b
     return { ok: true, bot };
 }
 
+/**
+ * The Blocks-menu half of the answer: every clause that named a block from the Bot Builder's Blocks
+ * menu is resolved against the workspace that was really built, so the page can say the block is
+ * used — or that the Architect does not place it — instead of claiming either.
+ */
+function alignWithBlocksMenu(
+    requirements: Requirement[],
+    workspace?: BuiltWorkspace
+): { requirements: Requirement[]; reasoning: string[] } {
+    const named = requirements.filter(item => item.menuBlock);
+    if (!named.length) return { requirements, reasoning: [] };
+
+    const present = new Set(workspace ? allBlocks(workspace).map(block => block.type) : []);
+
+    const reasoning = [...new Map(named.map(item => [item.menuBlock!.type, item.menuBlock!])).values()].map(block =>
+        present.has(block.type)
+            ? `Blocks menu: the request names “${block.label}” (${block.category}), and the generated bot uses it.`
+            : `Blocks menu: the request names “${block.label}” (${block.category}), which the Architect does not place.`
+    );
+
+    return {
+        requirements: requirements.map(item => {
+            if (!item.menuBlock) return item;
+            const used = present.has(item.menuBlock.type);
+            return {
+                ...item,
+                status: used ? 'applied' : 'unsupported',
+                detail: `Blocks menu · ${item.menuBlock.label} (${item.menuBlock.category}) — the generated bot ${
+                    used ? 'uses this block' : 'does not place it'
+                }.`,
+            };
+        }),
+        reasoning,
+    };
+}
+
 export function generateBot(prompt: string, options: GenerateOptions = {}): PipelineResult {
     const registry = options.registry ?? buildRegistry();
     const plan = planStrategy(prompt, options.planner);
@@ -96,12 +132,13 @@ export function generateBot(prompt: string, options: GenerateOptions = {}): Pipe
     }
 
     const assembled = assemble(plan.spec, registry);
+    const aligned = alignWithBlocksMenu(plan.requirements, assembled.bot?.workspace);
     const shared = {
         defaults: plan.defaults,
         clarifications: [],
         unsupported: plan.unsupported,
-        reasoning: plan.reasoning,
-        requirements: plan.requirements,
+        reasoning: [...plan.reasoning, ...aligned.reasoning],
+        requirements: aligned.requirements,
     };
 
     if (assembled.ok === true) return { ok: true, bot: assembled.bot, ...shared };
