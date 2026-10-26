@@ -87,6 +87,43 @@ describe('switch active market block', () => {
         expect(status.total).toBe(1);
     });
 
+    it('looks for the entry on the market the bot is already on before switching', async () => {
+        const original = ApiHelpers.singleton.active_symbols;
+        const one_second = ['1HZ100V', '1HZ75V', '1HZ50V'].map(code => ({
+            underlying_symbol: code,
+            underlying_symbol_name: `${code} Index`,
+            exchange_is_open: 1,
+            is_trading_suspended: 0,
+            market: 'synthetic_index',
+            submarket: 'random_index',
+            pip_size: 0.001,
+        }));
+        ApiHelpers.singleton.active_symbols = { ...original, retrieveActiveSymbols: async () => one_second };
+
+        try {
+            const engine = makeEngine();
+            engine.symbol = '1HZ75V';
+            engine.options = { symbol: '1HZ75V', contractTypes: ['DIGITOVER'] };
+
+            const status = await engine.marketScanBegin({ order: 'sequential', max_switches: 3 });
+
+            // The current market is analysed first; the rest keep the API's own pool order.
+            expect(engine.getScanState().eligible.map(market => market.apiSymbol)).toEqual([
+                '1HZ75V',
+                '1HZ100V',
+                '1HZ50V',
+            ]);
+            expect(status.symbol).toBe('1HZ75V');
+
+            // No entry on it: the scan moves on to the next eligible market.
+            const next = await engine.marketScanNext();
+            expect(engine.getScanState().analysed).toContain('1HZ75V');
+            expect(next.symbol).toBe('1HZ100V');
+        } finally {
+            ApiHelpers.singleton.active_symbols = original;
+        }
+    });
+
     it('names the market it freezes when the entry condition is met', async () => {
         const engine = makeEngine();
         await engine.marketScanBegin({ order: 'sequential', max_switches: 2 });

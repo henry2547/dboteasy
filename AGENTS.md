@@ -857,3 +857,24 @@ signal-only request reports it under "Not built". Keep `maskNonContractPhrases` 
 (blank/padding replacements): the offsets it produces are what splits the prompt, and
 `readFrequencies` never lets a digit sit between a digit list and its own operator, so a filter
 written after an entry list binds to the list nearest the operator.
+
+## Multi-Market Digit Entry Hunter (Free Bots, section 3)
+`src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;
+`MULTI_MARKET_PRESETS` holds the nine shipped variants. The four digit presets carry their entry rules:
+- **Over 1** — entry digits 5/6 · bar-neutral 5/6 · frequency ≥ 10.3% on 0/1
+- **Under 8** — entry digits 7/4/8 · bar-neutral 7/4/8 · frequency ≥ 10.3% on 8/9
+- **Under 7** — `digits_high_run` at_or_above 7 ×2 · bar-neutral 7/8/9 · frequency 7/8/9
+- **Over 7** — `digits_high_run` at_or_below 2 ×2 · bar-neutral 0/1/2 · frequency 0/1/2
+
+The whole rule (trigger AND every frequency/bar filter) is written into BOTH the `switch_active_market`
+CONDITION and the `if` that holds the `purchase`, so the scan only stops on a market whose own ticks pass
+it and the buy re-checks it on the frozen market. `MarketScan.marketScanBegin` puts `this.symbol` first in
+`scan.eligible`, so the market the bot is already on is analysed before any switch; `marketScanNext`
+marks it analysed and moves on to the next market (`market-scan-engine.test.js` pins this order).
+`inspectFreeBotXml` recognises the two generated entry shapes through the template's `entryDigits` /
+`entryRun` fields (set by `multiMarketTemplate`; `entryOperator`/`triggerDigit` are then `null`): a gate of
+`last digit = d` compares (digits deduped — the rule appears in both the scan and the purchase copy) and a
+`digits_high_run` gate. Its purchase lookup walks up to the closest `controls_if` that really holds a
+`purchase`, so a gate nested under AND/OR filters still validates. A template that adds one of these shapes
+without the matching field fails the loader with "Entry condition mismatch". The preset count (9) and the
+per-preset rules are pinned by `multi-market-xml.test.ts`.

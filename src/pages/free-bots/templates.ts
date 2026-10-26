@@ -152,6 +152,13 @@ export interface FreeBotTemplate {
     /** Comparison operator of the digit entry gate; `null` for an Even/Odd template. */
     entryOperator: 'LTE' | 'GTE' | null;
     triggerDigit: number | null;
+    /**
+     * Digits the entry accepts on their own ("entry is 5 or 6"), built as an OR of
+     * `last digit = d` compares instead of the barrier comparison.
+     */
+    entryDigits?: number[];
+    /** Newest digits in a row the entry needs ("any 2 digits above or equal 7"). */
+    entryRun?: { digits: number; count: number; mode: 'at_or_above' | 'at_or_below' };
     entryRule: string;
     /** Plain-language purchase condition, shown on the card as "Buys when". */
     buyCondition: string;

@@ -455,8 +455,10 @@ function entryConditionXml(config: MultiMarketConfig, id: string): string {
     return conditions.reduce((all, one, index) => logicOperation(`${id}-and-${index}`, 'AND', all, one));
 }
 
-const digitList = (digits: number[]): string =>
-    digits.length < 2 ? digits.join('') : `${digits.slice(0, -1).join(', ')} and ${digits[digits.length - 1]}`;
+const digitList = (digits: number[], conjunction: 'and' | 'or' = 'and'): string =>
+    digits.length < 2
+        ? digits.join('')
+        : `${digits.slice(0, -1).join(', ')} ${conjunction} ${digits[digits.length - 1]}`;
 
 /** The entry rule in words, for the panel summary and the template description. */
 export function entryConditionText(config: MultiMarketConfig): string {
@@ -468,7 +470,8 @@ export function entryConditionText(config: MultiMarketConfig): string {
         const side = config.entryRun.mode === 'at_or_above' ? 'or above' : 'or below';
         parts.push(`the last ${config.entryRun.count} digits are each ${config.entryRun.digits} ${side}`);
     } else if (config.entryDigits.length) {
-        parts.push(`last digit is ${digitList(config.entryDigits)}`);
+        // The entry digits are alternatives (OR); the frequency and bar rules below are ANDed.
+        parts.push(`last digit is ${digitList(config.entryDigits, 'or')}`);
     } else if (spec.entryOperator === 'LTE') {
         parts.push(`last digit ≤ ${digit}`);
     } else if (spec.entryOperator === 'GTE') {
@@ -750,8 +753,13 @@ export function multiMarketTemplate(config: MultiMarketConfig): FreeBotTemplate 
         takeProfit: config.takeProfit,
         stopLoss: config.stopLoss,
         multiplier: config.multiplier,
-        entryOperator: spec.entryOperator,
-        triggerDigit: spec.entryOperator ? digit : null,
+        // A preset that states its own entry digits or a digit run does not use the barrier
+        // comparison as its trigger, so the template names that rule instead of the barrier.
+        entryOperator: config.entryDigits.length || config.entryRun ? null : spec.entryOperator,
+        triggerDigit:
+            config.entryDigits.length || config.entryRun ? null : spec.entryOperator ? digit : null,
+        entryDigits: config.entryDigits.length ? [...config.entryDigits] : undefined,
+        entryRun: config.entryRun ?? undefined,
         entryRule: `${condition} · the market is switched by the Digits "Switch active market" block`,
         buyCondition: `The bot scans the eligible volatility markets in round-robin order, waits for each one's own tick history and a live tick, and reads the entry rule on that market: ${condition}. A market that fails any part of it is skipped and the scan switches to the next one; the first market that passes is bought ${spec.contractType}.`,
         afterPurchase:
@@ -780,7 +788,7 @@ export function multiMarketById(id: string | null | undefined): FreeBotTemplate 
     return builtTemplates.get(id) ?? null;
 }
 
-/** Every preset as a ready template — the eight bots this builder ships with. */
+/** Every preset as a ready template — the nine bots this builder ships with. */
 export function multiMarketTemplates(): FreeBotTemplate[] {
     return MULTI_MARKET_PRESETS.map(item => multiMarketTemplate(item.config));
 }
