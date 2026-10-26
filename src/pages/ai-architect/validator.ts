@@ -17,6 +17,7 @@
 
 import { allBlocks } from './builder';
 import { FORBIDDEN_BLOCKS, TRADE_CAPABLE_BLOCKS, type Registry } from './registry';
+import { legsOf, normalizeSpec } from './spec-model';
 import type { BlockNode, BuiltWorkspace, SocketType, StrategySpec, ValidationCheck, ValidationReport } from './types';
 
 const REQUIRED_ROOTS = ['trade_definition', 'before_purchase'] as const;
@@ -252,7 +253,12 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
 
     // 7. Market consistency: the scan and the confirmation must use the same rule ────────────────
     if (switches.length && before) {
-        const scanSignature = conditionSignature(switches[0].values?.CONDITION?.[0]);
+        const scanCondition = switches[0].values?.CONDITION?.[0];
+        // A two-leg bot scans on "either leg fits", so each leg's own rule must be confirmed.
+        const requiredSignatures =
+            scanCondition?.type === 'logic_operation' && scanCondition.fields?.OP === 'OR'
+                ? [...(scanCondition.values?.A ?? []), ...(scanCondition.values?.B ?? [])].map(conditionSignature)
+                : [conditionSignature(scanCondition)];
         // The confirmation is the `if` that directly holds the action (purchase or stop), not the
         // outer stop-flag guard that merely contains the whole stack.
         const confirmations = findAll(beforeBlocks, 'controls_if').filter(candidate =>
@@ -265,7 +271,7 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
         });
         // Exact equality only: a partial match (for example just `last_digit`) would let a different
         // rule such as `>= 1` stand in for `<= 1`.
-        const consistent = scanSignature !== '' && confirmationSignatures.includes(scanSignature);
+        const consistent = requiredSignatures.length > 0 && requiredSignatures.every(signature => signature !== '' && confirmationSignatures.includes(signature));
         checks.push(
             consistent
                 ? pass('market-consistency', 'Scan and confirmation use the same entry rule', 'The condition the scan stops on is re-checked on the frozen market before anything happens.')
@@ -277,17 +283,37 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
     const hasPurchase = blocks.some(block => (TRADE_CAPABLE_BLOCKS as readonly string[]).includes(block.type));
     if (spec) {
         if (spec.mode === 'demo_trading') {
+            const expectedPurchases = legsOf(spec).length;
             checks.push(
-                trades.length === 1
-                    ? pass('purchase', 'Exactly one purchase path', 'One Purchase block, inside the purchase conditions.')
-                    : fail('purchase', 'Exactly one purchase path', `${trades.length} Purchase blocks found in the purchase conditions; a trading bot needs exactly one.`)
+                trades.length === expectedPurchases
+                    ? pass(
+                          'purchase',
+                          'Exactly one purchase path per rule',
+                          expectedPurchases === 1
+                              ? 'One Purchase block, inside the purchase conditions.'
+                              : 'Each leg has its own Purchase block inside the purchase conditions.'
+                      )
+                    : fail(
+                          'purchase',
+                          'Exactly one purchase path per rule',
+                          `${trades.length} Purchase blocks found in the purchase conditions; this bot has ${expectedPurchases} entry rule(s) and needs one Purchase per rule.`
+                      )
             );
 
-            const guarded = trades.length > 0 && !!before && findAll(beforeBlocks, 'controls_if').some(candidate => {
-                const hasPurchase_ = descendants(candidate).some(inner => inner.type === 'purchase');
-                const condition = candidate.values?.IF0?.[0];
-                return hasPurchase_ && !!condition && descendants(condition).some(inner => inner.type === 'risk_can_trade');
-            });
+            // Every `if` that directly holds a Purchase must be risk-guarded, so neither leg can buy
+            // without the risk limits being checked.
+            const actionIfs = !!before
+                ? findAll(beforeBlocks, 'controls_if').filter(candidate =>
+                      (candidate.statements?.DO0 ?? []).some(inner => inner.type === 'purchase')
+                  )
+                : [];
+            const guarded =
+                trades.length > 0 &&
+                actionIfs.length === trades.length &&
+                actionIfs.every(candidate => {
+                    const condition = candidate.values?.IF0?.[0];
+                    return !!condition && descendants(condition).some(inner => inner.type === 'risk_can_trade');
+                });
             checks.push(
                 guarded
                     ? pass('risk-guard', 'The purchase sits behind the risk guard', 'Risk allows a trade is part of the condition that wraps the Purchase block.')
@@ -332,12 +358,15 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
             );
         }
 
-        if (spec.filters.window > 0 && spec.filters.frequency) {
-            const samples = findAll(blocks, 'digits_frequency').map(block => Number(block.values?.SAMPLE?.[0]?.fields?.NUM));
+        const readBlocks = [...findAll(blocks, 'digits_frequency'), ...findAll(blocks, 'digits_bar_neutral')];
+        if (readBlocks.length) {
+            const legWindows = [...new Set(legsOf(normalizeSpec(spec)).map(leg => leg.filters.window))];
+            const samples = readBlocks.map(block => Number(block.values?.SAMPLE?.[0]?.fields?.NUM));
+            const label = legWindows.length === 1 ? `the last ${legWindows[0]} ticks` : `one of the legs' windows (${legWindows.join(', ')} ticks)`;
             checks.push(
-                samples.every(sample => sample === spec.filters.window)
-                    ? pass('window', 'Filters use the requested analysis window', `Frequency filter reads the last ${spec.filters.window} ticks.`)
-                    : fail('window', 'Filters use the requested analysis window', `A frequency block reads ${samples.join(', ')} ticks, not ${spec.filters.window}.`)
+                samples.every(sample => legWindows.includes(sample))
+                    ? pass('window', 'Filters use the requested analysis window', `Every digit filter reads ${label}.`)
+                    : fail('window', 'Filters use the requested analysis window', `A digit filter reads ${samples.join(', ')} ticks, not ${label}.`)
             );
         }
     }

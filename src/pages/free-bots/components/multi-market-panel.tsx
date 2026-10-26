@@ -14,6 +14,7 @@ import {
     MULTI_MARKET_DEFAULTS,
     MULTI_MARKET_PRESETS,
     MULTI_MARKET_STRATEGIES,
+    entryConditionText,
     multiMarketBotName,
     multiMarketTemplate,
     validateMultiMarketConfig,
@@ -68,6 +69,11 @@ export default function MultiMarketPanel({
         apply({ ...config, ...changes }, null);
     };
 
+    // The entry rule belongs to the preset: a different strategy or barrier needs a rule of its own,
+    // so the preset's digits are cleared instead of silently staying on another contract.
+    const updateStrategy = (changes: Partial<MultiMarketConfig>) =>
+        update({ ...changes, entryDigits: [], entryRun: null, minFrequencyDigits: [], barNeutralDigits: [] });
+
     const selectPreset = (presetId: string) => {
         const preset = MULTI_MARKET_PRESETS.find(item => item.id === presetId);
         if (preset) apply(preset.config, presetId);
@@ -119,7 +125,7 @@ export default function MultiMarketPanel({
                         value={config.strategy}
                         onChange={event => {
                             const strategy = event.target.value as MultiMarketStrategy;
-                            update({ strategy, barrier: MULTI_MARKET_STRATEGIES[strategy].defaultDigit });
+                            updateStrategy({ strategy, barrier: MULTI_MARKET_STRATEGIES[strategy].defaultDigit });
                         }}
                     >
                         {STRATEGY_ORDER.map(strategy => (
@@ -139,7 +145,7 @@ export default function MultiMarketPanel({
                             max={spec.maxDigit}
                             step={1}
                             value={config.barrier ?? ''}
-                            onChange={event => update({ barrier: Number(event.target.value) })}
+                            onChange={event => updateStrategy({ barrier: Number(event.target.value) })}
                         />
                     </label>
                 )}
@@ -215,8 +221,8 @@ export default function MultiMarketPanel({
             <div className='multi-market__summary'>
                 <p className='multi-market__name'>{multiMarketBotName(config)}</p>
                 <p className='multi-market__rule'>
-                    Buys when <strong>{entryLabel(config)}</strong> on whichever eligible market the scan reaches
-                    first, after that market&apos;s own history and live tick are confirmed.
+                    Buys when <strong>{entryConditionText(config)}</strong> on the first eligible market whose own
+                    ticks pass it; a market that fails is skipped and the scan switches to the next one.
                 </p>
             </div>
 
@@ -250,11 +256,3 @@ export default function MultiMarketPanel({
     );
 }
 
-function entryLabel(config: MultiMarketConfig): string {
-    const spec = MULTI_MARKET_STRATEGIES[config.strategy];
-    if (spec.entryOperator === 'LTE') return `the last digit is ≤ ${config.barrier}`;
-    if (spec.entryOperator === 'GTE') return `the last digit is ≥ ${config.barrier}`;
-    if (spec.matchMode === 'matches') return `the last digit matches ${config.barrier}`;
-    if (spec.matchMode === 'differs') return `the last digit differs from ${config.barrier}`;
-    return `the last digit is ${spec.parity}`;
-}

@@ -19,6 +19,7 @@ jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 import { applyMarketToXml, inspectFreeBotXml, parseBotXml } from '../bot-xml';
 import {
     MULTI_MARKET_DEFAULTS,
+    MULTI_MARKET_FREQUENCY_PERCENT,
     MULTI_MARKET_PRESETS,
     buildMultiMarketBotXml,
     multiMarketById,
@@ -108,7 +109,7 @@ describe('generated workspace', () => {
 
 describe('templates', () => {
     it('generates one loadable template per preset', () => {
-        expect(MULTI_MARKET_PRESETS).toHaveLength(8);
+        expect(MULTI_MARKET_PRESETS).toHaveLength(9);
 
         for (const preset of MULTI_MARKET_PRESETS) {
             const template = multiMarketTemplate(preset.config);
@@ -128,6 +129,7 @@ describe('templates', () => {
 
         expect(contractOf('over_1')).toMatchObject({ contractType: 'DIGITOVER', prediction: 1, tradeType: 'overunder' });
         expect(contractOf('over_2')).toMatchObject({ contractType: 'DIGITOVER', prediction: 2 });
+        expect(contractOf('over_7')).toMatchObject({ contractType: 'DIGITOVER', prediction: 7 });
         expect(contractOf('under_8')).toMatchObject({ contractType: 'DIGITUNDER', prediction: 8 });
         expect(contractOf('under_7')).toMatchObject({ contractType: 'DIGITUNDER', prediction: 7 });
         expect(contractOf('even')).toMatchObject({ contractType: 'DIGITEVEN', prediction: null, entryParity: 'even' });
@@ -138,6 +140,70 @@ describe('templates', () => {
             tradeType: 'matchesdiffers',
         });
         expect(contractOf('differs')).toMatchObject({ contractType: 'DIGITDIFF', prediction: 4 });
+    });
+
+    it('carries the entry rules the four digit presets ask for', () => {
+        const configOf = (id: string) => MULTI_MARKET_PRESETS.find(item => item.id === id)!.config;
+
+        expect(configOf('over_1')).toMatchObject({
+            entryDigits: [5, 6],
+            barNeutralDigits: [5, 6],
+            minFrequencyDigits: [0, 1],
+        });
+        expect(configOf('under_8')).toMatchObject({
+            entryDigits: [7, 4, 8],
+            barNeutralDigits: [7, 4, 8],
+            minFrequencyDigits: [8, 9],
+        });
+        expect(configOf('under_7')).toMatchObject({
+            entryRun: { digits: 7, count: 2, mode: 'at_or_above' },
+            barNeutralDigits: [7, 8, 9],
+            minFrequencyDigits: [7, 8, 9],
+        });
+        expect(configOf('over_7')).toMatchObject({
+            entryRun: { digits: 2, count: 2, mode: 'at_or_below' },
+            barNeutralDigits: [0, 1, 2],
+            minFrequencyDigits: [0, 1, 2],
+        });
+    });
+
+    it('builds each preset rule into the switch block and the purchase confirmation', () => {
+        for (const id of ['over_1', 'under_8', 'under_7', 'over_7']) {
+            const presetConfig = MULTI_MARKET_PRESETS.find(item => item.id === id)!.config;
+            const template = multiMarketTemplate(presetConfig);
+            const doc = parseBotXml(freeBotXml(template)).doc!;
+            const switch_condition = doc.querySelector(
+                'block[type="switch_active_market"] value[name="CONDITION"]'
+            ) as Element;
+            const purchase_condition = doc.querySelector('block[id="mm-entry"] value[name="IF0"]') as Element;
+
+            for (const condition of [switch_condition, purchase_condition]) {
+                expect(condition).not.toBeNull();
+                const frequency = [...condition.querySelectorAll('block[type="digits_frequency"]')];
+                const neutral = [...condition.querySelectorAll('block[type="digits_bar_neutral"]')];
+
+                expect(frequency).toHaveLength(presetConfig.minFrequencyDigits.length);
+                expect(neutral).toHaveLength(presetConfig.barNeutralDigits.length);
+
+                // Every frequency rule reads the same 10.3% threshold of the 100-tick window.
+                const thresholds = [...condition.querySelectorAll('shadow[type="math_number"] field[name="NUM"]')]
+                    .map(field => field.textContent)
+                    .filter(value => value === String(MULTI_MARKET_FREQUENCY_PERCENT));
+                expect(thresholds).toHaveLength(presetConfig.minFrequencyDigits.length);
+
+                if (presetConfig.entryRun) {
+                    const run = condition.querySelector('block[type="digits_high_run"]')!;
+                    expect(run.querySelector('field[name="MODE"]')?.textContent).toBe(presetConfig.entryRun.mode);
+                    expect(run.querySelector('field[name="DIGIT"]')?.textContent).toBe(
+                        String(presetConfig.entryRun.digits)
+                    );
+                } else {
+                    expect(condition.querySelectorAll('block[type="last_digit"]')).toHaveLength(
+                        presetConfig.entryDigits.length
+                    );
+                }
+            }
+        }
     });
 
     it('keeps the generated template resolvable by id after a load', () => {

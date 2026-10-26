@@ -208,7 +208,14 @@ export default Engine =>
                 );
             }
 
-            scan.eligible = pool;
+            // The market the bot is already on is analysed first: the switch block checks that
+            // market's own entry conditions and only moves the bot when it shows no entry.
+            scan.eligible = this.symbol
+                ? [
+                      ...pool.filter(market => market.apiSymbol === this.symbol),
+                      ...pool.filter(market => market.apiSymbol !== this.symbol),
+                  ]
+                : pool;
             scan.limit = resolveSwitchLimit(scan.max_switches, pool.length);
             journal(
                 `Market scan: ${pool.length} eligible volatility market(s) found, searching up to ${

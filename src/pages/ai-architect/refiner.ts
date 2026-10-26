@@ -9,7 +9,8 @@
  */
 
 import { MAX_WINDOW, MIN_WINDOW } from './planner';
-import type { ExecutionMode, StrategySpec } from './types';
+import { filterText, normalizeSpec } from './spec-model';
+import type { ExecutionMode, FrequencyFilter, StrategySpec } from './types';
 
 export interface SpecChange {
     field: string;
@@ -35,7 +36,9 @@ const toNumber = (token: string | undefined): number | null => {
     return Number.isFinite(value) ? value : null;
 };
 
-const clone = (spec: StrategySpec): StrategySpec => JSON.parse(JSON.stringify(spec)) as StrategySpec;
+const clone = (spec: StrategySpec): StrategySpec => JSON.parse(JSON.stringify(normalizeSpec(spec))) as StrategySpec;
+const DIGIT_LIST = '\\d(?:\\s*(?:,|and|or|&)\\s*\\d)*';
+const digitsOf = (value: string): number[] => [...new Set((value.match(/\d/g) ?? []).map(Number).filter(digit => digit >= 0 && digit <= 9))];
 const modeLabel = (mode: ExecutionMode) => (mode === 'demo_trading' ? 'Demo trading' : mode === 'signal' ? 'Signal only' : 'Observation only');
 
 export function refineSpec(current: StrategySpec, instruction: string): RefineResult {
@@ -123,24 +126,40 @@ export function refineSpec(current: StrategySpec, instruction: string): RefineRe
 
     // ── Filters ──────────────────────────────────────────────────────────────────────────────────
     const frequency = text.match(
-        new RegExp(`digit\\s*${NUMBER}[^.]{0,30}?(below|under|above|over|less than|more than)\\s*(\\d+(?:\\.\\d+)?)\\s*%`)
+        new RegExp(`digits?\\s*(${DIGIT_LIST})[^.]{0,40}?(below|under|above|over|less than|more than|at least|at most)\\s*(\\d+(?:\\.\\d+)?)\\s*%`)
     );
-    const losingDigits = text.match(/(?:each|every|all)\s+(?:the\s+)?losing digits?\s+(?:to be\s+|is\s+|are\s+)?(?:below|under|less than)\s*(\d+(?:\.\d+)?)\s*%/);
     if (frequency) {
-        const digit = toNumber(frequency[1]);
-        if (digit !== null && digit >= 0 && digit <= 9) {
+        const operator: FrequencyFilter['operator'] = /below|under|less|at most/.test(frequency[2]) ? 'below' : 'above';
+        const percent = Number(frequency[3]);
+        const filters = digitsOf(frequency[1]).map(digit => ({ digit, operator, percent }));
+        if (filters.length && percent > 0 && percent <= 100) {
             recognised += 1;
-            const operator = /below|under|less/.test(frequency[2]) ? 'below' : 'above';
-            const percent = Number(frequency[3]);
-            change('Frequency filter', next.filters.frequency ? `digit ${next.filters.frequency.digit} ${next.filters.frequency.operator} ${next.filters.frequency.percent}%` : 'none', `digit ${digit} ${operator} ${percent}%`);
-            next.filters.frequency = { digit, operator, percent };
+            change('Frequency filters', filterText(next.filters), filters.map(item => `digit ${item.digit} ${item.operator} ${item.percent}%`).join(', '));
+            next.filters.frequencies = filters;
         }
-    } else if (losingDigits) {
-        // "each losing digit below N%" needs one filter per losing digit; the registry's digit
-        // blocks can express that, but this single-filter spec cannot, so it is reported, not faked.
+    } else if (/\b(?:remove|drop|clear|delete)\b[^.]{0,30}\b(?:digit )?(?:frequency|filters?)\b/.test(text)) {
         recognised += 1;
-        unsupported.push('A frequency limit on every losing digit needs one filter per digit. Name one digit (for example "digit 0 below 10%") and I will add it.');
+        change('Frequency filters', filterText(next.filters), 'None');
+        next.filters.frequencies = [];
+        next.filters.barNeutral = [];
     }
+
+    const barDigits = text.match(new RegExp(`digits?\\s*(${DIGIT_LIST})[^.]{0,40}?(?:no|not|without)[^.]{0,30}?\\bbars?\\b`));
+    if (barDigits) {
+        recognised += 1;
+        const digits = digitsOf(barDigits[1]);
+        change('Digit bar filters', next.filters.barNeutral.join(', ') || 'none', digits.join(', '));
+        next.filters.barNeutral = digits;
+    }
+
+    const entryDigits = text.match(new RegExp(`\\bentr(?:y|ies)\\b[^.]{0,30}?\\b(?:is|are|=|:)?\\s*(${DIGIT_LIST})`));
+    if (entryDigits) {
+        recognised += 1;
+        const digits = digitsOf(entryDigits[1]);
+        change('Entry digits', next.entry.digits.join(', ') || 'the contract rule', digits.join(' or '));
+        next.entry.digits = digits;
+    }
+
     const streak = text.match(new RegExp(`streak[^.]{0,20}?(?:at most|no more than|below|under|<=?)\\s*${NUMBER}`));
     if (streak) {
         const value = toNumber(streak[1]);

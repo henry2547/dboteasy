@@ -11,8 +11,9 @@ import { explainBot } from './explainer';
 import { planStrategy, type StrategyPlanner } from './planner';
 import { refineSpec, type RefineResult } from './refiner';
 import { buildRegistry, type Registry } from './registry';
+import { normalizeSpec } from './spec-model';
 import { validateWorkspace } from './validator';
-import type { AppliedDefault, BuiltWorkspace, Clarification, Explanation, StrategySpec, ValidationReport } from './types';
+import type { AppliedDefault, BuiltWorkspace, Clarification, Explanation, Requirement, StrategySpec, ValidationReport } from './types';
 
 export type PipelineStage = 'understand' | 'plan' | 'build' | 'validate' | 'explain';
 
@@ -34,6 +35,8 @@ export interface PipelineResult {
     clarifications: Clarification[];
     unsupported: string[];
     reasoning: string[];
+    /** Every clause of the prompt, and whether the bot implements it. */
+    requirements: Requirement[];
 }
 
 export interface GenerateOptions {
@@ -42,7 +45,9 @@ export interface GenerateOptions {
 }
 
 /** Builds, validates and explains a spec. Throws nothing: errors become a failed result. */
-export function assemble(spec: StrategySpec, registry: Registry): { ok: true; bot: GeneratedBot } | { ok: false; failedAt: PipelineStage; message: string; bot?: GeneratedBot } {
+export function assemble(input: StrategySpec, registry: Registry): { ok: true; bot: GeneratedBot } | { ok: false; failedAt: PipelineStage; message: string; bot?: GeneratedBot } {
+    // A spec saved by an older version is upgraded once, here, so every later stage sees one shape.
+    const spec = normalizeSpec(input);
     let built: ReturnType<typeof buildBotXml>;
     try {
         built = buildBotXml(spec);
@@ -86,11 +91,18 @@ export function generateBot(prompt: string, options: GenerateOptions = {}): Pipe
             clarifications: plan.clarifications,
             unsupported: plan.unsupported,
             reasoning: plan.reasoning,
+            requirements: plan.requirements,
         };
     }
 
     const assembled = assemble(plan.spec, registry);
-    const shared = { defaults: plan.defaults, clarifications: [], unsupported: plan.unsupported, reasoning: plan.reasoning };
+    const shared = {
+        defaults: plan.defaults,
+        clarifications: [],
+        unsupported: plan.unsupported,
+        reasoning: plan.reasoning,
+        requirements: plan.requirements,
+    };
 
     if (assembled.ok === true) return { ok: true, bot: assembled.bot, ...shared };
     return { ok: false, failedAt: assembled.failedAt, message: assembled.message, bot: assembled.bot, ...shared };

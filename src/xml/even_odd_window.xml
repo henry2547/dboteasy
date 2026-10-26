@@ -509,30 +509,29 @@
                               </block>
                             </value>
                             <statement name="DO0">
-                              <block type="trade_again" id="freebot-eo-trade-again-block">
-                                <next>
-                                  <block type="report_journal" id="freebot-eo-result-report">
-                                    <field name="LEVEL">info</field>
-                                    <value name="MESSAGE">
-                                      <shadow type="text" id="freebot-eo-result-report-text">
-                                        <field name="TEXT">Result</field>
-                                      </shadow>
-                                      <block type="exec_last_result" id="freebot-eo-result-report-value"></block>
-                                    </value>
-                                    <next>
-                                      <block type="report_journal" id="freebot-eo-session-report">
-                                        <field name="LEVEL">info</field>
-                                        <value name="MESSAGE">
-                                          <shadow type="text" id="freebot-eo-session-report-text">
-                                            <field name="TEXT">Session report</field>
-                                          </shadow>
-                                          <block type="report_session" id="freebot-eo-session-report-value"></block>
-                                        </value>
-                                      </block>
-                                    </next>
-                                  </block>
-                                </next>
-                              </block>
+                                <block type="report_journal" id="freebot-eo-result-report">
+                                  <field name="LEVEL">info</field>
+                                  <value name="MESSAGE">
+                                    <shadow type="text" id="freebot-eo-result-report-text">
+                                      <field name="TEXT">Result</field>
+                                    </shadow>
+                                    <block type="exec_last_result" id="freebot-eo-result-report-value"></block>
+                                  </value>
+                                  <next>
+                                    <block type="report_journal" id="freebot-eo-session-report">
+                                      <field name="LEVEL">info</field>
+                                      <value name="MESSAGE">
+                                        <shadow type="text" id="freebot-eo-session-report-text">
+                                          <field name="TEXT">Session report</field>
+                                        </shadow>
+                                        <block type="report_session" id="freebot-eo-session-report-value"></block>
+                                      </value>
+                                      <next>
+                                        <block type="trade_again" id="freebot-eo-trade-again-block"></block>
+                                      </next>
+                                    </block>
+                                  </next>
+                                </block>
                             </statement>
                           </block>
                         </next>

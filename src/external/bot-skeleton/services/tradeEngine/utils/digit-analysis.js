@@ -81,7 +81,14 @@ export const highDigitRun = (digits, threshold, mode = 'at_or_above') => {
     const list = toDigitList(digits);
     const wanted = Number(threshold);
     if (!Number.isInteger(wanted)) return 0;
-    const qualifies = mode === 'above' ? digit => digit > wanted : digit => digit >= wanted;
+    const qualifies =
+        mode === 'above'
+            ? digit => digit > wanted
+            : mode === 'below'
+              ? digit => digit < wanted
+              : mode === 'at_or_below'
+                ? digit => digit <= wanted
+                : digit => digit >= wanted;
 
     let run = 0;
     for (let index = list.length - 1; index >= 0; index -= 1) {

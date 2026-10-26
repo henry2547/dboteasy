@@ -164,6 +164,10 @@ interface EntryCondition {
     /** `matches` / `differs` when the purchase is gated by the Matches/Differs digit block. */
     matchMode: 'matches' | 'differs' | null;
     matchDigit: string | null;
+    /** Every digit an `entry is 5 or 6` gate accepts, when the gate ORs `last digit = d` compares. */
+    entryDigits?: string[];
+    /** Set when the gate is a run of high/low digits (`digits_high_run`). */
+    run?: { mode: string; digit: string; count: string } | null;
     purchaseContract: string | null;
     hasPurchase: boolean;
     /** Set when the entry is an Even/Odd strategy block (`eo_buy_even` / `eo_buy_odd`). */
@@ -183,25 +187,76 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
     const beforePurchase = blocksOfType(doc, 'before_purchase')[0];
     if (!beforePurchase) return null;
 
+    /**
+     * The purchase the gate around `block` buys. The entry condition may be nested several
+     * logic blocks deep (OR of digit compares, ANDed filters), so this walks up to the first
+     * `controls_if` that really holds a purchase instead of assuming a fixed nesting depth.
+     */
+    const gatePurchase = (block: Element): Element | null => {
+        let node: Element | null = block.parentElement;
+        while (node && node !== beforePurchase) {
+            if (node.tagName === 'block' && node.getAttribute('type') === 'controls_if') {
+                const purchase = node.querySelector('statement[name="DO0"] block[type="purchase"]');
+                if (purchase) return purchase;
+            }
+            node = node.parentElement;
+        }
+        return null;
+    };
+
     const compares = blocksOfType(beforePurchase, 'logic_compare');
-    for (const compare of compares) {
-        if (!compare.querySelector('block[type="last_digit"]')) continue;
-        const operator = fieldValue(compare, 'OP');
-        const trigger = valueField(compare, 'B');
-        if (!operator || trigger === null) continue;
+    const digit_compares = compares.filter(compare => compare.querySelector('block[type="last_digit"]'));
+    if (digit_compares.length) {
+        const operator = fieldValue(digit_compares[0], 'OP');
+        const trigger = valueField(digit_compares[0], 'B');
+        if (operator && trigger !== null) {
+            const purchase = gatePurchase(digit_compares[0]);
+            // "entry is 5 or 6": several `last digit = d` compares ORed into one gate. The same
+            // rule is written twice (scan condition and purchase gate), so the digits are deduped.
+            const entryDigits =
+                operator === 'EQ'
+                    ? Array.from(
+                          new Set(
+                              digit_compares
+                                  .filter(compare => fieldValue(compare, 'OP') === 'EQ')
+                                  .map(compare => valueField(compare, 'B'))
+                                  .filter((digit): digit is string => digit !== null)
+                          )
+                      )
+                    : [];
 
-        const controlsIf = compare.parentElement?.parentElement ?? null;
-        const purchase = controlsIf?.querySelector('statement[name="DO0"] block[type="purchase"]') ?? null;
+            return {
+                operator,
+                trigger,
+                parity: null,
+                matchMode: null,
+                matchDigit: null,
+                entryDigits: entryDigits.length ? entryDigits : undefined,
+                purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
+                hasPurchase: !!purchase,
+            };
+        }
+    }
 
-        return {
-            operator,
-            trigger,
-            parity: null,
-            matchMode: null,
-            matchDigit: null,
-            purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
-            hasPurchase: !!purchase,
-        };
+    // "any 2 digits above or equal 7": the gate is a run of the newest high/low digits.
+    const runBlock = blocksOfType(beforePurchase, 'digits_high_run')[0];
+    if (runBlock) {
+        const mode = fieldValue(runBlock, 'MODE');
+        const digit = fieldValue(runBlock, 'DIGIT');
+        const count = valueField(runBlock, 'COUNT');
+        const purchase = gatePurchase(runBlock);
+        if (mode && digit !== null && count !== null) {
+            return {
+                operator: null,
+                trigger: null,
+                parity: null,
+                matchMode: null,
+                matchDigit: null,
+                run: { mode, digit, count },
+                purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
+                hasPurchase: !!purchase,
+            };
+        }
     }
 
     const parityBlocks = blocksOfType(beforePurchase, 'digits_even_odd');
@@ -511,6 +566,21 @@ export function inspectFreeBotXml(
     const expectsMatch = template.strategy === 'matches' || template.strategy === 'differs';
 
     const entryMatchesTemplate = (condition: EntryCondition): boolean => {
+        if (template.entryRun) {
+            return (
+                condition.run?.mode === template.entryRun.mode &&
+                Number(condition.run?.digit) === template.entryRun.digits &&
+                Number(condition.run?.count) === template.entryRun.count
+            );
+        }
+        if (template.entryDigits?.length) {
+            const digits = condition.entryDigits ?? [];
+            return (
+                condition.operator === 'EQ' &&
+                digits.length === template.entryDigits.length &&
+                template.entryDigits.every(digit => digits.includes(String(digit)))
+            );
+        }
         if (expectsMatch) {
             return condition.matchMode === template.strategy && Number(condition.matchDigit) === template.prediction;
         }
@@ -536,7 +606,11 @@ export function inspectFreeBotXml(
                       ? `Last digit ${entry.parity}`
                       : entry.matchMode
                         ? `Last digit ${entry.matchMode} ${entry.matchDigit}`
-                        : `Last digit ${entry.operator} ${entry.trigger}`
+                        : entry.run
+                          ? `Last ${entry.run.count} digits ${entry.run.mode.replace(/_/g, ' ')} ${entry.run.digit}`
+                          : entry.entryDigits?.length
+                            ? `Last digit ${entry.entryDigits.join(' or ')}`
+                            : `Last digit ${entry.operator} ${entry.trigger}`
               } → purchase ${entry.purchaseContract ?? '—'}`
             : 'No digit entry condition found around the purchase block.',
     });
@@ -546,7 +620,11 @@ export function inspectFreeBotXml(
                 ? `Entry condition mismatch: expected "last digit ${template.strategy} ${template.prediction} → purchase ${primary_contract}".`
                 : expectsParity
                   ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${primary_contract}".`
-                  : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${primary_contract}".`
+                  : template.entryRun
+                    ? `Entry condition mismatch: expected "last ${template.entryRun.count} digits ${template.entryRun.mode.replace(/_/g, ' ')} ${template.entryRun.digits} → purchase ${primary_contract}".`
+                    : template.entryDigits?.length
+                      ? `Entry condition mismatch: expected "last digit ${template.entryDigits.join(' or ')} → purchase ${primary_contract}".`
+                      : `Entry condition mismatch: expected "last digit ${template.entryOperator} ${template.triggerDigit} → purchase ${primary_contract}".`
         );
     }
 

@@ -18,7 +18,8 @@
  *    arm a genuine next-tick observation without raising that gate.
  */
 
-import type { BlockNode, BuiltWorkspace, StrategyKind, StrategySpec } from './types';
+import type { BlockNode, BuiltWorkspace, StrategyKind, StrategyLeg, StrategySpec } from './types';
+import { legsOf, normalizeSpec } from './spec-model';
 
 // ── Contract table ──────────────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,8 @@ const VAR_IDS = {
     stop: 'aa-var-stop',
     initialised: 'aa-var-initialised',
     losses: 'aa-var-losses',
+    leg: 'aa-var-leg',
+    prediction: 'aa-var-prediction',
 } as const;
 type VarKey = keyof typeof VAR_IDS;
 
@@ -56,6 +59,8 @@ const VAR_NAMES: Record<VarKey, string> = {
     stop: 'architect:stop',
     initialised: 'architect:initialised',
     losses: 'architect:losses',
+    leg: 'architect:leg',
+    prediction: 'architect:prediction',
 };
 
 // ── Node helpers ────────────────────────────────────────────────────────────────────────────────
@@ -88,6 +93,9 @@ const not = (ids: Ids, value: BlockNode): BlockNode => node(ids.next('not'), 'lo
 const and = (ids: Ids, a: BlockNode, b: BlockNode): BlockNode =>
     node(ids.next('and'), 'logic_operation', { fields: { OP: 'AND' }, values: { A: [a], B: [b] } });
 
+const or = (ids: Ids, a: BlockNode, b: BlockNode): BlockNode =>
+    node(ids.next('or'), 'logic_operation', { fields: { OP: 'OR' }, values: { A: [a], B: [b] } });
+
 const text = (ids: Ids, value: string): BlockNode => node(ids.next('text'), 'text', { fields: { TEXT: value } });
 
 const ifThen = (ids: Ids, condition: BlockNode, body: BlockNode[], otherwise?: BlockNode[], role?: string): BlockNode =>
@@ -103,9 +111,18 @@ const journal = (ids: Ids, message: BlockNode, level: 'info' | 'warn' | 'error' 
 
 // ── Entry condition: the trigger, kept separate from the barrier and the filters ────────────────
 
-/** The digit rule the bot waits for. Mirrors the shipped Multi-Market templates exactly. */
-function entryTrigger(ids: Ids, spec: StrategySpec): BlockNode {
-    const { strategy, barrier } = spec.entry;
+/**
+ * The digit rule the bot waits for. Mirrors the shipped Multi-Market templates exactly. When the user
+ * listed the entry digits ("entry is 5 and 6") each of them is accepted on its own, so the entry is an
+ * OR of those digits instead of the barrier comparison.
+ */
+function entryTrigger(ids: Ids, leg: StrategyLeg): BlockNode {
+    const { strategy, barrier, digits } = leg;
+    if (digits.length) {
+        return digits
+            .map(digit => compare(ids, 'EQ', node(ids.next('digit'), 'last_digit'), num(ids, digit, true)))
+            .reduce((all, digit) => or(ids, all, digit));
+    }
     if (strategy === 'over') {
         return compare(ids, 'LTE', node(ids.next('digit'), 'last_digit'), num(ids, barrier as number, true));
     }
@@ -118,24 +135,36 @@ function entryTrigger(ids: Ids, spec: StrategySpec): BlockNode {
     return node(ids.next('eo'), 'digits_even_odd', { fields: { PARITY: strategy } });
 }
 
-/** Statistical filters over the historical window (the user's thresholds, never invented). */
-function filterConditions(ids: Ids, spec: StrategySpec): BlockNode[] {
+/**
+ * Every statistical filter the user stated, over the leg's own historical window — one frequency
+ * comparison per digit, one bar-neutral read per digit, plus the streak rule. All are ANDed.
+ */
+function filterConditions(ids: Ids, leg: StrategyLeg): BlockNode[] {
     const conditions: BlockNode[] = [];
-    const { frequency, streakAtMost, window } = spec.filters;
+    const { frequencies, streakAtMost, window, barNeutral } = leg.filters;
 
-    if (frequency) {
+    frequencies.forEach(filter => {
         conditions.push(
             compare(
                 ids,
-                frequency.operator === 'below' ? 'LTE' : 'GTE',
+                filter.operator === 'below' ? 'LTE' : 'GTE',
                 node(ids.next('freq'), 'digits_frequency', {
-                    fields: { DIGIT: String(frequency.digit) },
+                    fields: { DIGIT: String(filter.digit) },
                     values: { SAMPLE: [num(ids, window, true)] },
                 }),
-                num(ids, frequency.percent, true)
+                num(ids, filter.percent, true)
             )
         );
-    }
+    });
+    barNeutral.forEach(digit => {
+        conditions.push(
+            node(ids.next('bar'), 'digits_bar_neutral', {
+                fields: { DIGIT: String(digit) },
+                values: { SAMPLE: [num(ids, window, true)] },
+                role: `Digit ${digit} carries neither the hot nor the cold bar.`,
+            })
+        );
+    });
     if (streakAtMost !== null) {
         conditions.push(compare(ids, 'LTE', node(ids.next('streak'), 'digits_streak'), num(ids, streakAtMost, true)));
     }
@@ -143,15 +172,22 @@ function filterConditions(ids: Ids, spec: StrategySpec): BlockNode[] {
 }
 
 /** Trigger AND every filter, as one Boolean the switch block and the confirmation both use. */
-function entryCondition(ids: Ids, spec: StrategySpec): BlockNode {
-    return filterConditions(ids, spec).reduce((all, filter) => and(ids, all, filter), entryTrigger(ids, spec));
+function entryCondition(ids: Ids, leg: StrategyLeg): BlockNode {
+    return filterConditions(ids, leg).reduce((all, filter) => and(ids, all, filter), entryTrigger(ids, leg));
 }
 
 // ── Trade definition ────────────────────────────────────────────────────────────────────────────
 
 function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
-    const info = CONTRACTS[spec.entry.strategy];
-    const hasPrediction = spec.entry.barrier !== null;
+    const legs = legsOf(spec);
+    const primary = legs[0];
+    const info = CONTRACTS[primary.strategy];
+    const hasPrediction = legs.some(leg => leg.barrier !== null);
+    const twoLegs = legs.length > 1;
+    const contracts = [...new Set(legs.map(leg => CONTRACTS[leg.strategy].contractType))];
+    // One contract type for a single-leg bot; `both` lets each leg's Purchase block name its own
+    // contract, exactly like the shipped two-leg recovery template.
+    const contractType = contracts.length === 1 ? contracts[0] : 'both';
     const locked = { deletable: 'false', movable: 'false' };
 
     const options: BlockNode[] = [
@@ -163,8 +199,8 @@ function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
         node('aa-tradetype', 'trade_definition_tradetype', { attrs: locked, fields: { TRADETYPECAT_LIST: 'digits', TRADETYPE_LIST: info.tradeType } }),
         node('aa-contracttype', 'trade_definition_contracttype', {
             attrs: locked,
-            fields: { TYPE_LIST: info.contractType },
-            role: `${info.label} contract.`,
+            fields: { TYPE_LIST: contractType },
+            role: twoLegs ? 'Both legs buy their own contract.' : `${info.label} contract.`,
         }),
         node('aa-candle', 'trade_definition_candleinterval', { attrs: locked, fields: { CANDLEINTERVAL_LIST: '60' } }),
         node('aa-restartbuysell', 'trade_definition_restartbuysell', { attrs: locked, fields: { TIME_MACHINE_ENABLED: 'FALSE' } }),
@@ -172,19 +208,24 @@ function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
     ];
 
     // The stake is seeded here (run once) so the first proposal never sees an undefined amount.
-    const initialisation = ifThen(
-        ids,
-        not(ids, getVar(ids, 'initialised')),
-        [
-            setVar(ids, 'initialised', bool(ids, true)),
-            setVar(ids, 'stake', num(ids, spec.risk.stake)),
-            setVar(ids, 'profit', num(ids, 0)),
-            setVar(ids, 'losses', num(ids, 0)),
-            setVar(ids, 'stop', bool(ids, false)),
-        ],
-        undefined,
-        'Seeds the stake and counters before the first quote.'
-    );
+    const seed: BlockNode[] = [
+        setVar(ids, 'initialised', bool(ids, true)),
+        setVar(ids, 'stake', num(ids, spec.risk.stake)),
+        setVar(ids, 'profit', num(ids, 0)),
+        setVar(ids, 'losses', num(ids, 0)),
+        setVar(ids, 'stop', bool(ids, false)),
+    ];
+    if (twoLegs) {
+        seed.push(setVar(ids, 'leg', num(ids, 0)));
+        if (hasPrediction) seed.push(setVar(ids, 'prediction', num(ids, primary.barrier ?? 0)));
+    }
+    const initialisation = ifThen(ids, not(ids, getVar(ids, 'initialised')), seed, undefined, 'Seeds the stake and counters before the first quote.');
+
+    // A two-leg bot carries its barrier in a variable, because the leg that will trade next decides
+    // it; the trade options are generated at the top of every loop, so the variable is always current.
+    const prediction = twoLegs
+        ? getVar(ids, 'prediction')
+        : num(ids, primary.barrier as number, true, 'math_number_positive');
 
     const tradeOptions = node('aa-tradeoptions', 'trade_definition_tradeoptions', {
         mutation: { has_first_barrier: 'false', has_second_barrier: 'false', has_prediction: String(hasPrediction) },
@@ -192,7 +233,7 @@ function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
         values: {
             DURATION: [num(ids, 1, true, 'math_number_positive')],
             AMOUNT: [num(ids, spec.risk.stake, true, 'math_number_positive'), getVar(ids, 'stake')],
-            ...(hasPrediction ? { PREDICTION: [num(ids, spec.entry.barrier as number, true, 'math_number_positive')] } : {}),
+            ...(hasPrediction ? { PREDICTION: [prediction] } : {}),
         },
         role: 'One-tick duration, the stake variable and the barrier digit.',
     });
@@ -209,8 +250,8 @@ function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
  * Records the qualifying setup in the run log and arms a genuine next-tick observation. The
  * observation never reads a tick that did not arrive, and it never counts as a purchased contract.
  */
-function virtualHook(ids: Ids, spec: StrategySpec): BlockNode[] {
-    const { strategy, barrier } = spec.entry;
+function virtualHook(ids: Ids, spec: StrategySpec, leg: StrategyLeg = legsOf(spec)[0]): BlockNode[] {
+    const { strategy, barrier } = leg;
     const where = spec.market.scope === 'all' ? 'the active market' : spec.market.symbol;
     const configure: BlockNode[] = [node(ids.next('cfg'), `obs_configure_${strategy}`, { role: 'Tells the observer which contract the next observation is about.' })];
     if ((strategy === 'matches' || strategy === 'differs') && barrier !== null) {
@@ -219,7 +260,7 @@ function virtualHook(ids: Ids, spec: StrategySpec): BlockNode[] {
     return [
         journal(
             ids,
-            text(ids, `Virtual setup: ${spec.observation.strategyLabel} entry condition met on ${where}; observing the next genuine tick (not a purchased contract).`),
+            text(ids, `Virtual setup: ${leg.label} entry condition met on ${where}; observing the next genuine tick (not a purchased contract).`),
             'info',
             'Records the setup in the run log.'
         ),
@@ -237,10 +278,12 @@ function riskGuard(ids: Ids): BlockNode {
 function beforePurchase(ids: Ids, spec: StrategySpec): BlockNode {
     const trading = spec.mode === 'demo_trading';
     const notStopped = not(ids, getVar(ids, 'stop'));
+    const legs = trading ? legsOf(spec) : [legsOf(spec)[0]];
+    const twoLegs = legs.length > 1;
 
     const body: BlockNode[] = [];
 
-    // 1. Discover + switch (or a single market's own condition).
+    // 1. Discover + switch. Both legs' conditions count, so a market is chosen when either leg fits.
     if (spec.market.scope === 'all') {
         body.push(
             node(ids.next('discover'), 'market_discover_eligible', {
@@ -250,41 +293,63 @@ function beforePurchase(ids: Ids, spec: StrategySpec): BlockNode {
             }),
             node(ids.next('switch'), 'switch_active_market', {
                 fields: { ORDER: spec.market.order },
-                values: { MAX_SWITCHES: [num(ids, spec.market.maxSwitches)], CONDITION: [entryCondition(ids, spec)] },
+                values: {
+                    MAX_SWITCHES: [num(ids, spec.market.maxSwitches)],
+                    CONDITION: [legs.map(leg => entryCondition(ids, leg)).reduce((all, condition) => or(ids, all, condition))],
+                },
                 role: 'Scans markets until the entry condition holds, using only each market\'s own ticks.',
             })
         );
     }
 
     // 2. Everything that happens on a confirmed entry.
-    const onEntry: BlockNode[] = [];
-
-    if (spec.observation.virtualHook) onEntry.push(...virtualHook(ids, spec));
-
-    if (trading) {
-        onEntry.push(node(ids.next('buy'), 'purchase', { fields: { PURCHASE_LIST: CONTRACTS[spec.entry.strategy].contractType }, role: 'Requests the proposal and buys it through the engine.' }));
-    } else {
+    const onEntry = (leg: StrategyLeg): BlockNode[] => {
+        const actions: BlockNode[] = [];
+        if (spec.observation.virtualHook) actions.push(...virtualHook(ids, spec, leg));
+        if (trading) {
+            actions.push(
+                node(ids.next('buy'), 'purchase', {
+                    fields: { PURCHASE_LIST: CONTRACTS[leg.strategy].contractType },
+                    role: `Requests the ${leg.label} proposal and buys it through the engine.`,
+                })
+            );
+            return actions;
+        }
         if (!spec.observation.virtualHook) {
-            onEntry.push(
+            actions.push(
                 journal(
                     ids,
-                    text(ids, `Signal: ${spec.observation.strategyLabel} entry condition met. No contract was bought (${spec.mode === 'signal' ? 'signal only' : 'observation only'}).`),
+                    text(ids, `Signal: ${leg.label} entry condition met. No contract was bought (${spec.mode === 'signal' ? 'signal only' : 'observation only'}).`),
                     'info',
                     'Reports the signal; this bot never buys.'
                 )
             );
         }
-        onEntry.push(
+        actions.push(
             node(ids.next('stop'), 'bot_stop', {
                 values: { REASON: [text(ids, `${spec.mode === 'signal' ? 'Signal' : 'Observation'} complete`)] },
                 role: 'Ends the run once the signal has been reported.',
             })
         );
-    }
+        return actions;
+    };
 
-    // 3. Confirm on the frozen market with the SAME condition, behind the risk guard when trading.
-    const confirm = trading ? and(ids, riskGuard(ids), entryCondition(ids, spec)) : entryCondition(ids, spec);
-    body.push(ifThen(ids, confirm, onEntry, undefined, 'Confirms the entry on the market the scan stopped on.'));
+    // 3. Confirm on the market the scan froze, with the SAME condition, behind the risk guard.
+    if (twoLegs) {
+        const [primary, secondary] = legs;
+        body.push(
+            ifThen(
+                ids,
+                compare(ids, 'EQ', getVar(ids, 'leg'), num(ids, 0, true)),
+                [ifThen(ids, and(ids, riskGuard(ids), entryCondition(ids, primary)), onEntry(primary), undefined, 'Primary leg.')],
+                [ifThen(ids, and(ids, riskGuard(ids), entryCondition(ids, secondary)), onEntry(secondary), undefined, 'Second leg, after a loss.')],
+                'Trades the primary rule while it is winning and the second rule after a loss.'
+            )
+        );
+    } else {
+        const confirm = trading ? and(ids, riskGuard(ids), entryCondition(ids, legs[0])) : entryCondition(ids, legs[0]);
+        body.push(ifThen(ids, confirm, onEntry(legs[0]), undefined, 'Confirms the entry on the market the scan stopped on.'));
+    }
 
     return node('aa-before-purchase', 'before_purchase', {
         attrs: { x: '0', y: '740' },
@@ -325,6 +390,27 @@ function afterPurchase(ids: Ids, spec: StrategySpec): BlockNode {
             undefined,
             'Stops after the configured consecutive losses.'
         ),
+    ];
+
+    // A combined bot alternates: the second leg trades after a loss, the primary after a win. The
+    // barrier variable is set here so the next loop's trade options carry the right prediction.
+    if (spec.secondLeg) {
+        const nextLeg = (index: 0 | 1, leg: StrategyLeg): BlockNode[] => [
+            setVar(ids, 'leg', num(ids, index)),
+            ...(leg.barrier !== null ? [setVar(ids, 'prediction', num(ids, leg.barrier))] : []),
+        ];
+        stack.push(
+            ifThen(
+                ids,
+                getVar(ids, 'won'),
+                nextLeg(0, legsOf(spec)[0]),
+                nextLeg(1, spec.secondLeg),
+                'Switches to the second leg after a loss; a win returns to the primary leg.'
+            )
+        );
+    }
+
+    stack.push(
         ifThen(
             ids,
             getVar(ids, 'won'),
@@ -340,8 +426,8 @@ function afterPurchase(ids: Ids, spec: StrategySpec): BlockNode {
                 ),
             ],
             'Resets the stake after a win; applies the multiplier (1 = flat) after a loss.'
-        ),
-    ];
+        )
+    );
 
     if (risk.tradeLimit > 0) {
         stack.push(
@@ -370,7 +456,8 @@ function afterPurchase(ids: Ids, spec: StrategySpec): BlockNode {
 // ── Public API ──────────────────────────────────────────────────────────────────────────────────
 
 /** Builds the block tree for a spec. Pure and deterministic. */
-export function buildWorkspace(spec: StrategySpec): BuiltWorkspace {
+export function buildWorkspace(input: StrategySpec): BuiltWorkspace {
+    const spec = normalizeSpec(input);
     const ids = new Ids();
     const roots: BlockNode[] = [tradeDefinition(ids, spec), beforePurchase(ids, spec)];
 

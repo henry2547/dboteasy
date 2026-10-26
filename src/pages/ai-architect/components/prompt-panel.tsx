@@ -18,6 +18,11 @@ export const EXAMPLE_PROMPTS: { label: string; prompt: string }[] = [
         label: 'Even digits on one market',
         prompt: 'Trade even digits on 1HZ25V with stake 1, take profit 5 and stop loss 10.',
     },
+    {
+        label: 'Over 1 with digits 5 and 6 and bar filters',
+        prompt:
+            'Scan all volatility markets for Over 1, entry is 5 and 6, digits 0 and 1 should have at least 10.3% frequency, digits 5 and 6 should not have the green or red bar, last 500 ticks, stop after 3 consecutive losses.',
+    },
 ];
 
 interface Props {

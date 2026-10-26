@@ -20,6 +20,8 @@ window.Blockly.Blocks.digits_high_run = digitBlock({
             options: [
                 [localize('at or above'), 'at_or_above'],
                 [localize('above'), 'above'],
+                [localize('at or below'), 'at_or_below'],
+                [localize('below'), 'below'],
             ],
         },
         {
@@ -40,6 +42,7 @@ window.Blockly.Blocks.digits_high_run = digitBlock({
 });
 
 window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_high_run = digitGenerator(block => {
-    const mode = block.getFieldValue('MODE') === 'above' ? 'above' : 'at_or_above';
+    const chosen = block.getFieldValue('MODE');
+    const mode = ['above', 'at_or_above', 'below', 'at_or_below'].includes(chosen) ? chosen : 'at_or_above';
     return `Bot.areLastDigitsHigh(${block.getFieldValue('DIGIT')}, ${sampleCode(block, 'COUNT', '3')}, '${mode}')`;
 });

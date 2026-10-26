@@ -8,10 +8,12 @@
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { combineSpecs } from './combine';
 import { botLibrary } from './library';
+import { planStrategy } from './planner';
 import { assemble, generateBot, refineBot, type GeneratedBot } from './pipeline';
 import { buildRegistry, type Registry } from './registry';
-import type { AppliedDefault, Clarification, SavedBot } from './types';
+import type { AppliedDefault, Clarification, Requirement, SavedBot, StrategySpec } from './types';
 import type { SpecChange } from './refiner';
 
 export interface ChangeLog {
@@ -30,6 +32,8 @@ export interface ArchitectState {
     clarifications: Clarification[];
     unsupported: string[];
     reasoning: string[];
+    /** Every clause of the prompt and whether the bot implements it. */
+    requirements: Requirement[];
     changeLog: ChangeLog[];
     libraryId: string | null;
 }
@@ -43,6 +47,7 @@ const INITIAL: ArchitectState = {
     clarifications: [],
     unsupported: [],
     reasoning: [],
+    requirements: [],
     changeLog: [],
     libraryId: null,
 };
@@ -77,7 +82,17 @@ export function useArchitect() {
                         if (token.current !== mine) return previous;
                         const next: ArchitectState = { ...previous };
                         if (result.clarifications.length) {
-                            return { ...next, status: 'needs_input', prompt, message: result.message ?? null, clarifications: result.clarifications, defaults: result.defaults, unsupported: result.unsupported, reasoning: result.reasoning };
+                            return {
+                                ...next,
+                                status: 'needs_input',
+                                prompt,
+                                message: result.message ?? null,
+                                clarifications: result.clarifications,
+                                defaults: result.defaults,
+                                unsupported: result.unsupported,
+                                reasoning: result.reasoning,
+                                requirements: result.requirements,
+                            };
                         }
                         return {
                             ...next,
@@ -89,6 +104,7 @@ export function useArchitect() {
                             clarifications: [],
                             unsupported: result.unsupported,
                             reasoning: result.reasoning,
+                            requirements: result.requirements,
                             changeLog: [],
                             libraryId: null,
                         };
@@ -167,6 +183,43 @@ export function useArchitect() {
         [state.bot, state.libraryId, state.prompt, refreshLibrary]
     );
 
+    /**
+     * "Add a bot to this one": the bot on screen becomes the target and the added bot its second
+     * entry rule, so both rules run in one workspace. The addition is a saved bot or a description
+     * that is planned on the spot; nothing is changed when the engine cannot run both rules.
+     */
+    const addBot = useCallback(
+        (addition: { savedId?: string; prompt?: string }): { ok: boolean; message: string } => {
+            const current = state.bot;
+            if (!current) return { ok: false, message: 'Generate a bot first, then add another one to it.' };
+
+            let additionSpec: StrategySpec | null = null;
+            if (addition.savedId) {
+                additionSpec = botLibrary.get(addition.savedId)?.spec ?? null;
+                if (!additionSpec) return { ok: false, message: 'That bot is no longer in the library.' };
+            } else if (addition.prompt?.trim()) {
+                const plan = planStrategy(addition.prompt);
+                if (!plan.spec) {
+                    return { ok: false, message: plan.clarifications[0]?.question ?? 'The bot you described could not be understood.' };
+                }
+                additionSpec = plan.spec;
+            }
+            if (!additionSpec) return { ok: false, message: 'Choose a saved bot or describe the bot to add.' };
+
+            const outcome = combineSpecs(current.spec, additionSpec);
+            if (!outcome.spec) return { ok: false, message: outcome.message };
+
+            const assembled = assemble(outcome.spec, getRegistry());
+            if (assembled.ok === false) {
+                return { ok: false, message: `${outcome.message} It could not be built: ${assembled.message}` };
+            }
+
+            setState(previous => ({ ...previous, status: 'ready', bot: assembled.bot, message: null, clarifications: [], libraryId: null }));
+            return { ok: true, message: outcome.message };
+        },
+        [state.bot, getRegistry]
+    );
+
     /** Opens a saved bot for review, re-running validation against what is registered now. */
     const open = useCallback(
         (saved: SavedBot) => {
@@ -190,7 +243,7 @@ export function useArchitect() {
     }, []);
 
     return useMemo(
-        () => ({ state, library, generate, cancel, refine, answer, save, open, setPrompt, clear, refreshLibrary, getRegistry }),
-        [state, library, generate, cancel, refine, answer, save, open, setPrompt, clear, refreshLibrary, getRegistry]
+        () => ({ state, library, generate, cancel, refine, answer, save, open, addBot, setPrompt, clear, refreshLibrary, getRegistry }),
+        [state, library, generate, cancel, refine, answer, save, open, addBot, setPrompt, clear, refreshLibrary, getRegistry]
     );
 }

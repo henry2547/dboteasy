@@ -162,13 +162,32 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
   **66** for the plain Over/Under templates, **83** for `even_odd_window`, **83** for every template with an
   extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **133** for the two-leg
+  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **163** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
-  `-3`, …). `loadBot` compares it with `derivWorkspace.getAllBlocks(true).length`, so a
+  `-3`, …). **A `controls_if` also drops its branch silently when its `<mutation>` does not declare it**:
+  Blockly only creates the inputs the mutation asks for (`IF1`/`DO1` need `elseif="1"`, `ELSE` needs
+  `else="1"`), logs `Ignoring non-existent input ELSE in block controls_if`, and skips the whole branch
+  instead of failing. The recovery asset's `freebot-o1u6-session-guard` had an `ELSE` with
+  `<mutation>` missing, so its "Waiting · session guard" notify never reached the canvas and every load
+  ended in the block-count message (161 held vs 163 in the template) — the
+  `declares every branch its IF blocks use` test now pins the mutation against the branches each asset
+  uses. `loadBot` compares the block count with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
-  that formula in sync if a template gains blocks (the unit test pins 66 for the first template only).
+  that formula in sync if a template gains blocks (the unit test pins 101 for the first template only).
+- **Never hang a block chain off `trade_again`'s `<next>`.** `trade_again` calls
+  `setNextStatement(false)`, so it has no next connection at all. An asset that nests its
+  `report_journal` chain as `trade_again`'s `<next>` loads as far as that block and then throws
+  `Error: The text content is null.` from `FieldDropdown.render_` — the load aborts, the whole
+  `after_purchase` stack stays unrendered, and the user sees the Bot Builder's
+  "XML file contains unsupported elements. Please check or modify file." with no clue which block is
+  wrong. `even_odd_window` and `over1_under6_recovery` both did this (the tail of `after_purchase`
+  never reached the canvas, and the reports were dead code after `trade_again`'s `return true`); the
+  report chain now sits BEFORE `trade_again` in the same `statement`, which is also the order the
+  working templates use. Keep `trade_again` the last block of any stack, and reach for
+  `python3 -c` / a scratch `Blockly.Workspace` check on `trade_again`'s `<next>` before shipping an
+  asset: the unit tests read block TYPES and counts, so this shape loads "fine" on paper.
 - **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
   two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7) and a second
   entry gate built from
@@ -207,9 +226,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `OP=AND`, otherwise the load reports an unsupported block type.
 - **Bot 15 keeps every number in a variable seeded by "Run once at start".** `INITIALIZATION` sets
   `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 20,
-  `freebot:stop-loss` −50 and `freebot:runs` 5 (plus a stake of 20/profit/stop/trades/initialised), and the
+  `freebot:stop-loss` −50 and `freebot:runs` 3 (plus a stake of 20/profit/stop/trades/initialised), and the
   blocks call those variables instead of repeating literals. Only the digit gates keep literal numbers
-  (10.5% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
+  (10.3% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
   straight from the shadow.
   - **The prediction gate sits OUTSIDE the `not initialised` guard**, chained as its `<next>`: the guard
     seeds once, while the gate must run on every trade loop — `Bot.start()` reads the trade options
@@ -221,10 +240,10 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
     `freebot:loss-count GTE 1` → the Under 6 recovery. The Over 1 leg needs the newest digit to be 5 or
     6 (two nested compares, `last digit ≥ 5` then `last digit ≤ 6` — the entry inspector reads the first
     `last_digit` compare, so that one must stay the outer one and the loss-count compare above it must
-    stay `last_digit`-free) with digit 0 and digit 1 both under 10.5% of the last 1000 ticks and
+    stay `last_digit`-free) with digit 0 and digit 1 both under 10.3% of the last 1000 ticks and
     `digits_bar_neutral` on digit 5 AND digit 6 (one `logic_operation` with `OP=AND` over two neutral
     reads, sample 100). The recovery leg only needs `digits_high_run` (`above` 6, COUNT ←
-    `freebot:runs`): five ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
+    `freebot:runs`): three ticks in a row above 6 — 7, 8 or 9 — where a 9 counts like 7 and 8 and a 9 on the
     newest tick never stops the wait, then it buys
     `DIGITUNDER`. Keeping the two legs as IF/ELSE-IF branches is what lets a 7, 8 or 9 reach the
     recovery — as a trailing step with the Over gate's ELSE it could never run on those digits.
@@ -782,4 +801,80 @@ The page is `src/pages/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss
   export breaks the whole dev build).
 - Verify: open the tab, press Generate on an example prompt (expect a "Validation Passed" card), then Load —
   the app switches to `#bot_builder` and the canvas holds the generated blocks.
-  `docker compose exec web npx jest src/pages/ai-architect` (83 tests); `npx tsc --noEmit` is clean.
+  `docker compose exec web npx jest src/pages/ai-architect` (116 tests); `npx tsc --noEmit` is clean.
+
+### Every condition the prompt states (planner + builder)
+The deterministic planner reads all of a request, not just the first match of each concept:
+- `filters.frequencies` is a **list** of digit-frequency filters ("digits 8 and 9 should have at least
+  10.3%"), one block per digit, all ANDed. The old single `filters.frequency` is still read —
+  `normalizeSpec` in `spec-model.ts` upgrades a saved spec in `assemble`, so a bot saved before the
+  change still opens. Keep that upgrade when adding fields.
+- `filters.barNeutral` holds the digits that must carry neither the green nor the red bar, built with
+  `digits_bar_neutral` (registry entry added with the block; it reads the same grid the Digits page
+  draws). The parser binds the digit list nearest *before* the bar rule ("digits 5 and 6 should not
+  have the green or red bar").
+- `entry.digits` holds the digits the user listed for the entry ("entry is 5 and 6", "entry digits
+  7, 8 or 9", "any 2 digits above or equal 7"). The builder then makes the entry an OR of
+  `last_digit == d` compares instead of the barrier comparison; the contract barrier is unchanged.
+- `PlanResult.requirements` is one entry per clause (split on `, ; . and or then also but`, never
+  inside a decimal), each `applied` / `unsupported` / `unapplied`. The page renders it as
+  **Everything you asked for**, so a clause the planner could not build is visible instead of being
+  silently dropped — do not add a concept reader without a matching entry in `CLAUSE_CONCEPTS`, or
+  its clauses will show as unapplied.
+- `spec-model.ts` must not be named `spec.ts`: the jest config treats `*.spec.ts` as a test file.
+
+### "Add this bot to another" (combine)
+`combine.ts` `combineSpecs(target, addition)` puts the added bot in `spec.secondLeg`. The engine
+reads the trade options (amount **and** barrier) at the top of every loop, so a bot cannot pick its
+contract from the tick it trades: the two rules alternate like the shipped two-leg recovery template.
+The target trades while it is winning, the added bot takes over after a loss, and `after_purchase`
+writes `architect:leg` + `architect:prediction` before `trade_again` so the next loop's
+`Bot.start` carries the right barrier (which is why the two-leg form uses a `variables_get` in
+`PREDICTION` and `contracttype = both`). The combination is refused, with the reason, when the two
+bots are not both Demo trading, do not share the market selection, or need different Trade types
+(different contract families) — never silently drop half a bot.
+- `validator.ts` therefore allows one Purchase **per leg**, requires **every** `if` that directly
+  holds a Purchase to check `risk_can_trade`, and lets the market-consistency check match an OR scan
+  condition operand by operand.
+- The UI entry point is the "Add this bot to…" `<select>` on each saved-bot card
+  (`library-panel.tsx`); the page saves the combination as its own library entry, so neither
+  original bot changes.
+- **"Add a bot to this one" (`components/add-bot-panel.tsx`)** is the same combine, started from the
+  bot on screen: `use-architect.ts`'s `addBot({ savedId | prompt })` plans a described addition (or
+  reads a saved bot), runs `combineSpecs(currentSpec, addition)`, assembles and puts the combined
+  bot on screen. It is only rendered once a bot exists, and a combination is refused with the
+  reason when `combineSpecs` refuses it. Nothing is loaded or run by this action.
+
+### Two rules from one prompt
+A prompt that names two contracts of the same Trade type ("Over 1 ... recovery with Under 6") is
+planned as ONE two-rule bot instead of asking which contract to drop: `contractMentions` returns
+every contract with its offset, `distinctMentions` keeps the first mention of each, and the prompt is
+split at the second contract's offset so each rule keeps the entry digits, frequency filters and bar
+rules written beside it (the second rule's window is its own when it states one). Both rules must
+share `CONTRACTS[...].tradeType` (Over/Under, Even/Odd, Matches/Differs); otherwise the planner still
+asks `contract_conflict`. A second rule is only attached to a Demo-trading bot — an observation- or
+signal-only request reports it under "Not built". Keep `maskNonContractPhrases` **length-preserving**
+(blank/padding replacements): the offsets it produces are what splits the prompt, and
+`readFrequencies` never lets a digit sit between a digit list and its own operator, so a filter
+written after an entry list binds to the list nearest the operator.
+
+## Multi-Market Digit Entry Hunter (Free Bots, section 3)
+`src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;
+`MULTI_MARKET_PRESETS` holds the nine shipped variants. The four digit presets carry their entry rules:
+- **Over 1** — entry digits 5/6 · bar-neutral 5/6 · frequency ≥ 10.3% on 0/1
+- **Under 8** — entry digits 7/4/8 · bar-neutral 7/4/8 · frequency ≥ 10.3% on 8/9
+- **Under 7** — `digits_high_run` at_or_above 7 ×2 · bar-neutral 7/8/9 · frequency 7/8/9
+- **Over 7** — `digits_high_run` at_or_below 2 ×2 · bar-neutral 0/1/2 · frequency 0/1/2
+
+The whole rule (trigger AND every frequency/bar filter) is written into BOTH the `switch_active_market`
+CONDITION and the `if` that holds the `purchase`, so the scan only stops on a market whose own ticks pass
+it and the buy re-checks it on the frozen market. `MarketScan.marketScanBegin` puts `this.symbol` first in
+`scan.eligible`, so the market the bot is already on is analysed before any switch; `marketScanNext`
+marks it analysed and moves on to the next market (`market-scan-engine.test.js` pins this order).
+`inspectFreeBotXml` recognises the two generated entry shapes through the template's `entryDigits` /
+`entryRun` fields (set by `multiMarketTemplate`; `entryOperator`/`triggerDigit` are then `null`): a gate of
+`last digit = d` compares (digits deduped — the rule appears in both the scan and the purchase copy) and a
+`digits_high_run` gate. Its purchase lookup walks up to the closest `controls_if` that really holds a
+`purchase`, so a gate nested under AND/OR filters still validates. A template that adds one of these shapes
+without the matching field fails the loader with "Entry condition mismatch". The preset count (9) and the
+per-preset rules are pinned by `multi-market-xml.test.ts`.

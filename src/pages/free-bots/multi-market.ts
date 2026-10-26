@@ -51,6 +51,24 @@ export interface MultiMarketConfig {
     maxConsecutiveLosses: number;
     /** Market written into the trade definition; replaced when the bot is loaded. */
     defaultMarket: string;
+    /**
+     * Last digits the entry accepts on their own ("entry is 5 and 6"). Empty means the contract's
+     * own barrier comparison decides the entry.
+     */
+    entryDigits: number[];
+    /** Newest ticks in a row that must all reach a digit ("any 2 digits above or equal 7"). */
+    entryRun: MultiMarketRun | null;
+    /** Digits that must each hold at least `MULTI_MARKET_FREQUENCY_PERCENT` of the window. */
+    minFrequencyDigits: number[];
+    /** Digits that must carry neither the green nor the red bar of the digit grid. */
+    barNeutralDigits: number[];
+}
+
+/** A run of the newest ticks that all have to sit above — or below — one digit. */
+export interface MultiMarketRun {
+    digits: number;
+    count: number;
+    mode: 'at_or_above' | 'at_or_below';
 }
 
 interface StrategySpec {
@@ -154,6 +172,10 @@ export const MULTI_MARKET_STRATEGIES: Record<MultiMarketStrategy, StrategySpec> 
 
 export const MULTI_MARKET_BOT_NAME = 'Multi-Market Digit Entry Hunter';
 
+/** The window every frequency and bar filter reads, and the share a digit has to hold. */
+export const MULTI_MARKET_WINDOW = 100;
+export const MULTI_MARKET_FREQUENCY_PERCENT = 10.3;
+
 /** Conservative Demo-first defaults: flat stake, small limits, no martingale growth. */
 export const MULTI_MARKET_DEFAULTS: MultiMarketConfig = {
     strategy: 'over',
@@ -165,6 +187,10 @@ export const MULTI_MARKET_DEFAULTS: MultiMarketConfig = {
     multiplier: 1,
     maxConsecutiveLosses: 3,
     defaultMarket: '1HZ25V',
+    entryDigits: [],
+    entryRun: null,
+    minFrequencyDigits: [],
+    barNeutralDigits: [],
 };
 
 export interface MultiMarketPreset {
@@ -179,12 +205,42 @@ const preset = (id: string, label: string, changes: Partial<MultiMarketConfig>):
     config: { ...MULTI_MARKET_DEFAULTS, ...changes },
 });
 
-/** The bot variants this generator ships with. */
+/**
+ * The bot variants this generator ships with. The four digit presets carry the entry rules the
+ * strategy asks for: the entry digits (or the run of high/low digits) are the trigger, and the
+ * frequency and bar rules are filters the *selected market* itself has to pass before the scan
+ * stops — a market that fails them is skipped and the bot switches to the next one.
+ */
 export const MULTI_MARKET_PRESETS: MultiMarketPreset[] = [
-    preset('over_1', 'Over 1', { strategy: 'over', barrier: 1 }),
+    preset('over_1', 'Over 1', {
+        strategy: 'over',
+        barrier: 1,
+        entryDigits: [5, 6],
+        barNeutralDigits: [5, 6],
+        minFrequencyDigits: [0, 1],
+    }),
     preset('over_2', 'Over 2', { strategy: 'over', barrier: 2 }),
-    preset('under_8', 'Under 8', { strategy: 'under', barrier: 8 }),
-    preset('under_7', 'Under 7', { strategy: 'under', barrier: 7 }),
+    preset('over_7', 'Over 7', {
+        strategy: 'over',
+        barrier: 7,
+        entryRun: { digits: 2, count: 2, mode: 'at_or_below' },
+        barNeutralDigits: [0, 1, 2],
+        minFrequencyDigits: [0, 1, 2],
+    }),
+    preset('under_8', 'Under 8', {
+        strategy: 'under',
+        barrier: 8,
+        entryDigits: [7, 4, 8],
+        barNeutralDigits: [7, 4, 8],
+        minFrequencyDigits: [8, 9],
+    }),
+    preset('under_7', 'Under 7', {
+        strategy: 'under',
+        barrier: 7,
+        entryRun: { digits: 7, count: 2, mode: 'at_or_above' },
+        barNeutralDigits: [7, 8, 9],
+        minFrequencyDigits: [7, 8, 9],
+    }),
     preset('even', 'Even', { strategy: 'even', barrier: null }),
     preset('odd', 'Odd', { strategy: 'odd', barrier: null }),
     preset('matches', 'Matches', { strategy: 'matches', barrier: 5 }),
@@ -210,6 +266,23 @@ export function validateMultiMarketConfig(config: MultiMarketConfig): string[] {
         }
     } else if (config.barrier !== null) {
         errors.push(`${spec.label} takes no barrier digit.`);
+    }
+
+    const ruleDigits = [...config.entryDigits, ...config.barNeutralDigits, ...config.minFrequencyDigits];
+    if (ruleDigits.some(digit => !isWholeNumber(digit) || digit < 0 || digit > 9)) {
+        errors.push('Entry, frequency and bar digits must be whole numbers between 0 and 9.');
+    }
+    if (config.entryRun) {
+        const { digits, count, mode } = config.entryRun;
+        if (!isWholeNumber(digits) || digits < 0 || digits > 9) {
+            errors.push('The digit a run has to reach must be a whole number between 0 and 9.');
+        }
+        if (!isWholeNumber(count) || count < 2) {
+            errors.push('A digit run needs at least 2 ticks in a row.');
+        }
+        if (mode !== 'at_or_above' && mode !== 'at_or_below') {
+            errors.push('A digit run must look for digits at or above, or at or below, its digit.');
+        }
     }
 
     if (!isWholeNumber(config.maxScanCycles) || config.maxScanCycles < 0) {
@@ -294,9 +367,51 @@ const ifBlock = (id: string, condition: string, doStatement: string, elseStateme
 
 const lastDigit = (id: string): string => `<block type="last_digit" id="${id}"></block>`;
 
-/** The digit rule the bot waits for — the same block family the Switch block's condition socket takes. */
-function entryConditionXml(config: MultiMarketConfig, id: string): string {
+const logicOperation = (id: string, operator: 'AND' | 'OR', a: string, b: string): string =>
+    `<block type="logic_operation" id="${id}"><field name="OP">${operator}</field><value name="A">${a}</value><value name="B">${b}</value></block>`;
+
+const digitsFrequency = (id: string, digit: number): string =>
+    `<block type="digits_frequency" id="${id}"><field name="DIGIT">${digit}</field><value name="SAMPLE">${mathShadow(
+        `${id}-sample`,
+        'math_number',
+        MULTI_MARKET_WINDOW
+    )}</value></block>`;
+
+const digitBarNeutral = (id: string, digit: number): string =>
+    `<block type="digits_bar_neutral" id="${id}"><field name="DIGIT">${digit}</field><value name="SAMPLE">${mathShadow(
+        `${id}-sample`,
+        'math_number',
+        MULTI_MARKET_WINDOW
+    )}</value></block>`;
+
+const digitRun = (id: string, run: MultiMarketRun): string =>
+    `<block type="digits_high_run" id="${id}"><value name="COUNT">${mathShadow(
+        `${id}-count`,
+        'math_number',
+        run.count
+    )}</value><field name="MODE">${run.mode}</field><field name="DIGIT">${run.digits}</field></block>`;
+
+/**
+ * What the entry waits for on the market the scan has selected: the run of high/low digits or one
+ * of the listed entry digits when the strategy states them, otherwise the contract's own barrier.
+ */
+function entryTriggerXml(config: MultiMarketConfig, id: string): string {
     const spec = MULTI_MARKET_STRATEGIES[config.strategy];
+
+    if (config.entryRun) return digitRun(`${id}-run`, config.entryRun);
+
+    if (config.entryDigits.length) {
+        return config.entryDigits
+            .map(digit =>
+                logicCompare(
+                    `${id}-is-${digit}`,
+                    'EQ',
+                    lastDigit(`${id}-digit-${digit}`),
+                    mathShadow(`${id}-is-${digit}-value`, 'math_number', digit)
+                )
+            )
+            .reduce((all, one, index) => logicOperation(`${id}-either-${index}`, 'OR', all, one));
+    }
 
     if (spec.entryOperator) {
         return logicCompare(
@@ -314,15 +429,71 @@ function entryConditionXml(config: MultiMarketConfig, id: string): string {
     return `<block type="digits_even_odd" id="${id}-parity"><field name="PARITY">${spec.parity}</field></block>`;
 }
 
-function entryConditionText(config: MultiMarketConfig): string {
+/**
+ * The whole entry rule — the trigger AND every frequency and bar filter — as one Boolean. The
+ * Switch block and the purchase confirmation both use it, so the bot only stops on a market that
+ * genuinely passes the rule on its own ticks, and the buy re-checks it on the frozen market.
+ */
+function entryConditionXml(config: MultiMarketConfig, id: string): string {
+    const conditions: string[] = [entryTriggerXml(config, id)];
+
+    config.minFrequencyDigits.forEach(digit => {
+        conditions.push(
+            logicCompare(
+                `${id}-freq-check-${digit}`,
+                'GTE',
+                digitsFrequency(`${id}-freq-${digit}`, digit),
+                mathShadow(`${id}-freq-min-${digit}`, 'math_number', MULTI_MARKET_FREQUENCY_PERCENT)
+            )
+        );
+    });
+
+    config.barNeutralDigits.forEach(digit => {
+        conditions.push(digitBarNeutral(`${id}-bar-${digit}`, digit));
+    });
+
+    return conditions.reduce((all, one, index) => logicOperation(`${id}-and-${index}`, 'AND', all, one));
+}
+
+const digitList = (digits: number[], conjunction: 'and' | 'or' = 'and'): string =>
+    digits.length < 2
+        ? digits.join('')
+        : `${digits.slice(0, -1).join(', ')} ${conjunction} ${digits[digits.length - 1]}`;
+
+/** The entry rule in words, for the panel summary and the template description. */
+export function entryConditionText(config: MultiMarketConfig): string {
     const spec = MULTI_MARKET_STRATEGIES[config.strategy];
     const digit = config.barrier;
+    const parts: string[] = [];
 
-    if (spec.entryOperator === 'LTE') return `last digit ≤ ${digit}`;
-    if (spec.entryOperator === 'GTE') return `last digit ≥ ${digit}`;
-    if (spec.matchMode === 'matches') return `last digit matches ${digit}`;
-    if (spec.matchMode === 'differs') return `last digit differs from ${digit}`;
-    return `last digit is ${spec.parity}`;
+    if (config.entryRun) {
+        const side = config.entryRun.mode === 'at_or_above' ? 'or above' : 'or below';
+        parts.push(`the last ${config.entryRun.count} digits are each ${config.entryRun.digits} ${side}`);
+    } else if (config.entryDigits.length) {
+        // The entry digits are alternatives (OR); the frequency and bar rules below are ANDed.
+        parts.push(`last digit is ${digitList(config.entryDigits, 'or')}`);
+    } else if (spec.entryOperator === 'LTE') {
+        parts.push(`last digit ≤ ${digit}`);
+    } else if (spec.entryOperator === 'GTE') {
+        parts.push(`last digit ≥ ${digit}`);
+    } else if (spec.matchMode === 'matches') {
+        parts.push(`last digit matches ${digit}`);
+    } else if (spec.matchMode === 'differs') {
+        parts.push(`last digit differs from ${digit}`);
+    } else {
+        parts.push(`last digit is ${spec.parity}`);
+    }
+
+    if (config.minFrequencyDigits.length) {
+        parts.push(
+            `digit ${digitList(config.minFrequencyDigits)} at least ${MULTI_MARKET_FREQUENCY_PERCENT}% of the last ${MULTI_MARKET_WINDOW} ticks`
+        );
+    }
+    if (config.barNeutralDigits.length) {
+        parts.push(`digit ${digitList(config.barNeutralDigits)} with neither the green nor the red bar`);
+    }
+
+    return parts.join(' · ');
 }
 
 /** `FreeBotStrategy` values the classic library already uses, so scanner typing stays intact. */
@@ -401,8 +572,9 @@ export function buildMultiMarketBotXml(config: MultiMarketConfig): string {
             : ''
     }<field name="AMOUNT_LIMITS"></field></block>`;
 
-    // Discover + switch: the engine's scan picks the market, waits for its own ticks, then the
-    // digit condition decides whether this market is the entry.
+    // Discover + switch: the engine's scan picks the market, waits for its own ticks, then the whole
+    // entry rule decides whether this market is the entry. A market that fails any part of it is
+    // skipped and the scan switches to the next one.
     const switchBlock = `<block type="switch_active_market" id="mm-switch"><field name="ORDER">round_robin</field><value name="MAX_SWITCHES">${mathNumber(
         'mm-max-switches',
         config.maxScanCycles
@@ -524,6 +696,17 @@ export function multiMarketBotName(config: MultiMarketConfig): string {
 /** Stable id for one configuration, so the loaded bot stays resolvable from the id alone. */
 export function multiMarketTemplateId(config: MultiMarketConfig): MultiMarketBotId {
     const digit = MULTI_MARKET_STRATEGIES[config.strategy].digitLabel ? String(config.barrier) : 'any';
+    // The entry rule is part of the id too, so two bots that differ only in their filters stay apart.
+    const rule = [
+        config.entryRun
+            ? `run${config.entryRun.count}${config.entryRun.digits}${config.entryRun.mode === 'at_or_above' ? 'up' : 'down'}`
+            : '',
+        config.entryDigits.length ? `entry${config.entryDigits.join('')}` : '',
+        config.minFrequencyDigits.length ? `freq${config.minFrequencyDigits.join('')}` : '',
+        config.barNeutralDigits.length ? `bar${config.barNeutralDigits.join('')}` : '',
+    ]
+        .filter(Boolean)
+        .join('');
     return [
         'multi_market',
         config.strategy,
@@ -534,6 +717,7 @@ export function multiMarketTemplateId(config: MultiMarketConfig): MultiMarketBot
         `sl${config.stopLoss}`,
         `x${config.multiplier}`,
         `loss${config.maxConsecutiveLosses}`,
+        rule || 'plain',
     ].join('_') as MultiMarketBotId;
 }
 
@@ -569,18 +753,29 @@ export function multiMarketTemplate(config: MultiMarketConfig): FreeBotTemplate 
         takeProfit: config.takeProfit,
         stopLoss: config.stopLoss,
         multiplier: config.multiplier,
-        entryOperator: spec.entryOperator,
-        triggerDigit: spec.entryOperator ? digit : null,
+        // A preset that states its own entry digits or a digit run does not use the barrier
+        // comparison as its trigger, so the template names that rule instead of the barrier.
+        entryOperator: config.entryDigits.length || config.entryRun ? null : spec.entryOperator,
+        triggerDigit:
+            config.entryDigits.length || config.entryRun ? null : spec.entryOperator ? digit : null,
+        entryDigits: config.entryDigits.length ? [...config.entryDigits] : undefined,
+        entryRun: config.entryRun ?? undefined,
         entryRule: `${condition} · the market is switched by the Digits "Switch active market" block`,
-        buyCondition: `The bot scans the eligible volatility markets in round-robin order, waits for each one's own tick history and a live tick, and buys ${spec.contractType} on the first market whose ${condition}.`,
+        buyCondition: `The bot scans the eligible volatility markets in round-robin order, waits for each one's own tick history and a live tick, and reads the entry rule on that market: ${condition}. A market that fails any part of it is skipped and the scan switches to the next one; the first market that passes is bought ${spec.contractType}.`,
         afterPurchase:
             config.multiplier > 1
                 ? `Win → stake back to ${config.stake} · Loss → stake × ${config.multiplier} · ${stopRule}`
                 : `Flat stake of ${config.stake} on every trade · ${stopRule}`,
         restartCondition: `After each contract settles it trades again on the next qualifying tick, until ${stopRule}. Stopping the bot stops market switching immediately.`,
-        blocksUsed: `Switch active market · Last Digit · ${
-            spec.matchMode ? 'Digit matches/differs' : spec.parity ? 'Digit even/odd' : 'Less/Greater than'
-        }`,
+        blocksUsed: [
+            'Switch active market',
+            ...(config.entryRun ? ['High digits in a row'] : ['Last Digit']),
+            ...(config.entryRun
+                ? []
+                : [spec.matchMode ? 'Digit matches/differs' : spec.parity ? 'Digit even/odd' : 'Less/Greater than']),
+            ...(config.minFrequencyDigits.length ? ['Digit frequency'] : []),
+            ...(config.barNeutralDigits.length ? ['Neutral digit bar'] : []),
+        ].join(' · '),
     };
 
     builtTemplates.set(id, template);
@@ -593,7 +788,7 @@ export function multiMarketById(id: string | null | undefined): FreeBotTemplate 
     return builtTemplates.get(id) ?? null;
 }
 
-/** Every preset as a ready template — the eight bots this builder ships with. */
+/** Every preset as a ready template — the nine bots this builder ships with. */
 export function multiMarketTemplates(): FreeBotTemplate[] {
     return MULTI_MARKET_PRESETS.map(item => multiMarketTemplate(item.config));
 }

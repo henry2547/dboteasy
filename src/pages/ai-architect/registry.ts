@@ -263,6 +263,17 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         inputs: [value('SAMPLE', ['Number'])],
         requires: ['ticks'],
     }),
+    BOOLEAN_VALUE(
+        'digits_bar_neutral',
+        'Digit has no hot / cold bar',
+        'digits',
+        'True only when the digit carries neither the green (hottest) nor the red (coldest) bar of the digit grid; a bar that cannot be read answers false.',
+        {
+            fields: [dropdown('DIGIT', DIGITS)],
+            inputs: [value('SAMPLE', ['Number'])],
+            requires: ['ticks'],
+        }
+    ),
     NUMBER_VALUE('digits_streak', 'Same-digit streak', 'digits', 'Ticks in a row with the same last digit.', { requires: ['ticks'] }),
     cap({
         type: 'switch_active_market',
@@ -273,6 +284,20 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         semantics:
             'Drives the engine market scan: discovers eligible markets, subscribes to the selected market, waits for its history and a genuine live tick, and only then evaluates the condition. While false it moves to the next market.',
         requires: ['active_symbols', 'ticks', 'market_scan'],
+    }),
+    cap({
+        type: 'digits_parity_recovery',
+        displayName: 'Trade Over 1 / Under 8, recover on Even/Odd',
+        category: 'digits',
+        fields: [
+            dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1'),
+            dropdown('PARITY', ['both', 'even', 'odd'], 'both'),
+            number('TICKS', 1, 1000, 100, true),
+            number('PERCENT', 0, 100, 55),
+        ],
+        semantics:
+            'Buys Over 1 (or Under 8) when the newest digit passes that barrier; after a settled loss it scans every market for the strongest even/odd split and enters the Even/Odd contract through the engine’s own purchase path, which refuses the entry with its reason while the window is incomplete or the trade definition is not Even/Odd.',
+        requires: ['ticks', 'market_scan', 'proposal', 'buy'],
     }),
 
     // ── Market intelligence ─────────────────────────────────────────────────────────────────────
