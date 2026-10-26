@@ -823,6 +823,31 @@ The deterministic planner reads all of a request, not just the first match of ea
   its clauses will show as unapplied.
 - `spec-model.ts` must not be named `spec.ts`: the jest config treats `*.spec.ts` as a test file.
 
+### Blocks menu alignment (the Architect picks from the menu the user sees)
+`block-menu.ts` reads the Bot Builder's Blocks menu as data. `ToolboxItems()` renders the palette to
+static markup — the same value the toolbox mounts — and `parseBlocksMenu` turns it into one entry per
+block: the name the menu shows (the registry display name, or the observer catalogue label), the menu
+category it is listed under and, for the four observer groups, the group it is browsed in (`group` is
+only set for the categories whose id starts with `observer_`, so a nested legacy category is not
+mistaken for a group). `readPalette()` falls back to the registry's own catalogue view of the palette
+only when that markup cannot be parsed — jest maps `react-dom/server` to a stub, so the tests exercise
+`parseBlocksMenu` against palette-shaped markup and the index against the names/categories/groups.
+- The planner asks the menu which blocks a prompt names (`menuBlockNamedIn` per clause). A clause that
+  names a menu block is answered with **that** block instead of a concept of the planner's own, and
+  naming `switch_active_market` / `market_discover_eligible` (`SCAN_BLOCKS`) is what makes the request
+  a multi-market scan even when the prompt never says "scan all markets".
+- The alignment is decided in the pipeline against the workspace that was really built, never claimed
+  by the planner: `alignWithBlocksMenu` marks the requirement `applied` (detail carries the menu label
+  and category) when the generated bot holds that block, and `unsupported` — "the generated bot does
+  not place it" — when it does not, plus one `Blocks menu:` reasoning line per named block. The
+  Requirements panel shows both as they are, so "Cool down market" or "Wait for settlement" is
+  reported instead of silently ignored.
+- `EXAMPLE_PROMPTS` ends with a prompt that names menu blocks, so the behaviour is reachable from the
+  tab without knowing the menu by heart.
+- Verify: `docker compose exec web npx jest src/pages/ai-architect` and, on the tab, generate
+  "Find eligible markets, then trade Over 1 when the last digit is over 1" — the request row reads
+  "Blocks menu · Find eligible markets (Market Intelligence) — the generated bot uses this block."
+
 ### "Add this bot to another" (combine)
 `combine.ts` `combineSpecs(target, addition)` puts the added bot in `spec.secondLeg`. The engine
 reads the trade options (amount **and** barrier) at the top of every loop, so a bot cannot pick its

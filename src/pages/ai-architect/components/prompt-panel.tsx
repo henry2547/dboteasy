@@ -23,6 +23,11 @@ export const EXAMPLE_PROMPTS: { label: string; prompt: string }[] = [
         prompt:
             'Scan all volatility markets for Over 1, entry is 5 and 6, digits 0 and 1 should have at least 10.3% frequency, digits 5 and 6 should not have the green or red bar, last 500 ticks, stop after 3 consecutive losses.',
     },
+    {
+        label: 'Name blocks from the Blocks menu',
+        prompt:
+            'Find eligible markets and use the Switch active market block to scan them for an Over 1 entry, check the last 100 digits, only when digit 0 is above 10%, then trade if the risk checks pass.',
+    },
 ];
 
 interface Props {
@@ -45,7 +50,8 @@ export default function PromptPanel({ prompt, generating, clarifications, onProm
             </h3>
             <p className='aa-card__hint'>
                 Say which contract, which markets and how it should find an entry. The Architect builds the bot only from blocks that are
-                really registered in this app.
+                really registered in this app. Name a block from the Bot Builder&apos;s Blocks menu — “Switch active market”, “Digit
+                frequency (%)” — and the Architect uses that block and reports the ones it cannot place.
             </p>
 
             <textarea
