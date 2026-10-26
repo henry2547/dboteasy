@@ -285,6 +285,20 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
             'Drives the engine market scan: discovers eligible markets, subscribes to the selected market, waits for its history and a genuine live tick, and only then evaluates the condition. While false it moves to the next market.',
         requires: ['active_symbols', 'ticks', 'market_scan'],
     }),
+    cap({
+        type: 'digits_parity_recovery',
+        displayName: 'Trade Over 1 / Under 8, recover on Even/Odd',
+        category: 'digits',
+        fields: [
+            dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1'),
+            dropdown('PARITY', ['both', 'even', 'odd'], 'both'),
+            number('TICKS', 1, 1000, 100, true),
+            number('PERCENT', 0, 100, 55),
+        ],
+        semantics:
+            'Buys Over 1 (or Under 8) when the newest digit passes that barrier; after a settled loss it scans every market for the strongest even/odd split and enters the Even/Odd contract through the engine’s own purchase path, which refuses the entry with its reason while the window is incomplete or the trade definition is not Even/Odd.',
+        requires: ['ticks', 'market_scan', 'proposal', 'buy'],
+    }),
 
     // ── Market intelligence ─────────────────────────────────────────────────────────────────────
     cap({

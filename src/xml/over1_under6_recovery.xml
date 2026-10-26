@@ -313,31 +313,21 @@
         <statement name="DO0">
           <block type="controls_if" id="freebot-o1u6-observer-gate"><mutation else="1"></mutation>
             <value name="IF0">
-              <block type="obs_and" id="freebot-o1u6-observer-and">
+              <block type="obs_and" id="freebot-o1u6-observer-monitor">
                 <value name="A">
-                  <block type="obs_freq_below" id="freebot-o1u6-observer-rare-one">
-                    <field name="DIGIT">1</field>
-                    <field name="PERCENT">10.3</field>
+                  <block type="obs_and" id="freebot-o1u6-observer-data">
+                    <value name="A">
+                      <block type="obs_fresh" id="freebot-o1u6-observer-fresh"></block>
+                    </value>
+                    <value name="B">
+                      <block type="obs_require_sample" id="freebot-o1u6-observer-entry-sample">
+                        <field name="N">100</field>
+                      </block>
+                    </value>
                   </block>
                 </value>
                 <value name="B">
-                  <block type="obs_and" id="freebot-o1u6-observer-monitor">
-                    <value name="A">
-                      <block type="obs_and" id="freebot-o1u6-observer-data">
-                        <value name="A">
-                          <block type="obs_fresh" id="freebot-o1u6-observer-fresh"></block>
-                        </value>
-                        <value name="B">
-                          <block type="obs_require_sample" id="freebot-o1u6-observer-entry-sample">
-                            <field name="N">100</field>
-                          </block>
-                        </value>
-                      </block>
-                    </value>
-                    <value name="B">
-                      <block type="obs_parity_switched" id="freebot-o1u6-observer-parity"></block>
-                    </value>
-                  </block>
+                  <block type="obs_parity_switched" id="freebot-o1u6-observer-parity"></block>
                 </value>
               </block>
             </value>
@@ -401,6 +391,15 @@
                     <statement name="DO0">
                       <block type="controls_if" id="freebot-o1u6-p1-neutral-gate">
                         <value name="IF0">
+                          <block type="logic_operation" id="freebot-o1u6-p1-filters-and">
+                            <field name="OP">AND</field>
+                            <value name="A">
+                              <block type="obs_freq_below" id="freebot-o1u6-observer-rare-one">
+                                <field name="DIGIT">1</field>
+                                <field name="PERCENT">10.3</field>
+                              </block>
+                            </value>
+                            <value name="B">
                           <block type="logic_operation" id="freebot-o1u6-p1-neutral-and">
                             <field name="OP">AND</field>
                             <value name="A">
@@ -418,6 +417,8 @@
                                   <shadow type="math_number"><field name="NUM">100</field></shadow>
                                 </value>
                               </block>
+                            </value>
+                          </block>
                             </value>
                           </block>
                         </value>
