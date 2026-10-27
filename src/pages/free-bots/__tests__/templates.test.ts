@@ -268,11 +268,57 @@ describe('Free Bots templates', () => {
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
-        // 89 real blocks + 17 shadows − 5 shadows replaced by a real block in
-        // the same input = 101. This exact number is what the loader compares
+        // 93 real blocks + 20 shadows − 2 shadows replaced by a real block in
+        // the same input = 111. This exact number is what the loader compares
         // the live workspace against, so a stale canvas cannot look valid.
         const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
-        expect(report.blockCount).toBe(101);
+        expect(report.blockCount).toBe(111);
+    });
+
+    it('every Over/Under template keeps the losing digits cold', () => {
+        // The published Over/Under setups enter only while the digits the contract loses to sit
+        // below the fair 10.3% share — Over 1 waits for digits 0 and 1, Under 8 for 8 and 9.
+        const cold_digits: Record<string, number[]> = {
+            over1_entry_every_time: [0, 1],
+            over2_entry_every_time: [0, 1, 2],
+            over3_entry_every_time: [0, 1, 2, 3],
+            under6_entry_every_time: [6, 7, 8, 9],
+            under7_entry_every_time: [7, 8, 9],
+            under8_entry_every_time: [8, 9],
+            over1_two_low_digits: [0, 1],
+            under8_two_high_digits: [8, 9],
+            over2_three_low_digits: [0, 1, 2],
+        };
+
+        Object.entries(cold_digits).forEach(([id, digits]) => {
+            const template = FREE_BOT_TEMPLATES.find(item => item.id === id)!;
+            const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+            const gates = [...doc.querySelectorAll('block[type="logic_compare"]')].filter(compare =>
+                compare.querySelector('field[name="OP"]')?.textContent === 'LT'
+            );
+
+            const field_of = (scope: Element, name: string) =>
+                [...scope.getElementsByTagName('field')].find(item => item.getAttribute('name') === name);
+
+            expect(gates).toHaveLength(digits.length);
+            digits.forEach((digit, index) => {
+                const input = [...gates[index].children].find(
+                    child => child.tagName === 'value' && child.getAttribute('name') === 'A'
+                )!;
+                const frequency = [...input.children].find(
+                    child => child.tagName === 'block' && child.getAttribute('type') === 'digits_frequency'
+                )!;
+
+                const limit = [...gates[index].children].find(
+                    child => child.tagName === 'value' && child.getAttribute('name') === 'B'
+                )!;
+
+                expect(field_of(frequency, 'DIGIT')?.textContent).toBe(String(digit));
+                expect(field_of(limit, 'NUM')?.textContent).toBe('10.3');
+            });
+            // The trigger comparison itself is untouched — the cold filter is an extra guard.
+            expect(template.entryOperator).not.toBeNull();
+        });
     });
 
     it.each(FREE_BOT_TEMPLATES)('$name keeps "Trade again" as the last block of its stack', template => {

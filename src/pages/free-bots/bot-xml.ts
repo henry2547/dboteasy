@@ -294,8 +294,9 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
         const parity = fieldValue(parityBlock, 'PARITY');
         if (!parity) continue;
 
-        const controlsIf = parityBlock.parentElement?.parentElement ?? null;
-        const purchase = controlsIf?.querySelector('statement[name="DO0"] block[type="purchase"]') ?? null;
+        // The parity block may be ANDed with frequency/bar filters, so walk up to the closest
+        // `controls_if` that really holds the purchase instead of assuming a fixed depth.
+        const purchase = gatePurchase(parityBlock);
         if (!purchase) continue;
 
         return {
@@ -316,8 +317,8 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
         const matchDigit = fieldValue(matchBlock, 'DIGIT');
         if (mode !== 'matches' && mode !== 'differs') continue;
 
-        const controlsIf = matchBlock.parentElement?.parentElement ?? null;
-        const purchase = controlsIf?.querySelector('statement[name="DO0"] block[type="purchase"]') ?? null;
+        // Matches/Differs gates can carry frequency filters too, so use the same walk up.
+        const purchase = gatePurchase(matchBlock);
         if (!purchase) continue;
 
         return {

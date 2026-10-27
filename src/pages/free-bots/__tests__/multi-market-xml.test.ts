@@ -142,18 +142,35 @@ describe('templates', () => {
         expect(contractOf('differs')).toMatchObject({ contractType: 'DIGITDIFF', prediction: 4 });
     });
 
-    it('carries the entry rules the four digit presets ask for', () => {
+    it('gives every preset an entry rule, not just a contract', () => {
         const configOf = (id: string) => MULTI_MARKET_PRESETS.find(item => item.id === id)!.config;
 
+        MULTI_MARKET_PRESETS.forEach(preset => {
+            const rule = preset.config;
+            const has_filter =
+                rule.entryDigits.length > 0 ||
+                !!rule.entryRun ||
+                rule.minFrequencyDigits.length > 0 ||
+                rule.maxFrequencyDigits.length > 0 ||
+                rule.barNeutralDigits.length > 0;
+            expect({ preset: preset.id, has_filter }).toEqual({ preset: preset.id, has_filter: true });
+        });
+
+        // Over/Under: the losing digits stay below the fair share (published Over 1/Over 2 setups).
         expect(configOf('over_1')).toMatchObject({
             entryDigits: [5, 6],
             barNeutralDigits: [5, 6],
-            minFrequencyDigits: [0, 1],
+            maxFrequencyDigits: [0, 1],
+        });
+        expect(configOf('over_2')).toMatchObject({
+            entryDigits: [0, 2],
+            barNeutralDigits: [0, 1, 2],
+            maxFrequencyDigits: [0, 1, 2],
         });
         expect(configOf('under_8')).toMatchObject({
             entryDigits: [7, 4, 8],
             barNeutralDigits: [7, 4, 8],
-            minFrequencyDigits: [8, 9],
+            maxFrequencyDigits: [8, 9],
         });
         expect(configOf('under_7')).toMatchObject({
             entryRun: { digits: 7, count: 2, mode: 'at_or_above' },
@@ -165,11 +182,17 @@ describe('templates', () => {
             barNeutralDigits: [0, 1, 2],
             minFrequencyDigits: [0, 1, 2],
         });
+        // Even/Odd wait for three of their own digits to run hot.
+        expect(configOf('even')).toMatchObject({ minFrequencyDigits: [0, 2, 4] });
+        expect(configOf('odd')).toMatchObject({ minFrequencyDigits: [1, 3, 5] });
+        // Matches buys a hot target digit, Differs the same digit while it is cold.
+        expect(configOf('matches')).toMatchObject({ minFrequencyDigits: [5] });
+        expect(configOf('differs')).toMatchObject({ maxFrequencyDigits: [4] });
     });
 
     it('builds each preset rule into the switch block and the purchase confirmation', () => {
-        for (const id of ['over_1', 'under_8', 'under_7', 'over_7']) {
-            const presetConfig = MULTI_MARKET_PRESETS.find(item => item.id === id)!.config;
+        for (const preset of MULTI_MARKET_PRESETS) {
+            const presetConfig = preset.config;
             const template = multiMarketTemplate(presetConfig);
             const doc = parseBotXml(freeBotXml(template)).doc!;
             const switch_condition = doc.querySelector(
@@ -182,16 +205,57 @@ describe('templates', () => {
                 const frequency = [...condition.querySelectorAll('block[type="digits_frequency"]')];
                 const neutral = [...condition.querySelectorAll('block[type="digits_bar_neutral"]')];
 
-                expect(frequency).toHaveLength(presetConfig.minFrequencyDigits.length);
+                const frequency_rules = [
+                    ...presetConfig.minFrequencyDigits.map(digit => ({ digit, operator: 'GTE' })),
+                    ...presetConfig.maxFrequencyDigits.map(digit => ({ digit, operator: 'LT' })),
+                ];
+
+                expect(frequency).toHaveLength(frequency_rules.length);
                 expect(neutral).toHaveLength(presetConfig.barNeutralDigits.length);
 
                 // Every frequency rule reads the same 10.3% threshold of the 100-tick window.
                 const thresholds = [...condition.querySelectorAll('shadow[type="math_number"] field[name="NUM"]')]
                     .map(field => field.textContent)
                     .filter(value => value === String(MULTI_MARKET_FREQUENCY_PERCENT));
-                expect(thresholds).toHaveLength(presetConfig.minFrequencyDigits.length);
+                expect(thresholds).toHaveLength(frequency_rules.length);
 
-                if (presetConfig.entryRun) {
+                // Each frequency rule sits in its own `logic_compare` whose A input is the
+                // `digits_frequency` block; read those compares directly (a descendant selector
+                // escapes the compare in an XML document).
+                const gates = [...condition.querySelectorAll('block[type="logic_compare"]')]
+                    .map(compare => {
+                        const input = [...compare.children].find(
+                            child => child.tagName === 'value' && child.getAttribute('name') === 'A'
+                        );
+                        const block = input
+                            ? [...input.children].find(
+                                  child =>
+                                      child.tagName === 'block' &&
+                                      child.getAttribute('type') === 'digits_frequency'
+                              )
+                            : undefined;
+                        if (!block) return null;
+                        const field = (name: string, scope: Element) =>
+                            [...scope.getElementsByTagName('field')].find(item => item.getAttribute('name') === name);
+                        return {
+                            operator: field('OP', compare)?.textContent,
+                            digit: field('DIGIT', block)?.textContent,
+                        };
+                    })
+                    .filter(Boolean);
+
+                expect(gates).toEqual(
+                    frequency_rules.map(rule => ({ operator: rule.operator, digit: String(rule.digit) }))
+                );
+
+                const is_parity = presetConfig.strategy === 'even' || presetConfig.strategy === 'odd';
+                const is_match = presetConfig.strategy === 'matches' || presetConfig.strategy === 'differs';
+
+                if (is_parity) {
+                    expect(condition.querySelector('block[type="digits_even_odd"]')).not.toBeNull();
+                } else if (is_match) {
+                    expect(condition.querySelector('block[type="digits_matches_differs"]')).not.toBeNull();
+                } else if (presetConfig.entryRun) {
                     const run = condition.querySelector('block[type="digits_high_run"]')!;
                     expect(run.querySelector('field[name="MODE"]')?.textContent).toBe(presetConfig.entryRun.mode);
                     expect(run.querySelector('field[name="DIGIT"]')?.textContent).toBe(

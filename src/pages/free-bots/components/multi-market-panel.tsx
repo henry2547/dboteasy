@@ -72,7 +72,14 @@ export default function MultiMarketPanel({
     // The entry rule belongs to the preset: a different strategy or barrier needs a rule of its own,
     // so the preset's digits are cleared instead of silently staying on another contract.
     const updateStrategy = (changes: Partial<MultiMarketConfig>) =>
-        update({ ...changes, entryDigits: [], entryRun: null, minFrequencyDigits: [], barNeutralDigits: [] });
+        update({
+            ...changes,
+            entryDigits: [],
+            entryRun: null,
+            minFrequencyDigits: [],
+            maxFrequencyDigits: [],
+            barNeutralDigits: [],
+        });
 
     const selectPreset = (presetId: string) => {
         const preset = MULTI_MARKET_PRESETS.find(item => item.id === presetId);

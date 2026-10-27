@@ -171,7 +171,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **83** for every template with an
+  **111** for the first (Over 1) template — the six plain `*_entry_every_time` templates carry one
+  `digits_frequency` "losing digit stays cold" compare per losing digit (see "Researched entries" below),
+  which is why they are no longer the bare 66-block shape — **83** for `even_odd_window`, **83** for every template with an
   extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
   `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **163** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
@@ -965,13 +967,40 @@ builds exactly the workspace it did.
   `timeout → purchase` generates `sleep((2 + Math.random())); Bot.purchase('DIGITEVEN');` and
   `report_journal(learn_report)` generates `Bot.sessionJournal(Bot.learnReport(), "info")`.
 
+### Researched entries (every Free Bots template)
+Every bot in the Free Bots tab — the fifteen XML templates and the nine multi-market presets — carries an
+entry rule taken from the published Deriv digit setups, not a bare "trade on this digit" trigger:
+- **Over/Under** (Over 1/2/3, Under 6/7/8 and the presets): the digits the contract *loses to* have to stay
+  cold — below the fair 10.3% share of the last 100 ticks — and carry neither the green nor the red bar
+  ("Over 1: make sure digit 0 and 1 are less than 10%; avoid the green or red bar at digit 0 or 1"). Over 1
+  also enters on its own barrier digit once digits 0/1 are cold, Over 2 on digit 0 or 2.
+- **Even/Odd**: three of the parity's own digits must run hot (published guide: > 10.5%; the shared 10.3%
+  boundary is used) before the parity is bought — `even` → digits 0/2/4, `odd` → 1/3/5.
+- **Matches/Differs**: Matches buys its target while it is hot (≥ 10.3%), Differs buys the same target while
+  it is cold (< 10.3%) — the 90%/10% split of the two contracts in one observation.
+- **Two-leg / parity-recovery bots** keep their own gates (cold losing digits, `digits_high_run`, parity
+  switch), which already follow the same "barrier/frequency/parity" pattern.
+
+Where it lives: `MultiMarketConfig.maxFrequencyDigits` adds the "stays below 10.3%" compares to the
+generated switch + purchase condition (alongside `minFrequencyDigits` for the hot rules);
+`entryConditionText` writes the same rule into the card copy, so a card never shows a rule the XML does not
+carry. The nine static Over/Under XML assets — the six `*_entry_every_time` ones plus `over1_two_low_digits`,
+`under8_two_high_digits` and `over2_three_low_digits` — add one `logic_compare` (`OP=LT`, 10.3, sample 100)
+around a `digits_frequency` block per losing digit, ANDed with the existing bar/parity/freshness guards
+(the derived three keep their `freebot-o1two` / `freebot-u8two` / `freebot-o2three` block-id prefixes so
+every id stays unique inside one asset). Tests: `templates.test.ts` ("every Over/Under template keeps the
+losing digits cold") and `multi-market-xml.test.ts` ("gives every preset an entry rule, not just a contract").
+
 ## Multi-Market Digit Entry Hunter (Free Bots, section 3)
 `src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;
-`MULTI_MARKET_PRESETS` holds the nine shipped variants. The four digit presets carry their entry rules:
-- **Over 1** — entry digits 5/6 · bar-neutral 5/6 · frequency ≥ 10.3% on 0/1
-- **Under 8** — entry digits 7/4/8 · bar-neutral 7/4/8 · frequency ≥ 10.3% on 8/9
+`MULTI_MARKET_PRESETS` holds the nine shipped variants, and every one carries an entry rule:
+- **Over 1** — entry digits 5/6 · bar-neutral 5/6 · digits 0/1 below 10.3%
+- **Over 2** — entry digits 0/2 · bar-neutral 0/1/2 · digits 0/1/2 below 10.3%
+- **Under 8** — entry digits 7/4/8 · bar-neutral 7/4/8 · digits 8/9 below 10.3%
 - **Under 7** — `digits_high_run` at_or_above 7 ×2 · bar-neutral 7/8/9 · frequency 7/8/9
 - **Over 7** — `digits_high_run` at_or_below 2 ×2 · bar-neutral 0/1/2 · frequency 0/1/2
+- **Even / Odd** — parity · three of the parity's digits at or above 10.3% (0/2/4 · 1/3/5)
+- **Matches** — target digit 5 at or above 10.3% · **Differs** — target digit 4 below 10.3%
 
 The whole rule (trigger AND every frequency/bar filter) is written into BOTH the `switch_active_market`
 CONDITION and the `if` that holds the `purchase`, so the scan only stops on a market whose own ticks pass

@@ -60,6 +60,12 @@ export interface MultiMarketConfig {
     entryRun: MultiMarketRun | null;
     /** Digits that must each hold at least `MULTI_MARKET_FREQUENCY_PERCENT` of the window. */
     minFrequencyDigits: number[];
+    /**
+     * Digits that must each hold less than `MULTI_MARKET_FREQUENCY_PERCENT` of the window — the
+     * "the digits the contract loses to stay cold" rule the published Over/Under and Differs
+     * setups start from.
+     */
+    maxFrequencyDigits: number[];
     /** Digits that must carry neither the green nor the red bar of the digit grid. */
     barNeutralDigits: number[];
 }
@@ -190,6 +196,7 @@ export const MULTI_MARKET_DEFAULTS: MultiMarketConfig = {
     entryDigits: [],
     entryRun: null,
     minFrequencyDigits: [],
+    maxFrequencyDigits: [],
     barNeutralDigits: [],
 };
 
@@ -206,10 +213,19 @@ const preset = (id: string, label: string, changes: Partial<MultiMarketConfig>):
 });
 
 /**
- * The bot variants this generator ships with. The four digit presets carry the entry rules the
- * strategy asks for: the entry digits (or the run of high/low digits) are the trigger, and the
- * frequency and bar rules are filters the *selected market* itself has to pass before the scan
- * stops — a market that fails them is skipped and the bot switches to the next one.
+ * The bot variants this generator ships with.
+ *
+ * Every preset carries an entry rule, not just a contract: the entry digits (or the run of
+ * high/low digits) are the trigger, and the frequency and bar filters are what the *selected
+ * market* itself has to pass before the scan stops — a market that fails them is skipped and the
+ * bot switches to the next one. The rules follow the published manual setups:
+ * - Over/Under: the digits the contract loses to stay below the fair 10.3% share and carry neither
+ *   bar ("Over 1: digit 0 and 1 under 10%, no green or red bar on 0 or 1"), and a low-barrier Over
+ *   enters on its own barrier digit once that losing side is cold.
+ * - Even/Odd: three of the parity's own digits run hot (over 10.5% in the published guide; the
+ *   shared 10.3% window boundary is used here) before the parity is bought.
+ * - Matches buys its target digit while it is hot; Differs buys it while it is cold — the two sides
+ *   of the same observation, which is why Differs carries the frequency rule in reverse.
  */
 export const MULTI_MARKET_PRESETS: MultiMarketPreset[] = [
     preset('over_1', 'Over 1', {
@@ -217,9 +233,15 @@ export const MULTI_MARKET_PRESETS: MultiMarketPreset[] = [
         barrier: 1,
         entryDigits: [5, 6],
         barNeutralDigits: [5, 6],
-        minFrequencyDigits: [0, 1],
+        maxFrequencyDigits: [0, 1],
     }),
-    preset('over_2', 'Over 2', { strategy: 'over', barrier: 2 }),
+    preset('over_2', 'Over 2', {
+        strategy: 'over',
+        barrier: 2,
+        entryDigits: [0, 2],
+        barNeutralDigits: [0, 1, 2],
+        maxFrequencyDigits: [0, 1, 2],
+    }),
     preset('over_7', 'Over 7', {
         strategy: 'over',
         barrier: 7,
@@ -232,7 +254,7 @@ export const MULTI_MARKET_PRESETS: MultiMarketPreset[] = [
         barrier: 8,
         entryDigits: [7, 4, 8],
         barNeutralDigits: [7, 4, 8],
-        minFrequencyDigits: [8, 9],
+        maxFrequencyDigits: [8, 9],
     }),
     preset('under_7', 'Under 7', {
         strategy: 'under',
@@ -241,10 +263,26 @@ export const MULTI_MARKET_PRESETS: MultiMarketPreset[] = [
         barNeutralDigits: [7, 8, 9],
         minFrequencyDigits: [7, 8, 9],
     }),
-    preset('even', 'Even', { strategy: 'even', barrier: null }),
-    preset('odd', 'Odd', { strategy: 'odd', barrier: null }),
-    preset('matches', 'Matches', { strategy: 'matches', barrier: 5 }),
-    preset('differs', 'Differs', { strategy: 'differs', barrier: 4 }),
+    preset('even', 'Even', {
+        strategy: 'even',
+        barrier: null,
+        minFrequencyDigits: [0, 2, 4],
+    }),
+    preset('odd', 'Odd', {
+        strategy: 'odd',
+        barrier: null,
+        minFrequencyDigits: [1, 3, 5],
+    }),
+    preset('matches', 'Matches', {
+        strategy: 'matches',
+        barrier: 5,
+        minFrequencyDigits: [5],
+    }),
+    preset('differs', 'Differs', {
+        strategy: 'differs',
+        barrier: 4,
+        maxFrequencyDigits: [4],
+    }),
 ];
 
 const isWholeNumber = (value: unknown): value is number =>
@@ -268,7 +306,12 @@ export function validateMultiMarketConfig(config: MultiMarketConfig): string[] {
         errors.push(`${spec.label} takes no barrier digit.`);
     }
 
-    const ruleDigits = [...config.entryDigits, ...config.barNeutralDigits, ...config.minFrequencyDigits];
+    const ruleDigits = [
+        ...config.entryDigits,
+        ...config.barNeutralDigits,
+        ...config.minFrequencyDigits,
+        ...config.maxFrequencyDigits,
+    ];
     if (ruleDigits.some(digit => !isWholeNumber(digit) || digit < 0 || digit > 9)) {
         errors.push('Entry, frequency and bar digits must be whole numbers between 0 and 9.');
     }
@@ -448,6 +491,18 @@ function entryConditionXml(config: MultiMarketConfig, id: string): string {
         );
     });
 
+    // The losing digits have to stay cold: less than the fair 10.3% share of the window.
+    config.maxFrequencyDigits.forEach(digit => {
+        conditions.push(
+            logicCompare(
+                `${id}-cold-check-${digit}`,
+                'LT',
+                digitsFrequency(`${id}-cold-${digit}`, digit),
+                mathShadow(`${id}-cold-max-${digit}`, 'math_number', MULTI_MARKET_FREQUENCY_PERCENT)
+            )
+        );
+    });
+
     config.barNeutralDigits.forEach(digit => {
         conditions.push(digitBarNeutral(`${id}-bar-${digit}`, digit));
     });
@@ -487,6 +542,11 @@ export function entryConditionText(config: MultiMarketConfig): string {
     if (config.minFrequencyDigits.length) {
         parts.push(
             `digit ${digitList(config.minFrequencyDigits)} at least ${MULTI_MARKET_FREQUENCY_PERCENT}% of the last ${MULTI_MARKET_WINDOW} ticks`
+        );
+    }
+    if (config.maxFrequencyDigits.length) {
+        parts.push(
+            `digit ${digitList(config.maxFrequencyDigits)} below ${MULTI_MARKET_FREQUENCY_PERCENT}% of the last ${MULTI_MARKET_WINDOW} ticks`
         );
     }
     if (config.barNeutralDigits.length) {
@@ -703,6 +763,7 @@ export function multiMarketTemplateId(config: MultiMarketConfig): MultiMarketBot
             : '',
         config.entryDigits.length ? `entry${config.entryDigits.join('')}` : '',
         config.minFrequencyDigits.length ? `freq${config.minFrequencyDigits.join('')}` : '',
+        config.maxFrequencyDigits.length ? `cold${config.maxFrequencyDigits.join('')}` : '',
         config.barNeutralDigits.length ? `bar${config.barNeutralDigits.join('')}` : '',
     ]
         .filter(Boolean)
@@ -773,7 +834,7 @@ export function multiMarketTemplate(config: MultiMarketConfig): FreeBotTemplate 
             ...(config.entryRun
                 ? []
                 : [spec.matchMode ? 'Digit matches/differs' : spec.parity ? 'Digit even/odd' : 'Less/Greater than']),
-            ...(config.minFrequencyDigits.length ? ['Digit frequency'] : []),
+            ...(config.minFrequencyDigits.length || config.maxFrequencyDigits.length ? ['Digit frequency'] : []),
             ...(config.barNeutralDigits.length ? ['Neutral digit bar'] : []),
         ].join(' · '),
     };
