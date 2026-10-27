@@ -5,8 +5,10 @@ import { clearProposals, proposalsReady } from './state/actions';
 
 export default Engine =>
     class Proposal extends Engine {
-        makeProposals(trade_option) {
-            if (!this.isNewTradeOption(trade_option)) {
+        makeProposals(trade_option, { force = false } = {}) {
+            // `force` quotes a contract the trade definition does not carry (a cross-family entry)
+            // even when every other trade option is unchanged.
+            if (!force && !this.isNewTradeOption(trade_option)) {
                 return;
             }
 
@@ -53,6 +55,38 @@ export default Engine =>
                 id: to_buy.id,
                 askPrice: to_buy.ask_price,
             };
+        }
+
+        /**
+         * Makes sure a proposal for this contract type exists before a purchase selects it.
+         *
+         * A cross-family entry buys a contract the definition does not list (Over 1 from an Even/Odd
+         * bot, or the other way round), so that contract is quoted with the barrier the entry asks
+         * for and the purchase waits for its own proposal, exactly as `start` waits for the first.
+         */
+        ensureContractProposals(contract_type, trade_options = this.tradeOptions) {
+            if (!this.is_proposal_subscription_required) return Promise.resolve();
+            if (this.proposal_templates?.some(template => template.contract_type === contract_type)) {
+                return Promise.resolve();
+            }
+
+            this.makeProposals({ ...this.options, ...trade_options, contractTypes: [contract_type] }, { force: true });
+
+            return new Promise(resolve => {
+                const has_proposal = () =>
+                    this.store.getState().proposalsReady ||
+                    this.data.proposals.some(proposal => proposal.contract_type === contract_type);
+                if (has_proposal()) {
+                    resolve();
+                    return;
+                }
+                const unsubscribe = this.store.subscribe(() => {
+                    if (has_proposal()) {
+                        unsubscribe();
+                        resolve();
+                    }
+                });
+            });
         }
 
         renewProposalsOnPurchase() {

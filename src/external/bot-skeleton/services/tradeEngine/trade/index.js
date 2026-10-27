@@ -10,6 +10,7 @@ import { proposalsReady, start } from './state/actions';
 import * as constants from './state/constants';
 import rootReducer from './state/reducers';
 import Balance from './Balance';
+import ContractFamily from './ContractFamily';
 import EvenOdd from './EvenOdd';
 import OpenContract from './OpenContract';
 import Proposal from './Proposal';
@@ -72,11 +73,17 @@ const watchScope = ({ store, stopScope, passScope, passFlag }) => {
 // state (`getScanState`, `isTickSubscriptionActive`, …) the market switch already maintains.
 // `EvenOdd` is the outermost wrapper: its entry checks read the risk session and the session scope,
 // and its buys go through the same `purchase` path every other entry uses.
+// `ContractFamily` resolves the contract type and barrier a buy really uses, which is what lets one
+// bot trade an Over/Under leg and an Even/Odd leg in the same session.
 export default class TradeEngine extends EvenOdd(
-    SessionControl(
-        StrategyLearning(
-            RiskManagement(
-                MarketIntelligence(MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {})))))))))
+    ContractFamily(
+        SessionControl(
+            StrategyLearning(
+                RiskManagement(
+                    MarketIntelligence(
+                        MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {}))))))))
+                    )
+                )
             )
         )
     )

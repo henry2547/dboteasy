@@ -127,7 +127,7 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_parity_recovery = 
                     }
                 }
             } else if (Bot.getLastDigit() ${primary.compare} ${primary.barrier} && Bot.riskCanTrade()) {
-                Bot.purchase('${primary.contract}');
+                Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });
             }
         }
     `;

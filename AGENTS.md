@@ -474,6 +474,33 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
 - Engine entry regression coverage is in `utils/__tests__/even-odd-runtime.test.js`: the pure-rule tests alone cannot catch missing imports in `trade/EvenOdd.js`. Run with `--runInBand --coverage=false` to avoid rewriting tracked coverage output.
 - Browser generation can be checked in an isolated `Blockly.Workspace` without replacing the user's canvas or placing a trade. Live Demo purchases/settlements remain unverified.
 
+### Contract families: one bot, Over/Under + Even/Odd
+`services/tradeEngine/utils/contract-families.js` is the single rule book for the digit contract
+families (`over_under`, `even_odd`, `matches_differs`), and `trade/ContractFamily.js` is the mixin
+that applies it (wrapped just inside `EvenOdd` in `trade/index.js`).
+- **A buy carries its own family.** `purchase(contract_type, { barrier })` resolves the trade options
+  through the mixin: Over/Under and Matches/Differs get the barrier (the explicit one, else the
+  definition's prediction, validated as a whole digit 0–9), while an Even/Odd buy has `prediction`
+  stripped. `tradeOptionToBuy` / `tradeOptionToProposal` skip `barrier`/`selected_tick` for a family
+  that reads none — without that, an Even/Odd buy from an Over/Under definition sent
+  `barrier: 1` and Deriv rejected it. Non-digit types (`CALL`, `TICKLOW`, …) keep their old
+  behaviour.
+- **The definition still gates it.** `canTradeContract` allows a requested contract when the
+  definition's `TYPE_LIST` is `both` (or names that contract) and the trade type is a digit trade type
+  (`overunder` / `evenodd` / `matchesdiffers`). A definition pinned to one contract still refuses
+  every other contract, with the reason in the journal.
+- **Proposals follow the family.** With a payout block on the canvas the engine quotes contracts
+  before buying; `Proposal.ensureContractProposals` requests the missing contract's own proposal and
+  the purchase waits for it, so `selectProposal` never throws `SelectedProposalNotExist` when a leg
+  switches family.
+- **`Bot.purchase(contract, { barrier })`** is the block-facing form (`Interface/BotInterface.js`
+  forwards the second argument). `digits_parity_recovery` uses it to buy its Over 1 / Under 8 leg
+  from an Even/Odd bot; the Even/Odd leg keeps buying through `eoBuyEven` / `eoBuyOdd`.
+- Coverage: `utils/__tests__/contract-families.test.js` (rules), `contract-family-engine.test.js`
+  (mixin + request builders) and `scratch/blocks/Digits/__tests__/digits-parity-recovery.test.js`
+  (the generated call carries the barrier). A live two-leg purchase needs a logged-in Demo account,
+  so the settlement path stays manual.
+
 ## Strategy Learning blocks (Bot Builder)
 The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy
 actually performed, from contracts the engine really settled. It never simulates or predicts.

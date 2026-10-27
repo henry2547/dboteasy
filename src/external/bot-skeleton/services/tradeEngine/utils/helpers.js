@@ -4,6 +4,7 @@ import { config } from '@/external/bot-skeleton/constants';
 import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
 import { error as logError } from './broadcast';
+import { contractNeedsBarrier } from './contract-families';
 
 export const tradeOptionToProposal = (trade_option, purchase_reference) =>
     trade_option.contractTypes.map(type => {
@@ -22,12 +23,15 @@ export const tradeOptionToProposal = (trade_option, purchase_reference) =>
             proposal: 1,
             underlying_symbol: trade_option.symbol,
         };
-        if (trade_option.prediction !== undefined) {
+        // A barrier belongs to the family that reads one: an Even/Odd contract takes none, so the
+        // definition's Over/Under barrier is never sent along with it.
+        const wants_barrier = contractNeedsBarrier(type);
+        if (wants_barrier && trade_option.prediction !== undefined) {
             proposal.selected_tick = trade_option.prediction;
         }
-        if (!['TICKLOW', 'TICKHIGH'].includes(type) && trade_option.prediction !== undefined) {
+        if (wants_barrier && !['TICKLOW', 'TICKHIGH'].includes(type) && trade_option.prediction !== undefined) {
             proposal.barrier = trade_option.prediction;
-        } else if (trade_option.barrierOffset !== undefined) {
+        } else if (wants_barrier && trade_option.barrierOffset !== undefined) {
             proposal.barrier = trade_option.barrierOffset;
         }
         if (trade_option.secondBarrierOffset !== undefined) {
@@ -58,12 +62,14 @@ export const tradeOptionToBuy = (contract_type, trade_option) => {
             underlying_symbol: trade_option.symbol,
         },
     };
-    if (trade_option.prediction !== undefined) {
+    // Same rule as the proposal: only the families that read a barrier carry one.
+    const wants_barrier = contractNeedsBarrier(contract_type);
+    if (wants_barrier && trade_option.prediction !== undefined) {
         buy.parameters.selected_tick = trade_option.prediction;
     }
-    if (!['TICKLOW', 'TICKHIGH'].includes(contract_type) && trade_option.prediction !== undefined) {
+    if (wants_barrier && !['TICKLOW', 'TICKHIGH'].includes(contract_type) && trade_option.prediction !== undefined) {
         buy.parameters.barrier = trade_option.prediction;
-    } else if (trade_option.barrierOffset !== undefined) {
+    } else if (wants_barrier && trade_option.barrierOffset !== undefined) {
         buy.parameters.barrier = trade_option.barrierOffset;
     }
     if (trade_option.secondBarrierOffset !== undefined) {
