@@ -42,6 +42,7 @@ import over4FiveHotXml from '@/xml/over4_five_hot.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
+import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
 
 /** Generated multi-market templates carry a configuration-derived id. */
 export type MultiMarketBotId = `multi_market_${string}`;
@@ -61,7 +62,8 @@ export type FreeBotId =
     | 'under5_nine_rare'
     | 'over4_five_hot'
     | 'even_odd_window'
-    | 'over1_under6_recovery';
+    | 'over1_under6_recovery'
+    | 'over1_parity_recovery';
 
 export type FreeBotStrategy =
     | 'over1'
@@ -96,6 +98,21 @@ export interface FreeBotRecoveryLeg {
 }
 
 /**
+ * The two-leg entry the `digits_parity_recovery` Digits block builds: it trades one
+ * digit Over/Under leg first and, only after a settled loss, an Even/Odd leg on the
+ * best market its own scan finds. Both legs live inside that one block, so the
+ * barrier travels with the block instead of a prediction input.
+ */
+export interface FreeBotParityRecovery {
+    /** Primary leg the block trades first. */
+    primary: 'over_1' | 'under_8';
+    /** Barrier the primary leg trades (Over 1 → 1, Under 8 → 8). */
+    barrier: number;
+    /** Parity the recovery buys — `both` when the strongest even/odd side wins. */
+    parity: FreeBotParity;
+}
+
+/**
  * Digit trade type in the Bot Builder: Over/Under carries a prediction, Even/Odd a
  * parity, Matches/Differs a target digit.
  */
@@ -126,6 +143,8 @@ export interface FreeBotTemplate {
     primaryContractType?: FreeBotContractType;
     /** Second leg traded when the primary setup fails (see `FreeBotRecoveryLeg`). */
     recoveryLeg?: FreeBotRecoveryLeg;
+    /** Two-leg entry held in one `digits_parity_recovery` Digits block instead of purchase blocks. */
+    parityRecovery?: FreeBotParityRecovery;
     /** Defaults to `overunder` when the template does not say. */
     tradeType?: FreeBotTradeType;
     /**
@@ -569,6 +588,38 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         blocksUsed:
             'Digits above in a row · Two digits below a share · Digit bar is neutral · Digit & frequency: Digit Frequency Below · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with · AND',
     },
+    {
+        id: 'over1_parity_recovery',
+        name: 'Over 1 — Even/Odd Recovery',
+        sourceFile: 'Built from the "Trade Over 1 / Under 8, recover on Even/Odd" Digits block',
+        asset: 'parity_recovery_bot.xml',
+        strategy: 'over1',
+        strategyLabel: 'Digit Over → Even / Odd',
+        contractType: 'both',
+        primaryContractType: 'DIGITOVER',
+        tradeType: 'evenodd',
+        // One block holds both legs: Over 1 first, then the best even/odd market after a loss.
+        parityRecovery: { primary: 'over_1', barrier: 1, parity: 'both' },
+        prediction: null,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Newest digit above 1 · 20 genuine ticks observed · fresh market data · parity switched · risk guard, no open contract, trade cap',
+        buyCondition:
+            'Nothing is bought until the observer gate passes. Then the first leg buys Over 1 as soon as the newest genuine digit is above 1 — 2 to 9 wins, 0 and 1 lose — while the risk guard allows a trade, no contract is still open and the trade cap is not reached. After a settled loss the second leg takes over: the block scans every eligible volatility market, keeps the one whose own last ticks are the most lopsided between even and odd, configures the Even/Odd window on that market and buys EVEN or ODD only once the window is full, the winning parity reaches 65% and the selected signal matches. A refused entry is journalled with its reason, so a waiting bot always says why it did not trade.',
+        afterPurchase:
+            'Win → stake back to 10 and Over 1 again · Loss → stake × 1.5 and the next entry is the Even/Odd leg on the best parity market · stops at +10 profit or −20 loss',
+        restartCondition:
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back on Over 1, after a loss it scans for the best even/odd market and waits for that window to confirm a signal, until the take profit or the stop loss ends the run.',
+        blocksUsed:
+            'Digits: Trade Over 1 / Under 8, recover on Even/Odd · best even/odd market scan · Configure Even/Odd strategy · Monitor last N valid ticks · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+    },
 ];
 
 const FREE_BOT_XML: Record<string, string> = {
@@ -586,6 +637,7 @@ const FREE_BOT_XML: Record<string, string> = {
     over4_five_hot: over4FiveHotXml,
     even_odd_window: evenOddWindowXml,
     over1_under6_recovery: over1Under6RecoveryXml,
+    over1_parity_recovery: parityRecoveryXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {

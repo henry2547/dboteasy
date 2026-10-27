@@ -174,6 +174,11 @@ interface EntryCondition {
     strategyBuy?: { even: boolean; odd: boolean };
     /** True when the entry compares the "Selected signal direction" block. */
     gatedBySignal?: boolean;
+    /**
+     * Set when one `digits_parity_recovery` block holds both legs: the digit Over/Under
+     * leg it trades first and the Even/Odd parity it buys only after a settled loss.
+     */
+    parityRecovery?: { primary: string; contract: string; prediction: number; parity: string };
 }
 
 /**
@@ -203,6 +208,31 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
         }
         return null;
     };
+
+    // The parity-recovery block buys both legs itself, so there is no `purchase` block to gate.
+    const parityRecoveryBlock = beforePurchase.querySelector('block[type="digits_parity_recovery"]');
+    if (parityRecoveryBlock) {
+        const primary = fieldValue(parityRecoveryBlock, 'PRIMARY');
+        const leg =
+            primary === 'under_8'
+                ? { contract: 'DIGITUNDER', prediction: 8 }
+                : { contract: 'DIGITOVER', prediction: 1 };
+        return {
+            operator: null,
+            trigger: null,
+            parity: null,
+            matchMode: null,
+            matchDigit: null,
+            purchaseContract: leg.contract,
+            hasPurchase: true,
+            parityRecovery: {
+                primary: primary ?? '',
+                contract: leg.contract,
+                prediction: leg.prediction,
+                parity: fieldValue(parityRecoveryBlock, 'PARITY') ?? 'both',
+            },
+        };
+    }
 
     const compares = blocksOfType(beforePurchase, 'logic_compare');
     const digit_compares = compares.filter(compare => compare.querySelector('block[type="last_digit"]'));
@@ -591,14 +621,30 @@ export function inspectFreeBotXml(
     // A two-leg template buys its primary contract in the branch the entry condition
     // wraps; `contractType` is `both` for it, so the entry is compared with the leg.
     const primary_contract = template.primaryContractType ?? template.contractType;
-    const entryOk =
-        !!entry && entry.hasPurchase && entry.purchaseContract === primary_contract && entryMatchesTemplate(entry);
+    // A parity-recovery template keeps both legs inside the `digits_parity_recovery` block, so its
+    // entry is read from that block's fields instead of a purchase block.
+    const parity_recovery = template.parityRecovery;
+    const found_parity = entry?.parityRecovery;
+    const parityEntryOk =
+        !!parity_recovery &&
+        !!found_parity &&
+        found_parity.primary === parity_recovery.primary &&
+        found_parity.contract === primary_contract &&
+        found_parity.prediction === parity_recovery.barrier &&
+        found_parity.parity === parity_recovery.parity;
+    const entryOk = parity_recovery
+        ? parityEntryOk
+        : !!entry && entry.hasPurchase && entry.purchaseContract === primary_contract && entryMatchesTemplate(entry);
 
     checks.push({
         id: 'entry-condition',
         label: 'Entry condition',
         passed: entryOk,
-        detail: entry
+        detail: parity_recovery
+            ? found_parity
+                ? `${found_parity.primary === 'under_8' ? 'Under 8' : 'Over 1'} (${found_parity.contract} ${found_parity.prediction}) → Even/Odd ${found_parity.parity} after a loss`
+                : 'No "Trade Over 1 / Under 8, recover on Even/Odd" block found in the purchase conditions.'
+            : entry
             ? `${
                   entry.strategyBuy
                       ? `Even/Odd signal → ${entry.purchaseContract ?? '—'}`
@@ -614,7 +660,15 @@ export function inspectFreeBotXml(
               } → purchase ${entry.purchaseContract ?? '—'}`
             : 'No digit entry condition found around the purchase block.',
     });
-    if (!entryOk) {
+    if (!entryOk && parity_recovery) {
+        errors.push(
+            `Entry condition mismatch: expected the "Trade Over 1 / Under 8, recover on Even/Odd" block set to ${
+                parity_recovery.primary === 'under_8' ? 'Under 8' : 'Over 1'
+            } (${primary_contract} ${parity_recovery.barrier}) and recovering on ${
+                parity_recovery.parity === 'both' ? 'the strongest even/odd side' : parity_recovery.parity.toUpperCase()
+            }.`
+        );
+    } else if (!entryOk) {
         errors.push(
             expectsMatch
                 ? `Entry condition mismatch: expected "last digit ${template.strategy} ${template.prediction} → purchase ${primary_contract}".`

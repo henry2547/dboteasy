@@ -11,6 +11,12 @@
         bottom: 9.6rem;
     }
 
+    /* A dialog (the Quick strategy wizard) owns the screen while it is open: the button stays
+       mounted — so its dragged position survives — and simply steps out of the dialog's way. */
+    &--hidden {
+        display: none;
+    }
+
     &__fab {
         display: block;
         padding: 1rem 1.6rem;

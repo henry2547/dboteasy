@@ -26,6 +26,7 @@ jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
+jest.mock('@/xml/parity_recovery_bot.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml } from '../bot-xml';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from '../templates';
@@ -123,7 +124,12 @@ describe('Free Bots templates', () => {
         expect(report.settings.contractType).toBe(template.contractType);
         expect(report.variables.some(name => name.startsWith('freebot:'))).toBe(true);
 
-        if (template.entryParity) {
+        if (template.parityRecovery) {
+            // Parity recovery: both legs read their barrier from the block, so the trade options
+            // carry no prediction at all.
+            expect(report.settings.prediction).toBeNull();
+            expect(report.checks.find(check => check.id === 'entry-condition')?.passed).toBe(true);
+        } else if (template.entryParity) {
             // Even/Odd: gated by parity, so no barrier digit at all.
             expect(report.settings.prediction).toBeNull();
             expect(report.settings.entryParity).toBe(template.entryParity);
