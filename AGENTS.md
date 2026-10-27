@@ -282,8 +282,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab
   page in `main.tsx`, so a broken view shows a recoverable card instead of a blank app.
-- **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
-  `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
+- **Hamburger help:** the `'help'` submenu ("App guide") renders
+  `mobile-menu/app-guide-submenu.tsx`, the app's navigation map: one row per tab (Dashboard →
+  Statistics) with a one-line purpose and a tap that calls `dashboard.setActiveTab` and closes the
+  drawer, plus a short "Getting around" list. It replaced the old Digits-only help content — keep it a
+  map of the app, and keep `DESTINATIONS` in the `DBOT_TABS` / `TAB_IDS` order.
 - **Blocks guide (hamburger):** the `'blocks'` submenu ("Blocks help") renders
   `mobile-menu/blocks-help-submenu.tsx`, an accordion over the five Blocks-menu groups — Digits plus the
   four observer groups. Its content comes from `mobile-menu/blocks-help-data.ts`, which reads `GROUPS` /

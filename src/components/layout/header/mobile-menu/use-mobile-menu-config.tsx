@@ -50,10 +50,10 @@ const useMobileMenuConfig = (
                 // For desktop menu items, see:
                 // src/components/layout/header/header-config.tsx
 
-                // Help guide for the Digits / Statistics tabs
+                // Where everything lives: one row per tab, tapping it opens that tab
                 {
                     as: 'button',
-                    label: localize('Digits help'),
+                    label: localize('App guide'),
                     LeftComponent: LegacyGuide1pxIcon,
                     submenu: 'help',
                 },

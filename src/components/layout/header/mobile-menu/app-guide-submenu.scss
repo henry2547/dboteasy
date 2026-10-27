@@ -1,0 +1,108 @@
+/* App guide shown inside the hamburger drawer: one row per tab, tapping opens it. */
+
+.app-guide {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem 2rem;
+
+    &__intro {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+        padding: 0.9rem 1.1rem;
+        border: 1px solid var(--general-main-3);
+        border-radius: 10px;
+        background: var(--general-section-1);
+        color: var(--text-prominent);
+        text-align: left;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+
+        &:active {
+            border-color: var(--brand-primary);
+            background: var(--general-main-2);
+        }
+    }
+
+    &__number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 2.4rem;
+        height: 2.4rem;
+        border-radius: 50%;
+        background: var(--brand-primary);
+        color: var(--text-colored-background);
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+
+    &__text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex: 1 1 auto;
+    }
+
+    &__name {
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    &__hint {
+        font-size: 1.15rem;
+        line-height: 1.4;
+        color: var(--text-less-prominent);
+    }
+
+    &__arrow {
+        flex: 0 0 auto;
+        font-size: 1.6rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__tips {
+        margin-top: 0.4rem;
+        padding: 0.9rem 1.1rem;
+        border-radius: 10px;
+        border: 1px dashed var(--general-main-3);
+
+        ul {
+            margin: 0.4rem 0 0;
+            padding-left: 1.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        li {
+            font-size: 1.15rem;
+            line-height: 1.4;
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__tips-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+}
