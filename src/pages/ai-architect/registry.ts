@@ -218,6 +218,19 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         fields: [dropdown('OP', ['ADD', 'MINUS', 'MULTIPLY', 'DIVIDE', 'POWER'])],
         inputs: [value('A', ['Number']), value('B', ['Number'])],
     }),
+    NUMBER_VALUE('math_round', 'Round', 'math', 'Rounds a number to the nearest whole number.', {
+        fields: [dropdown('OP', ['ROUND', 'ROUNDUP', 'ROUNDDOWN'], 'ROUND')],
+        inputs: [value('NUM', ['Number'])],
+    }),
+    NUMBER_VALUE('math_random_float', 'Random fraction', 'math', 'A random fraction from 0.0 up to (not including) 1.0, used to vary entry timing and stake size.', {}),
+    cap({
+        type: 'timeout',
+        displayName: 'Run after a wait',
+        category: 'time',
+        fields: [],
+        inputs: [value('SECONDS', ['Number']), statement('TIMEOUTSTACK')],
+        semantics: 'Waits the given number of seconds, then runs the blocks inside it. Used to pace entries instead of firing on every tick.',
+    }),
     cap({
         type: 'variables_set',
         displayName: 'Set variable',
@@ -275,6 +288,27 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         }
     ),
     NUMBER_VALUE('digits_streak', 'Same-digit streak', 'digits', 'Ticks in a row with the same last digit.', { requires: ['ticks'] }),
+    BOOLEAN_VALUE(
+        'digits_high_run',
+        'Last digits above / below a digit',
+        'digits',
+        'True when the newest N ticks in a row all ended above (or at or above, below, at or below) the chosen digit. A custom indicator the entry can require.',
+        {
+            fields: [dropdown('MODE', ['at_or_above', 'above', 'at_or_below', 'below'], 'at_or_above'), dropdown('DIGIT', DIGITS)],
+            inputs: [value('COUNT', ['Number'])],
+            requires: ['ticks'],
+        }
+    ),
+    cap({
+        type: 'switch_best_parity_market',
+        displayName: 'Use the best even/odd market',
+        category: 'digits',
+        fields: [],
+        inputs: [value('TICKS', ['Number'])],
+        semantics:
+            'Walks every eligible volatility market, reads each market\'s own recent ticks and moves the bot to the one with the strongest even/odd split. It places no trade; the entry gates decide that afterwards.',
+        requires: ['active_symbols', 'ticks', 'market_scan'],
+    }),
     cap({
         type: 'switch_active_market',
         displayName: 'Switch active market',
@@ -367,7 +401,10 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         type: 'learn_report',
         displayName: 'Strategy learning report',
         category: 'strategy_learning',
-        semantics: 'Writes the per-strategy results measured so far to the run log.',
+        shape: 'value',
+        output: 'String',
+        execution: 'informational',
+        semantics: 'One line per labelled strategy with the results the engine really settled, for the run log.',
     }),
     cap({
         type: 'exec_wait_settlement',
@@ -614,6 +651,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
     trading_execution: 'Trading & Execution',
     bot_control: 'Bot Control',
     session_reporting: 'Reporting',
+    time: 'Time',
     notifications: 'Notifications',
     observer_entry_monitoring: 'Entry & monitoring (Virtual Hook)',
 };

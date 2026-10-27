@@ -140,10 +140,17 @@ describe('add a bot to another', () => {
         expect(combined.entry.digits).toEqual([]);
     });
 
-    it('refuses two bots that need different trade types', () => {
+    it('combines two bots that buy different contract families', () => {
         const outcome = combineSpecs(over(), plan('Trade even digits on all volatility markets'));
-        expect(outcome.ok).toBe(false);
-        expect(outcome.message).toMatch(/Trade type/);
+        expect(outcome.ok).toBe(true);
+        expect(outcome.message).toMatch(/contract family/);
+        const assembled = assemble(outcome.spec as StrategySpec, registry);
+        expect(assembled.ok).toBe(true);
+        if (assembled.ok === false) return;
+        const purchases = blocksOf(assembled.bot.workspace)
+            .filter(block => block.type === 'purchase')
+            .map(block => block.fields?.PURCHASE_LIST);
+        expect(purchases.sort()).toEqual(['DIGITEVEN', 'DIGITOVER']);
     });
 
     it('refuses bots on different single markets', () => {
@@ -161,5 +168,68 @@ describe('add a bot to another', () => {
     it('refuses to add a third rule', () => {
         const twice = combineSpecs(over(), under()).spec as StrategySpec;
         expect(combineSpecs(twice, plan('Trade Over 3 on all markets')).ok).toBe(false);
+    });
+});
+
+describe('custom indicators, analysis tools and session realism', () => {
+    it('reads a run-length indicator into a real block, in the scan and the confirmation', () => {
+        const result = generateBot('Trade Under 8 on all markets, last 3 digits above 6', { registry });
+        expect(result.ok).toBe(true);
+        const blocks = blocksOf(result.bot!.workspace);
+        const runs = blocks.filter(block => block.type === 'digits_high_run');
+        expect(runs.length).toBe(2); // one in the market scan, one in the confirmation
+        expect(runs[0].fields).toEqual({ MODE: 'above', DIGIT: '6' });
+        expect(result.bot?.spec.indicators[0]).toMatchObject({ kind: 'high_run', digit: 6, mode: 'above', count: 3 });
+    });
+
+    it('reads a hot/cold digit indicator', () => {
+        const result = generateBot('Trade Over 1 on all markets, hottest digit is 5', { registry });
+        expect(result.ok).toBe(true);
+        expect(result.bot?.spec.indicators[0]).toMatchObject({ kind: 'hot_cold', digit: 5, mode: 'hottest' });
+        expect(blocksOf(result.bot!.workspace).some(block => block.type === 'digits_hot_cold')).toBe(true);
+    });
+
+    it('paces entries, pauses after a loss and varies the stake when a realistic bot is asked for', () => {
+        const result = generateBot('Trade Over 1 on all markets, make it realistic and less likely to be flagged', { registry });
+        expect(result.ok).toBe(true);
+        const spec = result.bot!.spec;
+        expect(spec.realism.entryDelaySeconds).toBeGreaterThan(0);
+        expect(spec.realism.entryJitterSeconds).toBeGreaterThan(0);
+        expect(spec.realism.lossCooldownSeconds).toBeGreaterThan(0);
+        expect(spec.realism.stakeJitterPercent).toBeGreaterThan(0);
+
+        const blocks = blocksOf(result.bot!.workspace);
+        expect(blocks.some(block => block.type === 'timeout')).toBe(true);
+        expect(blocks.some(block => block.type === 'math_random_float')).toBe(true);
+        // The amount really spent is the varied stake, not the base one.
+        const options = blocks.find(block => block.type === 'trade_definition_tradeoptions');
+        expect(options?.values?.AMOUNT?.[1].fields?.VAR).toBe('architect:live:stake');
+    });
+
+    it('uses the best even/odd market scan when asked for it', () => {
+        const result = generateBot('Trade Even on every market, use the best even/odd market', { registry });
+        expect(result.ok).toBe(true);
+        expect(result.bot?.spec.analysis.bestParityMarket).toBe(true);
+        expect(blocksOf(result.bot!.workspace).some(block => block.type === 'switch_best_parity_market')).toBe(true);
+    });
+
+    it('labels each rule so the engine can report per-strategy results', () => {
+        const result = generateBot('Scan all markets for Over 1, entry is 5 and 6. Recovery with Under 6, entry digits 7, 8 or 9.', { registry });
+        expect(result.ok).toBe(true);
+        const labels = blocksOf(result.bot!.workspace)
+            .filter(block => block.type === 'learn_set_strategy')
+            .map(block => block.fields?.NAME);
+        expect(labels.sort()).toEqual(['Over 1', 'Under 6']);
+        expect(blocksOf(result.bot!.workspace).some(block => block.type === 'learn_report')).toBe(true);
+    });
+
+    it('leaves a bot built before pacing and indicators exactly as it was', () => {
+        const plain = createSpec({ strategy: 'over', barrier: 1, multi: true });
+        const workspace = buildWorkspace(plain);
+        expect(blocksOf(workspace).some(block => block.type === 'timeout')).toBe(false);
+        expect(blocksOf(workspace).some(block => block.type === 'math_random_float')).toBe(false);
+        expect(blocksOf(workspace).some(block => block.type === 'digits_high_run')).toBe(false);
+        const options = blocksOf(workspace).find(block => block.type === 'trade_definition_tradeoptions');
+        expect(options?.values?.AMOUNT?.[1].fields?.VAR).toBe('architect:stake');
     });
 });

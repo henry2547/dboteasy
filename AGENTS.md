@@ -916,13 +916,54 @@ A prompt that names two contracts of the same Trade type ("Over 1 ... recovery w
 planned as ONE two-rule bot instead of asking which contract to drop: `contractMentions` returns
 every contract with its offset, `distinctMentions` keeps the first mention of each, and the prompt is
 split at the second contract's offset so each rule keeps the entry digits, frequency filters and bar
-rules written beside it (the second rule's window is its own when it states one). Both rules must
-share `CONTRACTS[...].tradeType` (Over/Under, Even/Odd, Matches/Differs); otherwise the planner still
-asks `contract_conflict`. A second rule is only attached to a Demo-trading bot — an observation- or
-signal-only request reports it under "Not built". Keep `maskNonContractPhrases` **length-preserving**
+rules written beside it (the second rule's window is its own when it states one). The two rules may
+belong to **different contract families** — the two-market engine buys each leg's own family in one
+session (`services/tradeEngine/utils/contract-families.js`; the builder sets
+`trade_definition_contracttype` to `both` and carries the barrier in a variable), so "Over 1, recover
+with Even after a loss" builds ONE bot instead of asking `contract_conflict`. Only three or more named
+contracts still ask. A second rule is only attached to a Demo-trading bot — an observation- or
+signal-only request reports it under "Not built". `combine.ts` follows the same rule: a different
+family is no longer refused, only a different market selection. Keep `maskNonContractPhrases` **length-preserving**
 (blank/padding replacements): the offsets it produces are what splits the prompt, and
 `readFrequencies` never lets a digit sit between a digit list and its own operator, so a filter
 written after an entry list binds to the list nearest the operator.
+
+### Custom indicators, analysis tools and session realism
+Three spec sections the planner fills and the builder turns into real blocks. All of them are inert
+by default (`analyze`/`realism` are zeroed by `normalizeSpec`), so a bot saved before this exists
+builds exactly the workspace it did.
+- **`spec.indicators` / `StrategyLeg.indicators`** — `IndicatorPlan[]`, ANDed into the leg's entry by
+  `indicatorConditions` inside `filterConditions`, so the SAME rule gates the market scan and the
+  buy. Two kinds, each a real block: `high_run` → `digits_high_run` ("last 3 digits above 6", also
+  "three ticks in a row at or above 7") and `hot_cold` → `digits_hot_cold` compared to the digit
+  ("hottest digit is 5"). `maskNonContractPhrases` blanks the WHOLE indicator phrase before contract
+  parsing — masking only "last 3 digits" left "above 6" and the planner read it as a second Over 6
+  contract.
+- **`spec.analysis`** — `rankMarkets` places `market_rank` after `market_discover_eligible`;
+  `bestParityMarket` replaces discovery+scan with `switch_best_parity_market` (and makes the request
+  multi-market); `strategyReport` places `learn_set_strategy` before each leg's Purchase (so the
+  engine measures each named rule) and `learn_report` (a String value) into a `report_journal` when
+  the stop flag is set. `learn_report` must stay a **value** entry in the registry or the socket
+  check refuses it.
+- **`spec.realism`** — pacing that keeps the bot off a fixed per-tick cadence: `entryDelaySeconds` +
+  `entryJitterSeconds` wrap the Purchase in a `timeout` (`sleep(base + Math.random() * jitter)`);
+  `lossCooldownSeconds` wraps `trade_again` in the loss branch only; `stakeJitterPercent` writes
+  `architect:live:stake` from `round(stake * (1 ± share))` before each buy and the trade options read
+  that variable instead of `architect:stake`. The `:stake` suffix on the name is deliberate — the
+  validator's "stake is seeded at start" check reads it. Phrases: "realistic", "less likely to be
+  flagged", "random/jitter", "wait N seconds", "cool down N seconds after a loss", "vary the stake by
+  N%"; `refineSpec` accepts the same ones.
+- `validator.ts` finds a Purchase in an `if` branch **directly or one `timeout` level inside**
+  (`holdsAction`) — searching the whole subtree made the outer stop-flag guard look like a
+  confirmation and failed the risk-guard check. A `switch_best_parity_market` gets its own
+  `parity-scan` check (one scan, a 1–1000 tick window, no competing market selector).
+- The result UI shows all of it in `components/strategy-plan-panel.tsx` ("Strategies, indicators &
+  analysis"): each rule's family, entry digits, filters and indicators, then the analysis tools and
+  the pacing.
+- Verify: `docker compose exec web npx jest src/pages/ai-architect` (133 tests) and
+  `npx tsc --noEmit`. In the preview browser a scratch `Blockly.Workspace` loading
+  `timeout → purchase` generates `sleep((2 + Math.random())); Bot.purchase('DIGITEVEN');` and
+  `report_journal(learn_report)` generates `Bot.sessionJournal(Bot.learnReport(), "info")`.
 
 ## Multi-Market Digit Entry Hunter (Free Bots, section 3)
 `src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;

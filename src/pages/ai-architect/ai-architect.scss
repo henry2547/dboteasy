@@ -353,6 +353,34 @@ button.aa-chip {
     color: var(--text-less-prominent);
 }
 
+.aa-plan {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    &__row {
+        display: grid;
+        gap: 0.3rem;
+        padding: 1rem 1.2rem;
+        border: 1px solid var(--border-normal);
+        border-radius: 0.8rem;
+        background: var(--general-section-1);
+    }
+
+    &__name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+
+    &__meta {
+        font-size: 1.3rem;
+        color: var(--text-less-prominent);
+    }
+}
+
 .aa-blocks__type {
     font-family: monospace;
     font-size: 1.2rem;

@@ -13,9 +13,11 @@ import {
     RequirementsPanel,
     ValidationPanel,
 } from './components/result-panels';
+import { StrategyPlanPanel } from './components/strategy-plan-panel';
 import { combineSpecs } from './combine';
 import { botLibrary, inspectImportedXml } from './library';
 import { assemble } from './pipeline';
+import { legsOf } from './spec-model';
 import type { SavedBot } from './types';
 import { useArchitect } from './use-architect';
 import { useArchitectLoader, workspaceHasWork } from './use-architect-loader';
@@ -167,6 +169,7 @@ const AiArchitectPage = observer(() => {
                 <>
                     <RequirementsPanel requirements={state.requirements} />
                     <ReasoningPanel reasoning={state.reasoning} summary={bot.explanation.summary} />
+                    <StrategyPlanPanel legs={legsOf(bot.spec)} analysis={bot.spec.analysis} realism={bot.spec.realism} />
                     <ConfigurationPanel explanation={bot.explanation} defaults={state.defaults} />
                     <FlowPanel explanation={bot.explanation} />
                     <BlocksPanel explanation={bot.explanation} />

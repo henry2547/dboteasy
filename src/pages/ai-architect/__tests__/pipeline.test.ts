@@ -93,10 +93,14 @@ describe('planner: prompt -> strategy specification', () => {
         ]);
     });
 
-    it('asks which contract when the two contracts need different Trade types', () => {
-        const result = planStrategy('Trade Over 1 and also Even on all markets');
-        expect(result.spec).toBeNull();
-        expect(result.clarifications[0].id).toBe('contract_conflict');
+    it('builds ONE bot that trades two contract families through the two-market engine', () => {
+        const result = generateBot('Trade Over 1 and also Even on all markets', { registry });
+        expect(result.ok).toBe(true);
+        expect(result.bot?.spec.secondLeg).toMatchObject({ strategy: 'even', barrier: null });
+        const purchases = allBlocks(result.bot!.workspace)
+            .filter(block => block.type === 'purchase')
+            .map(block => block.fields?.PURCHASE_LIST);
+        expect(purchases.sort()).toEqual(['DIGITEVEN', 'DIGITOVER']);
     });
 
     it('assembles and validates a two-rule bot planned from one prompt', () => {

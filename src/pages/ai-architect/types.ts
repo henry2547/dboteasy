@@ -109,12 +109,64 @@ export interface FilterPlan {
     barNeutral: number[];
 }
 
+/**
+ * A custom indicator: one extra measurement the entry has to agree with. Each kind maps to a real
+ * digit-analysis block, so an indicator is never an approximation of the request.
+ */
+export type IndicatorKind = 'high_run' | 'hot_cold';
+
+export interface IndicatorPlan {
+    kind: IndicatorKind;
+    /** Digit the indicator reads (one digit for both kinds). */
+    digit: number;
+    /** `high_run`: at_or_above / above / at_or_below / below. `hot_cold`: hottest / coldest. */
+    mode: string;
+    /** `high_run`: the run length. Unused by `hot_cold`. */
+    count: number | null;
+    /** History window the indicator reads. */
+    window: number;
+    /** Plain-language name, shown in the analysis panel and journalled with the strategy. */
+    label: string;
+}
+
+/**
+ * The analysis tools placed around the entry. They read what the engine measured; none of them
+ * trades, sizes a stake or stops a session on its own.
+ */
+export interface AnalysisPlan {
+    /** Rank the discovered markets by a measured criterion before the entry gate. */
+    rankMarkets: boolean;
+    /** Scan every eligible market and trade the one with the strongest Even/Odd split. */
+    bestParityMarket: boolean;
+    /** Label each rule's trades and write the engine's own per-strategy report when the session stops. */
+    strategyReport: boolean;
+}
+
+/**
+ * Session realism. Bots that fire on every tick at the same stake are the ones a market's rate
+ * limits and its own settlement cadence punish; these settings pace the entries instead:
+ * a randomised wait before buying, a pause after a loss, and stakes that are not all identical.
+ * Every field is `0` (off) by default, so a bot built before this existed runs unchanged.
+ */
+export interface RealismPlan {
+    /** Seconds the bot waits after the entry condition holds and before it buys. */
+    entryDelaySeconds: number;
+    /** Extra random seconds (0..jitter) added to the entry delay, so entries never share one cadence. */
+    entryJitterSeconds: number;
+    /** Seconds to wait after a losing contract before the next entry. */
+    lossCooldownSeconds: number;
+    /** Stake varied by up to this share of itself, so every contract is not the same size. */
+    stakeJitterPercent: number;
+}
+
 /** One entry rule of a bot. A single-rule bot has one; a combined bot has a primary and a second. */
 export interface StrategyLeg {
     strategy: StrategyKind;
     barrier: number | null;
     digits: number[];
     filters: FilterPlan;
+    /** Custom indicators this rule's entry also requires. */
+    indicators: IndicatorPlan[];
     label: string;
 }
 
@@ -143,8 +195,14 @@ export interface StrategySpec {
     market: MarketPlan;
     entry: EntryPlan;
     filters: FilterPlan;
+    /** Custom indicators the primary rule's entry also requires. */
+    indicators: IndicatorPlan[];
     observation: ObservationPlan;
     risk: RiskPlan;
+    /** Analysis tools placed around the entry. */
+    analysis: AnalysisPlan;
+    /** Pacing, cooldown and stake variation (all off by default). */
+    realism: RealismPlan;
     /**
      * A second entry rule added with "Add this bot to another". The primary rule stays in `entry` /
      * `filters`; the bot trades the primary while it is winning and the second leg after a loss.
