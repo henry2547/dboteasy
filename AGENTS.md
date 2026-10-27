@@ -96,6 +96,17 @@ working while the bot-side symbol list is empty.
   (`--brand-success`) for the hottest digit, red (`--status-danger`) for the coldest, and a yellow
   (`--brand-warning`) cursor ring plus pin marks the digit the ticker is on right now. The grid takes
   `currentDigit` from the newest tick on the page — same value the distribution panel's cursor uses.
+- **Bot Builder below the desktop breakpoint: one collapsible menu.** `toolbox.tsx` renders the docked
+  palette only on a desktop; on a phone it renders `toolbox/mobile-tools-menu.tsx` instead — the
+  collapsible "Quick strategy & blocks" panel over the top-left of the canvas. Its "Quick strategy" row
+  opens the guided form (so `toolbar.tsx` no longer renders a mobile Quick strategy button, and its top
+  `.toolbar` row is desktop-only; the left icon strip comes from `WorkspaceGroup`), and its "Blocks"
+  section expands `toolbox/blocks-palette.tsx` — the search box plus category rows extracted out of the
+  old drawer, shared with the docked desktop palette. The palette list scrolls inside the menu (its
+  `.db-toolbox__category-menu` height reset in `mobile-tools-menu.scss`), so the last category is
+  reachable. The old floating "Blocks" drawer tab, its scrim and `.db-toolbox--mobile` slide-in were
+  removed: do not reintroduce them, and keep the category-pick callback closing the menu so the flyout
+  is not covered.
 
 ## Verification
 - `curl http://localhost:3000/` returns 200 with the app HTML; JS bundles are served live at `/static/js/index.js`.
