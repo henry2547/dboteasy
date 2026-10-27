@@ -202,7 +202,7 @@ const config: Config = {
 
     // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
     // react-router@8 ships ESM-only; force babel-jest to transform it (and its cookie-es dep).
-    transformIgnorePatterns: ['/node_modules/(?!(@deriv-com/ui|react-router|cookie-es)/)'],
+    transformIgnorePatterns: ['/node_modules/(?!(@deriv-com/ui|@remix-run|react-router|cookie-es)/)'],
 
     // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
     // unmockedModulePathPatterns: undefined,

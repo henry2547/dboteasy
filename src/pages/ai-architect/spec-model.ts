@@ -84,12 +84,6 @@ export function legsOf(spec: StrategySpec): StrategyLeg[] {
     return spec.secondLeg ? [primary, spec.secondLeg] : [primary];
 }
 
-/** `Over 1` / `Even` — the contract a leg buys, in the words the UI uses. */
-export function legLabel(strategy: StrategyLeg['strategy'], barrier: number | null): string {
-    const label = strategy[0].toUpperCase() + strategy.slice(1);
-    return barrier === null ? label : `${label} ${barrier}`;
-}
-
 /** The digit filters and bar rules written as one short sentence, for the explanation panels. */
 export function filterText(filters: FilterPlan): string {
     const parts = filters.frequencies.map(item => `digit ${item.digit} ${item.operator} ${item.percent}%`);

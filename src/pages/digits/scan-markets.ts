@@ -292,7 +292,7 @@ export async function scanDigitMarkets(options: ScanDigitMarketsOptions = {}): P
     try {
         emit('connecting');
         await openClient(client, requestTimeoutMs);
-        const offStatus = client.onStatus(state => {
+        client.onStatus(state => {
             if (state.status === 'disconnected' || state.status === 'error') feedDown = true;
         });
 

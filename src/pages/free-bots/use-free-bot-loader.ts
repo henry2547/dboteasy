@@ -20,7 +20,7 @@ import {
     type LoadedBotMarket,
     type WorkspaceFacts,
 } from './bot-loader-store';
-import { applyMarketToXml, inspectFreeBotXml, parseBotXml } from './bot-xml';
+import { applyMarketToXml, inspectFreeBotXml } from './bot-xml';
 import { freeBotById, freeBotXml, type FreeBotTemplate } from './templates';
 
 interface KnownBlocks {
