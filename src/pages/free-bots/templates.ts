@@ -25,6 +25,14 @@
  * rather than on a recovery flag. Its extra gates come from the Digits analysis
  * blocks (`Digits above in a row`, `Two digits below a share`, `Digit bar is
  * neutral`) rather than the observer blocks.
+ *
+ * Every card's entry rule follows the published Deriv digit setups, not just the
+ * contract's own digit: the six plain `*_entry_every_time` assets AND the tick
+ * pattern with a frequency guard on the digits the contract loses to ("Over 1:
+ * digit 0 and 1 under 10%, no green or red bar on 0 or 1"), which the asset
+ * builds from `digits_frequency` compares against the fair 10.3% share of the
+ * last 100 ticks. The multi-market presets carry the same idea through
+ * `maxFrequencyDigits` / `minFrequencyDigits`.
  */
 
 import { multiMarketById } from './multi-market';
@@ -42,6 +50,7 @@ import over4FiveHotXml from '@/xml/over4_five_hot.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
+import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
 
 /** Generated multi-market templates carry a configuration-derived id. */
 export type MultiMarketBotId = `multi_market_${string}`;
@@ -61,7 +70,8 @@ export type FreeBotId =
     | 'under5_nine_rare'
     | 'over4_five_hot'
     | 'even_odd_window'
-    | 'over1_under6_recovery';
+    | 'over1_under6_recovery'
+    | 'over1_parity_recovery';
 
 export type FreeBotStrategy =
     | 'over1'
@@ -96,6 +106,21 @@ export interface FreeBotRecoveryLeg {
 }
 
 /**
+ * The two-leg entry the `digits_parity_recovery` Digits block builds: it trades one
+ * digit Over/Under leg first and, only after a settled loss, an Even/Odd leg on the
+ * best market its own scan finds. Both legs live inside that one block, so the
+ * barrier travels with the block instead of a prediction input.
+ */
+export interface FreeBotParityRecovery {
+    /** Primary leg the block trades first. */
+    primary: 'over_1' | 'under_8';
+    /** Barrier the primary leg trades (Over 1 → 1, Under 8 → 8). */
+    barrier: number;
+    /** Parity the recovery buys — `both` when the strongest even/odd side wins. */
+    parity: FreeBotParity;
+}
+
+/**
  * Digit trade type in the Bot Builder: Over/Under carries a prediction, Even/Odd a
  * parity, Matches/Differs a target digit.
  */
@@ -126,6 +151,8 @@ export interface FreeBotTemplate {
     primaryContractType?: FreeBotContractType;
     /** Second leg traded when the primary setup fails (see `FreeBotRecoveryLeg`). */
     recoveryLeg?: FreeBotRecoveryLeg;
+    /** Two-leg entry held in one `digits_parity_recovery` Digits block instead of purchase blocks. */
+    parityRecovery?: FreeBotParityRecovery;
     /** Defaults to `overunder` when the template does not say. */
     tradeType?: FreeBotTradeType;
     /**
@@ -191,14 +218,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 1,
         entryRule:
-            'Last digit ≤ 1 AND the tick before it was also ≤ 1 · no hot/cold bar on digit 1 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≤ 1 AND the tick before it was also ≤ 1 · digits 0 and 1 below 10.3% of the last 100 ticks · no hot/cold bar on digit 1 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 0 or 1 and the tick before it was also 0 or 1, digit 1 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 0 or 1 and the tick before it was also 0 or 1, the losing digits 0 and 1 both hold less than 10.3% of the last 100 ticks, digit 1 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next double low tick that still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'under8_entry_every_time',
@@ -218,14 +245,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 8,
         entryRule:
-            'Last digit ≥ 8 AND the tick before it was also ≥ 8 · no hot/cold bar on digit 8 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≥ 8 AND the tick before it was also ≥ 8 · digits 8 and 9 below 10.3% of the last 100 ticks · no hot/cold bar on digit 8 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 8 or 9 and the tick before it was also 8 or 9, digit 8 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 8 or 9 and the tick before it was also 8 or 9, the losing digits 8 and 9 both hold less than 10.3% of the last 100 ticks, digit 8 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next double high tick that still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'over2_entry_every_time',
@@ -245,14 +272,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 2,
         entryRule:
-            'Last digit ≤ 2 AND the tick before it was also ≤ 2 · no hot/cold bar on digit 2 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≤ 2 AND the tick before it was also ≤ 2 · digits 0, 1 and 2 below 10.3% of the last 100 ticks · no hot/cold bar on digit 2 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 0, 1 or 2 and the tick before it was also 0, 1 or 2, digit 2 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 0, 1 or 2 and the tick before it was also 0, 1 or 2, the losing digits 0, 1 and 2 each hold less than 10.3% of the last 100 ticks, digit 2 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next double low tick that still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'over3_entry_every_time',
@@ -272,14 +299,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 3,
         entryRule:
-            'Last digit ≤ 3 AND the tick before it was also ≤ 3 · no hot/cold bar on digit 3 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≤ 3 AND the tick before it was also ≤ 3 · digits 0, 1, 2 and 3 below 10.3% of the last 100 ticks · no hot/cold bar on digit 3 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 0–3 and the tick before it was also 0–3, digit 3 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 0–3 and the tick before it was also 0–3, the losing digits 0, 1, 2 and 3 each hold less than 10.3% of the last 100 ticks, digit 3 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next double low tick that still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'under7_entry_every_time',
@@ -299,14 +326,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 7,
         entryRule:
-            'Last digit ≥ 7 AND the tick before it was also ≥ 7 · no hot/cold bar on digit 7 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≥ 7 AND the tick before it was also ≥ 7 · digits 7, 8 and 9 below 10.3% of the last 100 ticks · no hot/cold bar on digit 7 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 7, 8 or 9 and the tick before it was also 7, 8 or 9, digit 7 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 7, 8 or 9 and the tick before it was also 7, 8 or 9, the losing digits 7, 8 and 9 each hold less than 10.3% of the last 100 ticks, digit 7 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next double high tick that still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'under6_entry_every_time',
@@ -326,14 +353,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 6,
         entryRule:
-            'Last digit ≥ 6 AND the tick before it was also ≥ 6 · no hot/cold bar on digit 6 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≥ 6 AND the tick before it was also ≥ 6 · digits 6, 7, 8 and 9 below 10.3% of the last 100 ticks · no hot/cold bar on digit 6 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 6, 7, 8 or 9 and the tick before it was also 6, 7, 8 or 9, digit 6 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 6, 7, 8 or 9 and the tick before it was also 6, 7, 8 or 9, the losing digits 6, 7, 8 and 9 each hold less than 10.3% of the last 100 ticks, digit 6 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken — and the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next double high tick that still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'over1_two_low_digits',
@@ -353,14 +380,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 1,
         entryRule:
-            'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1 · no hot/cold bar on digit 1 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1 · digits 0 and 1 below 10.3% of the last 100 ticks · no hot/cold bar on digit 1 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — digit 1 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — the losing digits 0 and 1 both hold less than 10.3% of the last 100 ticks, digit 1 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double low run and still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'under8_two_high_digits',
@@ -380,14 +407,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 8,
         entryRule:
-            'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8 · no hot/cold bar on digit 8 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8 · digits 8 and 9 below 10.3% of the last 100 ticks · no hot/cold bar on digit 8 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — digit 8 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — the losing digits 8 and 9 both hold less than 10.3% of the last 100 ticks, digit 8 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double high run and still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'over2_three_low_digits',
@@ -407,14 +434,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 2,
         entryRule:
-            'Last digit ≤ 2 AND the two digits before it were also ≤ 2 · no hot/cold bar on digit 2 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
+            'Last digit ≤ 2 AND the two digits before it were also ≤ 2 · digits 0, 1 and 2 below 10.3% of the last 100 ticks · no hot/cold bar on digit 2 · risk guard, no open contract, trade cap · parity switched · fresh data · 100-tick sample',
         buyCondition:
-            'The last three digits in a row are all 0, 1 or 2 — one tick ago and two ticks ago are both checked with Read Digit N Ticks Ago, then combined with AND — digit 2 carries neither the hottest nor the coldest bar of the last 100 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
+            'The last three digits in a row are all 0, 1 or 2 — one tick ago and two ticks ago are both checked with Read Digit N Ticks Ago, then combined with AND — the losing digits 0, 1 and 2 each hold less than 10.3% of the last 100 ticks, digit 2 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 5 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 5 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that completes another three-in-a-row run and still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · AND · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
     },
     {
         id: 'under7_rare_nine',
@@ -569,6 +596,38 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         blocksUsed:
             'Digits above in a row · Two digits below a share · Digit bar is neutral · Digit & frequency: Digit Frequency Below · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with · AND',
     },
+    {
+        id: 'over1_parity_recovery',
+        name: 'Over 1 — Even/Odd Recovery',
+        sourceFile: 'Built from the "Trade Over 1 / Under 8, recover on Even/Odd" Digits block',
+        asset: 'parity_recovery_bot.xml',
+        strategy: 'over1',
+        strategyLabel: 'Digit Over → Even / Odd',
+        contractType: 'both',
+        primaryContractType: 'DIGITOVER',
+        tradeType: 'evenodd',
+        // One block holds both legs: Over 1 first, then the best even/odd market after a loss.
+        parityRecovery: { primary: 'over_1', barrier: 1, parity: 'both' },
+        prediction: null,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Newest digit above 1 · 20 genuine ticks observed · fresh market data · parity switched · risk guard, no open contract, trade cap',
+        buyCondition:
+            'Nothing is bought until the observer gate passes. Then the first leg buys Over 1 as soon as the newest genuine digit is above 1 — 2 to 9 wins, 0 and 1 lose — while the risk guard allows a trade, no contract is still open and the trade cap is not reached. After a settled loss the second leg takes over: the block scans every eligible volatility market, keeps the one whose own last ticks are the most lopsided between even and odd, configures the Even/Odd window on that market and buys EVEN or ODD only once the window is full, the winning parity reaches 65% and the selected signal matches. A refused entry is journalled with its reason, so a waiting bot always says why it did not trade.',
+        afterPurchase:
+            'Win → stake back to 10 and Over 1 again · Loss → stake × 1.5 and the next entry is the Even/Odd leg on the best parity market · stops at +10 profit or −20 loss',
+        restartCondition:
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back on Over 1, after a loss it scans for the best even/odd market and waits for that window to confirm a signal, until the take profit or the stop loss ends the run.',
+        blocksUsed:
+            'Digits: Trade Over 1 / Under 8, recover on Even/Odd · best even/odd market scan · Configure Even/Odd strategy · Monitor last N valid ticks · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+    },
 ];
 
 const FREE_BOT_XML: Record<string, string> = {
@@ -586,6 +645,7 @@ const FREE_BOT_XML: Record<string, string> = {
     over4_five_hot: over4FiveHotXml,
     even_odd_window: evenOddWindowXml,
     over1_under6_recovery: over1Under6RecoveryXml,
+    over1_parity_recovery: parityRecoveryXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {

@@ -231,6 +231,16 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
     const switches = findAll(beforeBlocks, 'switch_active_market');
     const trades = findAll(beforeBlocks, 'purchase');
 
+    /**
+     * An `if` whose own branch holds the given action. The action may sit inside a pacing wait, so
+     * one wait level is inspected too — but never the whole subtree, or the outer stop-flag guard
+     * that merely contains the whole stack would look like a confirmation.
+     */
+    const holdsAction = (candidate: BlockNode, types: string[]) =>
+        (candidate.statements?.DO0 ?? []).some(
+            inner => types.includes(inner.type) || (inner.type === 'timeout' && (inner.statements?.TIMEOUTSTACK ?? []).some(step => types.includes(step.type)))
+        );
+
     if (switches.length) {
         const problems: string[] = [];
         if (switches.length > 1) problems.push(`${switches.length} Switch active market blocks would run competing scans`);
@@ -251,6 +261,23 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
         );
     }
 
+    const parityScans = findAll(beforeBlocks, 'switch_best_parity_market');
+    if (parityScans.length) {
+        const problems: string[] = [];
+        if (parityScans.length > 1) problems.push(`${parityScans.length} best-parity scans would run competing scans`);
+        if (switches.length) problems.push('a best-parity scan and a Switch active market block would both choose the market');
+        for (const block of parityScans) {
+            const ticks = block.values?.TICKS?.[0];
+            const value = ticks ? Number(ticks.fields?.NUM) : NaN;
+            if (!Number.isFinite(value) || value < 1 || value > 1000) problems.push('the parity scan needs a tick window between 1 and 1000');
+        }
+        checks.push(
+            problems.length
+                ? fail('parity-scan', 'The even/odd market scan is measurable', problems.join('; '))
+                : pass('parity-scan', 'The even/odd market scan is measurable', 'One scan, a tick window the engine accepts, and no second market selector.')
+        );
+    }
+
     // 7. Market consistency: the scan and the confirmation must use the same rule ────────────────
     if (switches.length && before) {
         const scanCondition = switches[0].values?.CONDITION?.[0];
@@ -259,11 +286,9 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
             scanCondition?.type === 'logic_operation' && scanCondition.fields?.OP === 'OR'
                 ? [...(scanCondition.values?.A ?? []), ...(scanCondition.values?.B ?? [])].map(conditionSignature)
                 : [conditionSignature(scanCondition)];
-        // The confirmation is the `if` that directly holds the action (purchase or stop), not the
-        // outer stop-flag guard that merely contains the whole stack.
-        const confirmations = findAll(beforeBlocks, 'controls_if').filter(candidate =>
-            (candidate.statements?.DO0 ?? []).some(inner => inner.type === 'purchase' || inner.type === 'bot_stop')
-        );
+        // The confirmation is the `if` that holds the action (purchase or stop), not the outer
+        // stop-flag guard that merely contains the whole stack.
+        const confirmations = findAll(beforeBlocks, 'controls_if').filter(candidate => holdsAction(candidate, ['purchase', 'bot_stop']));
         // Every sub-condition the confirmation is built from, so an AND of (risk guard, same rule) still matches.
         const confirmationSignatures = confirmations.flatMap(candidate => {
             const condition = candidate.values?.IF0?.[0];
@@ -302,11 +327,7 @@ export function validateWorkspace(workspace: BuiltWorkspace, registry: Registry,
 
             // Every `if` that directly holds a Purchase must be risk-guarded, so neither leg can buy
             // without the risk limits being checked.
-            const actionIfs = !!before
-                ? findAll(beforeBlocks, 'controls_if').filter(candidate =>
-                      (candidate.statements?.DO0 ?? []).some(inner => inner.type === 'purchase')
-                  )
-                : [];
+            const actionIfs = !!before ? findAll(beforeBlocks, 'controls_if').filter(candidate => holdsAction(candidate, ['purchase'])) : [];
             const guarded =
                 trades.length > 0 &&
                 actionIfs.length === trades.length &&

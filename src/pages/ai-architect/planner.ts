@@ -19,11 +19,14 @@
 import { menuBlockNamedIn, menuBlocksNamedIn } from './block-menu';
 import { CONTRACTS } from './builder';
 import type {
+    AnalysisPlan,
     AppliedDefault,
     Clarification,
     ExecutionMode,
     FrequencyFilter,
+    IndicatorPlan,
     PlanResult,
+    RealismPlan,
     Requirement,
     StrategyKind,
     StrategyLeg,
@@ -122,6 +125,21 @@ const maskedPhrase = (match: string) => ' '.repeat(match.length);
 function maskNonContractPhrases(text: string): string {
     return text
         .replace(/\d+(?:\.\d+)?\s*(?:%|percent\w*|percentage\w*)/g, maskedPercent)
+        // A custom indicator ("last 3 digits above 6") states a run, not a second contract, and it
+        // must be masked whole: blanking only its window would leave "above 6" looking like Over 6.
+        .replace(
+            new RegExp(
+                `\\b(?:last|past|newest|recent)\\s+${NUMBER_TOKEN}\\s+(?:digits?|ticks?)\\s*(?:in a row)?\\s*(?:all\\s+)?(?:are\\s+|were\\s+|end(?:ed|ing)?\\s+)?` +
+                    `(?:at or above|at or below|above|over|below|under)\\s*\\d`,
+                'g'
+            ),
+            maskedPhrase
+        )
+        .replace(
+            new RegExp(`\\b${NUMBER_TOKEN}\\s+(?:digits?|ticks?)\\s+in a row\\s+(?:all\\s+)?(?:are\\s+|were\\s+)?(?:at or above|at or below|above|over|below|under)\\s*\\d`, 'g'),
+            maskedPhrase
+        )
+        .replace(/\b(?:hottest|coldest)\s+digit\s*(?:is|should be|=|:)\s*\d/g, maskedPhrase)
         .replace(new RegExp(`\\b(?:digits?|numbers?)\\s*${DIGIT_LIST}[^.]{0,45}?(?:below|under|above|over|less than|more than|at least|at most)\\s*p+`, 'g'), maskedPhrase)
         .replace(new RegExp(`digit\\s*${NUMBER_TOKEN}\\s*(?:frequency|share|percentage)?\\s*(?:is\\s*)?(?:below|under|above|over|less than|more than|at least|at most)\\s*p+`, 'g'), maskedPhrase)
         .replace(new RegExp(`(?:below|under|above|over|less than|more than)\\s*p+`, 'g'), maskedPhrase)
@@ -167,7 +185,8 @@ function distinctMentions(mentions: ContractMention[]): ContractMention[] {
 const defaultBarrierFor = (strategy: StrategyKind): number => (strategy === 'over' ? 1 : strategy === 'under' ? 8 : 5);
 
 /** Whether the engine can run both contracts in one bot: they must share a Trade type. */
-const shareTradeType = (a: StrategyKind, b: StrategyKind): boolean => CONTRACTS[a].tradeType === CONTRACTS[b].tradeType;
+/** The contract family of a strategy — the two-market engine can run a different family per leg. */
+const familyOf = (strategy: StrategyKind): string => CONTRACTS[strategy].tradeType;
 
 function readContract(rawText: string): ContractRead {
     const text = maskNonContractPhrases(rawText);
@@ -332,8 +351,14 @@ function readEntryDigits(text: string): number[] {
 // ── Coverage: every clause the user wrote, and what became of it ───────────────────────────────
 
 const CLAUSE_CONCEPTS: { test: RegExp; detail: string }[] = [
+    {
+        test: /\bindicators?\b|\bhottest digit\b|\bcoldest digit\b|\b(?:last|past|newest|recent)\s+\d+\s+(?:digits?|ticks?)\b[^.]{0,20}\b(?:in a row|above|below|over|under)\b/,
+        detail: 'Custom indicator',
+    },
     { test: /\b(over|under|above|below|matches?|differs?|even|odd)\b/, detail: 'Contract' },
     { test: /\b(markets?|volatilit\w*|symbols?|indices|1hz\d+|r_\d+|jd\d+)\b/, detail: 'Market' },
+    { test: /\banalys[ie]s\b|\brank\w*\b|\btop[- ]ranked\b|\bbest (?:even\/?odd|even|odd|parity) market\b/, detail: 'Analysis tool' },
+    { test: /\brealistic\b|\brandom\w*\b|\bjitter\b|\bpac(?:e|ed|ing)\b|\bflagged\b|\bdelay\b/, detail: 'Session pacing' },
     { test: /\b(last|past|previous|recent|window|history|sample|lookback|analy[sz]e)\b|\b\d+\s*(?:digits?|ticks?)\b/, detail: 'History window' },
     { test: /\d(?:\.\d+)?\s*(?:%|percent\w*|percentage\w*)/, detail: 'Digit frequency' },
     { test: /\bbars?\b|\bgreen\b|\bred\b/, detail: 'Digit bar rule' },
@@ -424,6 +449,97 @@ function readStreak(text: string): number | null {
     return value !== null && value >= 1 ? Math.floor(value) : null;
 }
 
+// ── Custom indicators, analysis tools and session realism ───────────────────────────────────────
+
+const RUN_MODE: [RegExp, string][] = [
+    [/^at or above$/, 'at_or_above'],
+    [/^at or below$/, 'at_or_below'],
+    [/^above$|^over$/, 'above'],
+    [/^below$|^under$/, 'below'],
+];
+
+/**
+ * The custom indicators the request describes, each one backed by a real block. Only the two the
+ * prompt can state unambiguously are read: a run of high/low digits ("last 3 digits above 6") and a
+ * hot/cold digit ("the hottest digit is 5"). Anything else is reported, never approximated.
+ */
+function readIndicators(text: string, window: number): IndicatorPlan[] {
+    const indicators: IndicatorPlan[] = [];
+    const runPatterns = [
+        new RegExp(
+            `\\b(?:last|past|newest|recent)\\s+${NUMBER_TOKEN}\\s+(?:digits?|ticks?)\\s*(?:in a row)?\\s*(?:all\\s+)?(?:are\\s+|were\\s+|end(?:ed|ing)?\\s+)?` +
+                `(at or above|at or below|above|over|below|under)\\s*(\\d)\\b`
+        ),
+        new RegExp(
+            `\\b${NUMBER_TOKEN}\\s+(?:digits?|ticks?)\\s+in a row\\s+(?:all\\s+)?(?:are\\s+|were\\s+)?(at or above|at or below|above|over|below|under)\\s*(\\d)\\b`
+        ),
+    ];
+    for (const pattern of runPatterns) {
+        const match = text.match(pattern);
+        if (!match) continue;
+        const count = readNumber(match[1]);
+        const mode = RUN_MODE.find(([test]) => test.test(match[2]))?.[1];
+        const digit = Number(match[3]);
+        if (count === null || !mode || digit < 0 || digit > 9) continue;
+        const run = Math.max(1, Math.min(50, Math.floor(count)));
+        indicators.push({
+            kind: 'high_run',
+            digit,
+            mode,
+            count: run,
+            window,
+            label: `Last ${run} digits ${mode.replace(/_/g, ' ')} ${digit}`,
+        });
+        break;
+    }
+
+    const hotCold = text.match(/\b(hottest|coldest)\s+digit\s*(?:is|should be|=|:)\s*(\d)\b/);
+    if (hotCold) {
+        const digit = Number(hotCold[2]);
+        if (digit >= 0 && digit <= 9) {
+            indicators.push({ kind: 'hot_cold', digit, mode: hotCold[1], count: null, window, label: `The ${hotCold[1]} digit is ${digit}` });
+        }
+    }
+    return indicators;
+}
+
+/** Which analysis tools the request asks for. */
+function readAnalysis(text: string): { rankMarkets: boolean; bestParityMarket: boolean } {
+    const bestParityMarket =
+        /\bbest\s+(?:even\/?odd|even|odd|parity)\s+market\b|\bstrongest\s+(?:even\/?odd|even|odd|parity)\b|\bbest\s+parity\b/.test(text);
+    const rankMarkets = /\brank\w*\b[^.]{0,40}\bmarkets?\b|\bcompare\w*\b[^.]{0,30}\bmarkets?\b|\bmarket analysis\b|\btop[- ]ranked\b/.test(text);
+    return { rankMarkets, bestParityMarket };
+}
+
+/**
+ * Session realism: pacing between entries, a pause after a loss and a stake that is not identical
+ * every time. Firing on every tick at one fixed stake is what a market's rate limits punish, so a
+ * request for a realistic bot turns these on with modest values; every setting stays off otherwise.
+ */
+function readRealism(text: string): RealismPlan {
+    const wantsRealism =
+        /\b(?:realistic|human[- ]?like|random\w*|jitter\w*|natural(?:ly)?|pac(?:e|ed|ing)|spaced out|vary|varied|varying)\b|\b(?:less likely to be|not be|avoid being) (?:flagged|detected)\b/.test(
+            text
+        );
+    const explicitWait = text.match(/(?:wait|delay|pause)[^.]{0,20}?(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/);
+    const cooldown = text.match(/(?:cool[- ]?down|pause|wait)[^.]{0,20}?(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\s*(?:after|following)\s*(?:a\s*)?loss/);
+    const vary = text.match(/(?:vary|varies|varying|randomi[sz]e)\s*(?:the\s*)?stake\s*(?:by\s*)?(\d+(?:\.\d+)?)\s*%/);
+    const seconds = (value: string | undefined, fallback: number) =>
+        value === undefined ? fallback : clamp(Math.round(Number(value) * 10) / 10, 0, 300);
+    const share = (value: string | undefined, fallback: number) =>
+        value === undefined ? fallback : clamp(Math.round(Number(value) * 10) / 10, 0, 50);
+
+    if (!wantsRealism && !explicitWait && !cooldown && !vary) {
+        return { entryDelaySeconds: 0, entryJitterSeconds: 0, lossCooldownSeconds: 0, stakeJitterPercent: 0 };
+    }
+    return {
+        entryDelaySeconds: seconds(explicitWait?.[1], wantsRealism ? 2 : 0),
+        entryJitterSeconds: wantsRealism ? 3 : 0,
+        lossCooldownSeconds: seconds(cooldown?.[1], wantsRealism ? 5 : 0),
+        stakeJitterPercent: share(vary?.[1], wantsRealism ? 10 : 0),
+    };
+}
+
 /** The Blocks-menu blocks that scan markets; naming one of them asks for the multi-market bot. */
 const SCAN_BLOCKS = new Set(['switch_active_market', 'market_discover_eligible']);
 
@@ -492,6 +608,9 @@ export function createSpec(
         digits: number[];
         barNeutral: number[];
         streakAtMost: number | null;
+        indicators: IndicatorPlan[];
+        analysis: AnalysisPlan;
+        realism: RealismPlan;
         reporting: boolean;
         purpose: string;
     }> = {}
@@ -521,6 +640,9 @@ export function createSpec(
             streakAtMost: partial.streakAtMost ?? null,
             barNeutral: partial.barNeutral ?? [],
         },
+        indicators: partial.indicators ?? [],
+        analysis: partial.analysis ?? { rankMarkets: false, bestParityMarket: false, strategyReport: false },
+        realism: partial.realism ?? { entryDelaySeconds: 0, entryJitterSeconds: 0, lossCooldownSeconds: 0, stakeJitterPercent: 0 },
         observation: { virtualHook: hook, strategyLabel: `${STRATEGY_LABEL[strategy]}${barrier !== null ? ` ${barrier}` : ''}` },
         risk: {
             stake: partial.stake ?? DEFAULT_RISK.stake,
@@ -567,9 +689,10 @@ export const deterministicPlanner: StrategyPlanner = {
         // ── Contract: essential, so a missing or conflicting one is a question ──────────────────
         const contract = readContract(text);
         const named = distinctMentions(contract.mentions);
-        // Two contracts that share a Trade type run in ONE bot as two entry rules, so a request that
-        // names both is built instead of one of them being dropped.
-        const secondRule = named.length === 2 && shareTradeType(named[0].strategy, named[1].strategy) ? named[1] : null;
+        // Two contracts run in ONE bot as two entry rules — the two-market engine buys each leg's own
+        // contract family, so Over/Under and Even/Odd can sit in the same bot. A request that names
+        // both is therefore built instead of one of them being dropped.
+        const secondRule = named.length === 2 ? named[1] : null;
 
         if (!contract.strategy) {
             clarifications.push({
@@ -577,14 +700,10 @@ export const deterministicPlanner: StrategyPlanner = {
                 question: 'Which digit contract should the bot trade or observe?',
                 options: ['Over 1', 'Under 8', 'Even', 'Odd', 'Matches 5', 'Differs 4'],
             });
-        } else if (named.length > 1 && !secondRule) {
-            const families = [...new Set(named.map(item => CONTRACTS[item.strategy].tradeType))];
+        } else if (named.length > 2) {
             clarifications.push({
                 id: 'contract_conflict',
-                question:
-                    families.length > 1
-                        ? `The request names ${named.map(item => STRATEGY_LABEL[item.strategy]).join(' and ')}, but one bot has one Trade type. Which contract should the bot use?`
-                        : `The request names several contracts (${named.map(item => STRATEGY_LABEL[item.strategy]).join(', ')}). Which one should the bot use?`,
+                question: `The request names several contracts (${named.map(item => STRATEGY_LABEL[item.strategy]).join(', ')}). One bot carries two entry rules; which two should it use?`,
                 options: named.map(item => STRATEGY_LABEL[item.strategy]),
             });
         }
@@ -650,7 +769,12 @@ export const deterministicPlanner: StrategyPlanner = {
             `Contract: ${STRATEGY_LABEL[strategy]}${barrier !== null ? ` ${barrier}` : ''} (the contract barrier, kept separate from the entry trigger).`
         );
         if (secondRule) {
-            reasoning.push(`Second contract: ${STRATEGY_LABEL[secondRule.strategy]}${secondBarrier !== null ? ` ${secondBarrier}` : ''} becomes this bot's second entry rule.`);
+            const crossFamily = familyOf(secondRule.strategy) !== familyOf(strategy);
+            reasoning.push(
+                `Second contract: ${STRATEGY_LABEL[secondRule.strategy]}${secondBarrier !== null ? ` ${secondBarrier}` : ''} becomes this bot's second entry rule${
+                    crossFamily ? ' — the two-market engine buys each leg’s own contract family in one session' : ''
+                }.`
+            );
         }
 
         // ── Discovery / market ────────────────────────────────────────────────────────────────────
@@ -658,7 +782,26 @@ export const deterministicPlanner: StrategyPlanner = {
         // Naming a scan block in the Blocks menu asks for the scan, even when the request never says
         // "scan all markets".
         const namedScanBlock = menuBlocksNamedIn(text).find(block => SCAN_BLOCKS.has(block.type)) ?? null;
-        const multi = !symbol && (MULTI_MARKET.test(text) || !!namedScanBlock);
+        // Analysis tools and realism read the whole request, not one rule's segment.
+        const analysisRead = readAnalysis(text);
+        const realism = readRealism(text);
+        // "Use the best even/odd market" is itself a scan of every market, so it counts as multi-market.
+        const multi = !symbol && (MULTI_MARKET.test(text) || !!namedScanBlock || analysisRead.bestParityMarket);
+        if (analysisRead.bestParityMarket) {
+            reasoning.push('Analysis tool: every eligible volatility market is measured and the bot uses the strongest even/odd split.');
+        }
+        if (analysisRead.rankMarkets) {
+            reasoning.push('Analysis tool: the discovered markets are ranked by how well the entry rule fits each one before the scan picks a market.');
+        }
+        if (realism.entryDelaySeconds + realism.entryJitterSeconds > 0) {
+            reasoning.push(
+                `Session pacing: the bot waits ${realism.entryDelaySeconds}s${
+                    realism.entryJitterSeconds > 0 ? ` + up to ${realism.entryJitterSeconds}s of random spread` : ''
+                } before each entry instead of buying on the first qualifying tick.`
+            );
+        }
+        if (realism.lossCooldownSeconds > 0) reasoning.push(`Cooldown: ${realism.lossCooldownSeconds}s pause after a losing contract.`);
+        if (realism.stakeJitterPercent > 0) reasoning.push(`Stake variation: up to ${realism.stakeJitterPercent}% either way, so contracts are not all the same size.`);
         if (multi) {
             reasoning.push(
                 `Market discovery: every supported volatility market is discovered dynamically and scanned with Switch active market${
@@ -724,6 +867,14 @@ export const deterministicPlanner: StrategyPlanner = {
         describeFilters(primaryFilters);
         if (secondaryFilters) describeFilters(secondaryFilters, 'Second rule — ');
 
+        // ── Custom indicators ────────────────────────────────────────────────────────────────────
+        const indicators = readIndicators(primaryText, window);
+        const secondIndicators = secondRule ? readIndicators(secondaryText, secondWindow) : [];
+        const describeIndicators = (list: IndicatorPlan[], prefix = '') =>
+            list.forEach(item => reasoning.push(`${prefix}Custom indicator: ${item.label} — a measured block, ANDed into the entry.`));
+        describeIndicators(indicators);
+        describeIndicators(secondIndicators, 'Second rule — ');
+
         // ── Observation (Virtual Hook) ────────────────────────────────────────────────────────────
         const hook = /\bvirtual hook\b|\bsetup observer\b|\brecord(?:s|ed|ing)?\b[^.]{0,30}\bsetup\b|\bobserve(?:s|d)?\b[^.]{0,30}\bnext\b[^.]{0,15}\b(?:genuine\s+)?tick\b|\bnext[- ]tick\b/.test(text);
         if (hook) reasoning.push('Setup observation: the qualifying setup is recorded and the next genuine tick of the same market is observed (never counted as a purchased contract).');
@@ -786,6 +937,15 @@ export const deterministicPlanner: StrategyPlanner = {
             digits,
             barNeutral,
             streakAtMost,
+            indicators,
+            analysis: {
+                rankMarkets: analysisRead.rankMarkets,
+                bestParityMarket: analysisRead.bestParityMarket,
+                // A two-rule bot is measured per rule, and an analysis or realism request asks for
+                // the engine's own per-strategy numbers.
+                strategyReport: analysisRead.rankMarkets || analysisRead.bestParityMarket || realism.entryDelaySeconds > 0 || !!secondRule,
+            },
+            realism,
             reporting: !/\bno (?:report|log|journal)/.test(text),
             purpose,
         });
@@ -801,6 +961,7 @@ export const deterministicPlanner: StrategyPlanner = {
                     streakAtMost: secondaryFilters.streakAtMost,
                     barNeutral: secondaryFilters.barNeutral,
                 },
+                indicators: secondIndicators,
                 label: `${STRATEGY_LABEL[secondRule.strategy]}${secondBarrier !== null ? ` ${secondBarrier}` : ''}`,
             };
             spec.secondLeg = leg;

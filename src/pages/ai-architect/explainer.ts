@@ -4,9 +4,9 @@
  * separately, so the explanation cannot drift from what the workspace actually contains.
  */
 
-import { allBlocks } from './builder';
+import { allBlocks, CONTRACTS } from './builder';
 import { CATEGORY_LABELS, type Registry } from './registry';
-import { filterText, normalizeSpec } from './spec-model';
+import { filterText, indicatorText, normalizeSpec } from './spec-model';
 import type { BlockUse, BuiltWorkspace, Explanation, FlowStep, StrategySpec } from './types';
 
 const MODE_TEXT: Record<StrategySpec['mode'], string> = {
@@ -18,6 +18,10 @@ const MODE_TEXT: Record<StrategySpec['mode'], string> = {
 
 const strategyText = (spec: StrategySpec): string =>
     `${spec.observation.strategyLabel}${spec.entry.strategy === 'even' || spec.entry.strategy === 'odd' ? ' digits' : ''}`;
+
+/** True when the two legs buy different contract families — the two-market engine's own switch. */
+const familiesDiffer = (spec: StrategySpec): boolean =>
+    !!spec.secondLeg && CONTRACTS[spec.entry.strategy].tradeType !== CONTRACTS[spec.secondLeg.strategy].tradeType;
 
 export function explainBot(input: StrategySpec, workspace: BuiltWorkspace, registry: Registry): Explanation {
     const spec = normalizeSpec(input);
@@ -43,11 +47,27 @@ export function explainBot(input: StrategySpec, workspace: BuiltWorkspace, regis
     });
     if (spec.filters.streakAtMost !== null) summary.push(`Requires no more than ${spec.filters.streakAtMost} identical digits in a row.`);
     if (spec.entry.digits.length) summary.push(`Waits for the last digit to be ${spec.entry.digits.join(' or ')}.`);
+    spec.indicators.forEach(indicator => summary.push(`Custom indicator — requires ${indicator.label.toLowerCase()} before it enters.`));
     if (spec.secondLeg) {
         summary.push(
-            `Trades the ${spec.secondLeg.label} rule after a loss and returns to ${strategyText(spec)} after a win, so both rules you added run in one bot.`
+            `Trades the ${spec.secondLeg.label} rule after a loss and returns to ${strategyText(spec)} after a win, so both rules you added run in one bot.${
+                familiesDiffer(spec) ? ' Each leg buys its own contract family through the two-market engine.' : ''
+            }`
+        );
+        spec.secondLeg.indicators.forEach(indicator => summary.push(`Second rule indicator — requires ${indicator.label.toLowerCase()}.`));
+    }
+    if (spec.analysis.bestParityMarket) summary.push('Analysis tool: measures every eligible market and moves to the strongest even/odd split before the entry gate.');
+    if (spec.analysis.rankMarkets) summary.push('Analysis tool: ranks the discovered markets by how well the entry rule fits each one.');
+    if (spec.analysis.strategyReport) summary.push('Analysis tool: labels each rule’s trades and writes the engine’s own per-strategy report when the session stops.');
+    if (spec.realism.entryDelaySeconds + spec.realism.entryJitterSeconds > 0) {
+        summary.push(
+            `Pacing: waits ${spec.realism.entryDelaySeconds}s${
+                spec.realism.entryJitterSeconds > 0 ? ` plus up to ${spec.realism.entryJitterSeconds}s of random spread` : ''
+            } before each entry instead of buying on the first qualifying tick.`
         );
     }
+    if (spec.realism.lossCooldownSeconds > 0) summary.push(`After a losing contract it waits ${spec.realism.lossCooldownSeconds}s before the next entry.`);
+    if (spec.realism.stakeJitterPercent > 0) summary.push(`Varies the stake by up to ${spec.realism.stakeJitterPercent}% either way, so contracts are not all the same size.`);
     if (spec.observation.virtualHook) {
         summary.push('When the entry condition holds, it records the setup in the run log and observes the next genuine tick of the same market. That observation is not a purchased contract.');
     }
@@ -68,6 +88,31 @@ export function explainBot(input: StrategySpec, workspace: BuiltWorkspace, regis
         },
         { label: 'History window', value: `${spec.filters.window} ticks` },
         { label: 'Filters', value: filterText(spec.filters) },
+        { label: 'Custom indicators', value: indicatorText(spec.indicators) || 'None' },
+        {
+            label: 'Analysis tools',
+            value:
+                [
+                    spec.analysis.rankMarkets ? 'rank the discovered markets' : null,
+                    spec.analysis.bestParityMarket ? 'best even/odd market scan' : null,
+                    spec.analysis.strategyReport ? 'per-strategy results report' : null,
+                ]
+                    .filter(Boolean)
+                    .join(', ') || 'None',
+        },
+        {
+            label: 'Session pacing',
+            value:
+                [
+                    spec.realism.entryDelaySeconds + spec.realism.entryJitterSeconds > 0
+                        ? `wait ${spec.realism.entryDelaySeconds}s${spec.realism.entryJitterSeconds > 0 ? ` + up to ${spec.realism.entryJitterSeconds}s random` : ''} before entry`
+                        : null,
+                    spec.realism.lossCooldownSeconds > 0 ? `${spec.realism.lossCooldownSeconds}s pause after a loss` : null,
+                    spec.realism.stakeJitterPercent > 0 ? `stake varies ±${spec.realism.stakeJitterPercent}%` : null,
+                ]
+                    .filter(Boolean)
+                    .join(', ') || 'None (buys as soon as the entry holds)',
+        },
         ...(spec.secondLeg
             ? [
                   { label: 'Second leg', value: spec.secondLeg.label },
@@ -105,13 +150,17 @@ export function explainBot(input: StrategySpec, workspace: BuiltWorkspace, regis
     add('Discover eligible markets', 'discovery', ['market_discover_eligible']);
     add('Switch market until the entry holds', 'discovery', ['switch_active_market']);
     add(`Analyse the last ${spec.filters.window} ticks`, 'analysis', ['digits_frequency', 'digits_bar_neutral', 'digits_streak']);
+    add('Measure the market pool', 'analysis', ['market_rank', 'switch_best_parity_market']);
+    add('Check the custom indicators', 'analysis', ['digits_high_run', 'digits_hot_cold']);
     add('Check the entry condition', 'entry', ['last_digit', 'digits_matches_differs', 'digits_even_odd', 'logic_compare']);
+    add('Pace the entry and vary the stake', 'entry', ['timeout', 'math_random_float', 'math_round']);
     add('Record the setup and observe the next tick', 'observation', ['report_journal', ...typesOf('obs_configure_'), ...typesOf('obs_evaluate_'), 'obs_set_digit']);
     add('Validate the risk limits', 'validation', ['risk_can_trade']);
-    add('Request the proposal and purchase', 'purchase', ['purchase']);
+    add('Label the rule and request the proposal', 'purchase', ['learn_set_strategy', 'purchase']);
     add('Monitor the contract and apply the stop rules', 'monitoring', ['after_purchase', 'contract_check_result', 'read_details', 'bot_trade_limit_reached', 'trade_again']);
     add('Stop the bot', 'monitoring', ['bot_stop']);
     add('Report the session', 'reporting', ['report_session']);
+    add('Report each strategy', 'reporting', ['learn_report']);
 
     // ── Blocks used, grouped by palette category ─────────────────────────────────────────────────
     const roles = new Map<string, string>();

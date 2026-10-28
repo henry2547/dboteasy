@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useStore } from '@/hooks/useStore';
 import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
 import { formatCount, formatDuration, formatPercent } from '../format';
 import type { MarketScan, MarketScanFailure, ScanProgress, ScanSummary } from '../scan-markets';
@@ -55,6 +56,10 @@ export default function ScanMarketsButton({
     onCancel,
     onPick,
 }: ScanMarketsButtonProps) {
+    const { quick_strategy } = useStore();
+    // The button floats above every tab, so it would sit on top of the Quick strategy wizard and its
+    // list. It steps aside while that dialog is open and comes back where it was left.
+    const is_hidden_by_dialog = !!quick_strategy?.is_open;
     const [isOpen, setIsOpen] = useState(false);
     const [position, setPosition] = useState<Point | null>(null);
     const [size, set_size] = useState({ width: 0, height: 0 });
@@ -180,7 +185,10 @@ export default function ScanMarketsButton({
 
     return (
         <div
-            className={`digits-scan${panel_below ? ' digits-scan--panel-below' : ''}`}
+            className={`digits-scan${panel_below ? ' digits-scan--panel-below' : ''}${
+                is_hidden_by_dialog ? ' digits-scan--hidden' : ''
+            }`}
+            aria-hidden={is_hidden_by_dialog}
             ref={container_ref}
             style={
                 position

@@ -96,6 +96,17 @@ working while the bot-side symbol list is empty.
   (`--brand-success`) for the hottest digit, red (`--status-danger`) for the coldest, and a yellow
   (`--brand-warning`) cursor ring plus pin marks the digit the ticker is on right now. The grid takes
   `currentDigit` from the newest tick on the page — same value the distribution panel's cursor uses.
+- **Bot Builder below the desktop breakpoint: one collapsible menu.** `toolbox.tsx` renders the docked
+  palette only on a desktop; on a phone it renders `toolbox/mobile-tools-menu.tsx` instead — the
+  collapsible "Quick strategy & blocks" panel over the top-left of the canvas. Its "Quick strategy" row
+  opens the guided form (so `toolbar.tsx` no longer renders a mobile Quick strategy button, and its top
+  `.toolbar` row is desktop-only; the left icon strip comes from `WorkspaceGroup`), and its "Blocks"
+  section expands `toolbox/blocks-palette.tsx` — the search box plus category rows extracted out of the
+  old drawer, shared with the docked desktop palette. The palette list scrolls inside the menu (its
+  `.db-toolbox__category-menu` height reset in `mobile-tools-menu.scss`), so the last category is
+  reachable. The old floating "Blocks" drawer tab, its scrim and `.db-toolbox--mobile` slide-in were
+  removed: do not reintroduce them, and keep the category-pick callback closing the menu so the flyout
+  is not covered.
 
 ## Verification
 - `curl http://localhost:3000/` returns 200 with the app HTML; JS bundles are served live at `/static/js/index.js`.
@@ -160,7 +171,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **66** for the plain Over/Under templates, **83** for `even_odd_window`, **83** for every template with an
+  **111** for the first (Over 1) template — the six plain `*_entry_every_time` templates carry one
+  `digits_frequency` "losing digit stays cold" compare per losing digit (see "Researched entries" below),
+  which is why they are no longer the bare 66-block shape — **83** for `even_odd_window`, **83** for every template with an
   extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
   `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **163** for the two-leg
   `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
@@ -282,8 +295,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab
   page in `main.tsx`, so a broken view shows a recoverable card instead of a blank app.
-- **Hamburger help:** `src/components/layout/header/mobile-menu/digits-help-submenu.tsx`, opened by the
-  `'help'` submenu in `use-mobile-menu-config.tsx` / `mobile-menu.tsx`.
+- **Hamburger help:** the `'help'` submenu ("App guide") renders
+  `mobile-menu/app-guide-submenu.tsx`, the app's navigation map: one row per tab (Dashboard →
+  Statistics) with a one-line purpose and a tap that calls `dashboard.setActiveTab` and closes the
+  drawer, plus a short "Getting around" list. It replaced the old Digits-only help content — keep it a
+  map of the app, and keep `DESTINATIONS` in the `DBOT_TABS` / `TAB_IDS` order.
 - **Blocks guide (hamburger):** the `'blocks'` submenu ("Blocks help") renders
   `mobile-menu/blocks-help-submenu.tsx`, an accordion over the five Blocks-menu groups — Digits plus the
   four observer groups. Its content comes from `mobile-menu/blocks-help-data.ts`, which reads `GROUPS` /
@@ -459,6 +475,33 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
 - The twelve `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
 - Engine entry regression coverage is in `utils/__tests__/even-odd-runtime.test.js`: the pure-rule tests alone cannot catch missing imports in `trade/EvenOdd.js`. Run with `--runInBand --coverage=false` to avoid rewriting tracked coverage output.
 - Browser generation can be checked in an isolated `Blockly.Workspace` without replacing the user's canvas or placing a trade. Live Demo purchases/settlements remain unverified.
+
+### Contract families: one bot, Over/Under + Even/Odd
+`services/tradeEngine/utils/contract-families.js` is the single rule book for the digit contract
+families (`over_under`, `even_odd`, `matches_differs`), and `trade/ContractFamily.js` is the mixin
+that applies it (wrapped just inside `EvenOdd` in `trade/index.js`).
+- **A buy carries its own family.** `purchase(contract_type, { barrier })` resolves the trade options
+  through the mixin: Over/Under and Matches/Differs get the barrier (the explicit one, else the
+  definition's prediction, validated as a whole digit 0–9), while an Even/Odd buy has `prediction`
+  stripped. `tradeOptionToBuy` / `tradeOptionToProposal` skip `barrier`/`selected_tick` for a family
+  that reads none — without that, an Even/Odd buy from an Over/Under definition sent
+  `barrier: 1` and Deriv rejected it. Non-digit types (`CALL`, `TICKLOW`, …) keep their old
+  behaviour.
+- **The definition still gates it.** `canTradeContract` allows a requested contract when the
+  definition's `TYPE_LIST` is `both` (or names that contract) and the trade type is a digit trade type
+  (`overunder` / `evenodd` / `matchesdiffers`). A definition pinned to one contract still refuses
+  every other contract, with the reason in the journal.
+- **Proposals follow the family.** With a payout block on the canvas the engine quotes contracts
+  before buying; `Proposal.ensureContractProposals` requests the missing contract's own proposal and
+  the purchase waits for it, so `selectProposal` never throws `SelectedProposalNotExist` when a leg
+  switches family.
+- **`Bot.purchase(contract, { barrier })`** is the block-facing form (`Interface/BotInterface.js`
+  forwards the second argument). `digits_parity_recovery` uses it to buy its Over 1 / Under 8 leg
+  from an Even/Odd bot; the Even/Odd leg keeps buying through `eoBuyEven` / `eoBuyOdd`.
+- Coverage: `utils/__tests__/contract-families.test.js` (rules), `contract-family-engine.test.js`
+  (mixin + request builders) and `scratch/blocks/Digits/__tests__/digits-parity-recovery.test.js`
+  (the generated call carries the barrier). A live two-leg purchase needs a logged-in Demo account,
+  so the settlement path stays manual.
 
 ## Strategy Learning blocks (Bot Builder)
 The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy
@@ -875,21 +918,89 @@ A prompt that names two contracts of the same Trade type ("Over 1 ... recovery w
 planned as ONE two-rule bot instead of asking which contract to drop: `contractMentions` returns
 every contract with its offset, `distinctMentions` keeps the first mention of each, and the prompt is
 split at the second contract's offset so each rule keeps the entry digits, frequency filters and bar
-rules written beside it (the second rule's window is its own when it states one). Both rules must
-share `CONTRACTS[...].tradeType` (Over/Under, Even/Odd, Matches/Differs); otherwise the planner still
-asks `contract_conflict`. A second rule is only attached to a Demo-trading bot — an observation- or
-signal-only request reports it under "Not built". Keep `maskNonContractPhrases` **length-preserving**
+rules written beside it (the second rule's window is its own when it states one). The two rules may
+belong to **different contract families** — the two-market engine buys each leg's own family in one
+session (`services/tradeEngine/utils/contract-families.js`; the builder sets
+`trade_definition_contracttype` to `both` and carries the barrier in a variable), so "Over 1, recover
+with Even after a loss" builds ONE bot instead of asking `contract_conflict`. Only three or more named
+contracts still ask. A second rule is only attached to a Demo-trading bot — an observation- or
+signal-only request reports it under "Not built". `combine.ts` follows the same rule: a different
+family is no longer refused, only a different market selection. Keep `maskNonContractPhrases` **length-preserving**
 (blank/padding replacements): the offsets it produces are what splits the prompt, and
 `readFrequencies` never lets a digit sit between a digit list and its own operator, so a filter
 written after an entry list binds to the list nearest the operator.
 
+### Custom indicators, analysis tools and session realism
+Three spec sections the planner fills and the builder turns into real blocks. All of them are inert
+by default (`analyze`/`realism` are zeroed by `normalizeSpec`), so a bot saved before this exists
+builds exactly the workspace it did.
+- **`spec.indicators` / `StrategyLeg.indicators`** — `IndicatorPlan[]`, ANDed into the leg's entry by
+  `indicatorConditions` inside `filterConditions`, so the SAME rule gates the market scan and the
+  buy. Two kinds, each a real block: `high_run` → `digits_high_run` ("last 3 digits above 6", also
+  "three ticks in a row at or above 7") and `hot_cold` → `digits_hot_cold` compared to the digit
+  ("hottest digit is 5"). `maskNonContractPhrases` blanks the WHOLE indicator phrase before contract
+  parsing — masking only "last 3 digits" left "above 6" and the planner read it as a second Over 6
+  contract.
+- **`spec.analysis`** — `rankMarkets` places `market_rank` after `market_discover_eligible`;
+  `bestParityMarket` replaces discovery+scan with `switch_best_parity_market` (and makes the request
+  multi-market); `strategyReport` places `learn_set_strategy` before each leg's Purchase (so the
+  engine measures each named rule) and `learn_report` (a String value) into a `report_journal` when
+  the stop flag is set. `learn_report` must stay a **value** entry in the registry or the socket
+  check refuses it.
+- **`spec.realism`** — pacing that keeps the bot off a fixed per-tick cadence: `entryDelaySeconds` +
+  `entryJitterSeconds` wrap the Purchase in a `timeout` (`sleep(base + Math.random() * jitter)`);
+  `lossCooldownSeconds` wraps `trade_again` in the loss branch only; `stakeJitterPercent` writes
+  `architect:live:stake` from `round(stake * (1 ± share))` before each buy and the trade options read
+  that variable instead of `architect:stake`. The `:stake` suffix on the name is deliberate — the
+  validator's "stake is seeded at start" check reads it. Phrases: "realistic", "less likely to be
+  flagged", "random/jitter", "wait N seconds", "cool down N seconds after a loss", "vary the stake by
+  N%"; `refineSpec` accepts the same ones.
+- `validator.ts` finds a Purchase in an `if` branch **directly or one `timeout` level inside**
+  (`holdsAction`) — searching the whole subtree made the outer stop-flag guard look like a
+  confirmation and failed the risk-guard check. A `switch_best_parity_market` gets its own
+  `parity-scan` check (one scan, a 1–1000 tick window, no competing market selector).
+- The result UI shows all of it in `components/strategy-plan-panel.tsx` ("Strategies, indicators &
+  analysis"): each rule's family, entry digits, filters and indicators, then the analysis tools and
+  the pacing.
+- Verify: `docker compose exec web npx jest src/pages/ai-architect` (133 tests) and
+  `npx tsc --noEmit`. In the preview browser a scratch `Blockly.Workspace` loading
+  `timeout → purchase` generates `sleep((2 + Math.random())); Bot.purchase('DIGITEVEN');` and
+  `report_journal(learn_report)` generates `Bot.sessionJournal(Bot.learnReport(), "info")`.
+
+### Researched entries (every Free Bots template)
+Every bot in the Free Bots tab — the fifteen XML templates and the nine multi-market presets — carries an
+entry rule taken from the published Deriv digit setups, not a bare "trade on this digit" trigger:
+- **Over/Under** (Over 1/2/3, Under 6/7/8 and the presets): the digits the contract *loses to* have to stay
+  cold — below the fair 10.3% share of the last 100 ticks — and carry neither the green nor the red bar
+  ("Over 1: make sure digit 0 and 1 are less than 10%; avoid the green or red bar at digit 0 or 1"). Over 1
+  also enters on its own barrier digit once digits 0/1 are cold, Over 2 on digit 0 or 2.
+- **Even/Odd**: three of the parity's own digits must run hot (published guide: > 10.5%; the shared 10.3%
+  boundary is used) before the parity is bought — `even` → digits 0/2/4, `odd` → 1/3/5.
+- **Matches/Differs**: Matches buys its target while it is hot (≥ 10.3%), Differs buys the same target while
+  it is cold (< 10.3%) — the 90%/10% split of the two contracts in one observation.
+- **Two-leg / parity-recovery bots** keep their own gates (cold losing digits, `digits_high_run`, parity
+  switch), which already follow the same "barrier/frequency/parity" pattern.
+
+Where it lives: `MultiMarketConfig.maxFrequencyDigits` adds the "stays below 10.3%" compares to the
+generated switch + purchase condition (alongside `minFrequencyDigits` for the hot rules);
+`entryConditionText` writes the same rule into the card copy, so a card never shows a rule the XML does not
+carry. The nine static Over/Under XML assets — the six `*_entry_every_time` ones plus `over1_two_low_digits`,
+`under8_two_high_digits` and `over2_three_low_digits` — add one `logic_compare` (`OP=LT`, 10.3, sample 100)
+around a `digits_frequency` block per losing digit, ANDed with the existing bar/parity/freshness guards
+(the derived three keep their `freebot-o1two` / `freebot-u8two` / `freebot-o2three` block-id prefixes so
+every id stays unique inside one asset). Tests: `templates.test.ts` ("every Over/Under template keeps the
+losing digits cold") and `multi-market-xml.test.ts` ("gives every preset an entry rule, not just a contract").
+
 ## Multi-Market Digit Entry Hunter (Free Bots, section 3)
 `src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;
-`MULTI_MARKET_PRESETS` holds the nine shipped variants. The four digit presets carry their entry rules:
-- **Over 1** — entry digits 5/6 · bar-neutral 5/6 · frequency ≥ 10.3% on 0/1
-- **Under 8** — entry digits 7/4/8 · bar-neutral 7/4/8 · frequency ≥ 10.3% on 8/9
+`MULTI_MARKET_PRESETS` holds the nine shipped variants, and every one carries an entry rule:
+- **Over 1** — entry digits 5/6 · bar-neutral 5/6 · digits 0/1 below 10.3%
+- **Over 2** — entry digits 0/2 · bar-neutral 0/1/2 · digits 0/1/2 below 10.3%
+- **Under 8** — entry digits 7/4/8 · bar-neutral 7/4/8 · digits 8/9 below 10.3%
 - **Under 7** — `digits_high_run` at_or_above 7 ×2 · bar-neutral 7/8/9 · frequency 7/8/9
 - **Over 7** — `digits_high_run` at_or_below 2 ×2 · bar-neutral 0/1/2 · frequency 0/1/2
+- **Even / Odd** — parity · three of the parity's digits at or above 10.3% (0/2/4 · 1/3/5)
+- **Matches** — target digit 5 at or above 10.3% · **Differs** — target digit 4 below 10.3%
 
 The whole rule (trigger AND every frequency/bar filter) is written into BOTH the `switch_active_market`
 CONDITION and the `if` that holds the `purchase`, so the scan only stops on a market whose own ticks pass

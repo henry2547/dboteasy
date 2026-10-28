@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { LOGO_CANDIDATES } from '../../../../utils/branding';
+import { getAppName, LOGO_CANDIDATES } from '../../../../utils/branding';
 import { LogoMark } from '../LogoMark';
 
 // Default to the old-BFF fallback (all extension candidates) so the probing tests
@@ -16,7 +16,7 @@ jest.mock('../../../../utils/branding', () => {
 });
 
 // No NEXT_PUBLIC_DERIV_APP_NAME / preview name in the test env, so getAppName()
-// resolves to brand.config.json platform.name ("Deriv Trading Bot").
+// resolves to brand.config.json platform.name.
 describe('LogoMark', () => {
     const originalAppBuild = process.env.NEXT_PUBLIC_APP_BUILD;
 
@@ -30,7 +30,7 @@ describe('LogoMark', () => {
 
     it('renders the resolved app name', () => {
         render(<LogoMark />);
-        expect(screen.getByText('Deriv Trading Bot')).toBeInTheDocument();
+        expect(screen.getByText(getAppName())).toBeInTheDocument();
     });
 
     it('renders the logo image (first candidate) by default', () => {
@@ -71,7 +71,7 @@ describe('LogoMark', () => {
             setPreviewShowAppName(false);
         });
         render(<LogoMark />);
-        expect(screen.queryByText('Deriv Trading Bot')).not.toBeInTheDocument();
+        expect(screen.queryByText(getAppName())).not.toBeInTheDocument();
         act(() => {
             setPreviewShowAppName(true);
         });

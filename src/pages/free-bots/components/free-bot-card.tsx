@@ -40,12 +40,26 @@ function FreeBotCard({
         ['Strategy', template.strategyLabel],
         [
             'Contract',
-            template.prediction !== null
-                ? `${template.contractType} · prediction ${template.prediction}`
-                : template.entryParity === 'both'
-                  ? 'DIGITEVEN / DIGITODD · the signal picks the parity'
-                  : `${template.contractType} · ${template.entryParity ?? 'parity'} digits`,
+            template.parityRecovery
+                ? `${template.primaryContractType ?? template.contractType} ${template.parityRecovery.barrier} → DIGITEVEN / DIGITODD after a loss`
+                : template.prediction !== null
+                  ? `${template.contractType} · prediction ${template.prediction}`
+                  : template.entryParity === 'both'
+                    ? 'DIGITEVEN / DIGITODD · the signal picks the parity'
+                    : `${template.contractType} · ${template.entryParity ?? 'parity'} digits`,
         ],
+        ...(template.parityRecovery
+            ? ([
+                  [
+                      'Recovery',
+                      `Even/Odd after a loss — ${
+                          template.parityRecovery.parity === 'both'
+                              ? 'the strongest parity wins'
+                              : template.parityRecovery.parity.toUpperCase()
+                      } on the best market the scan finds`,
+                  ],
+              ] as [string, string][])
+            : []),
         ['Duration', `${template.durationTicks} tick`],
         [
             template.marketScan ? 'Starting market in the XML' : 'Default market in the XML',

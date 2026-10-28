@@ -15,9 +15,9 @@ import { useTranslations } from '@deriv-com/translations';
 import { Drawer, MobileLanguagesDrawer } from '@deriv-com/ui';
 import NetworkStatus from './../../footer/NetworkStatus';
 import ServerTime from './../../footer/ServerTime';
+import AppGuideSubmenu from './app-guide-submenu';
 import BackButton from './back-button';
 import BlocksHelpSubmenu from './blocks-help-submenu';
-import DigitsHelpSubmenu from './digits-help-submenu';
 import MenuContent from './menu-content';
 import MenuHeader from './menu-header';
 import ReportsSubmenu from './reports-submenu';
@@ -116,9 +116,9 @@ const MobileMenu = ({ onLogout }: TMobileMenuProps) => {
                     ) : activeSubmenu === 'help' ? (
                         <>
                             <div className='mobile-menu__back-btn'>
-                                <BackButton buttonText={localize('Digits help')} onClick={closeSubmenu} />
+                                <BackButton buttonText={localize('App guide')} onClick={closeSubmenu} />
                             </div>
-                            <DigitsHelpSubmenu />
+                            <AppGuideSubmenu onNavigate={closeDrawer} />
                         </>
                     ) : activeSubmenu === 'blocks' ? (
                         <>

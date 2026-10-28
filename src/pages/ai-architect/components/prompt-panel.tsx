@@ -24,6 +24,11 @@ export const EXAMPLE_PROMPTS: { label: string; prompt: string }[] = [
             'Scan all volatility markets for Over 1, entry is 5 and 6, digits 0 and 1 should have at least 10.3% frequency, digits 5 and 6 should not have the green or red bar, last 500 ticks, stop after 3 consecutive losses.',
     },
     {
+        label: 'Two-market recovery, realistic pacing',
+        prompt:
+            'Scan all volatility markets: trade Over 1 first and recover with Even after a loss. Add a custom indicator: the hottest digit is 5. Make it realistic and less likely to be flagged — wait 3 seconds between trades, cool down 5 seconds after a loss and vary the stake by 10%.',
+    },
+    {
         label: 'Name blocks from the Blocks menu',
         prompt:
             'Find eligible markets and use the Switch active market block to scan them for an Over 1 entry, check the last 100 digits, only when digit 0 is above 10%, then trade if the risk checks pass.',

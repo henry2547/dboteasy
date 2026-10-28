@@ -2,11 +2,9 @@
 import React from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
-import Text from '@/components/shared_ui/text';
 import { getContractTypeDisplay } from '@/constants/contract';
 import { useStore } from '@/hooks/useStore';
 import { getSymbolDisplayNameSync } from '@/utils/symbol-display-name';
-import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import ContractCardLoader from '../contract-card-loading';
 import { getCardLabels } from '../shared';
@@ -111,13 +109,6 @@ const SummaryCard = observer(({ contract_info, is_contract_loading, is_bot_runni
                         {contract_el}
                     </div>
                 </ContractCard>
-            )}
-            {!is_contract_loading && !contract_info && !is_bot_running && (
-                <Text as='p' align='center' lineHeight='s' size='xs'>
-                    {localize('When you’re ready to trade, hit ')}
-                    <strong className='summary-panel-inactive__strong'>{localize('Run')}</strong>
-                    {localize('. You’ll be able to track your bot’s performance here.')}
-                </Text>
             )}
         </div>
     );

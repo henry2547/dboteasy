@@ -13,6 +13,7 @@
  */
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { canTradeContract, readWorkspaceTradeDefinition } from '../utils/contract-families';
 import {
     EO_CONTRACT_TYPES,
     EO_NO_SIGNAL,
@@ -32,20 +33,6 @@ import * as constants from './state/constants';
 
 const notify = (message, className = 'info') =>
     globalObserver.emit('ui.log.notify', { className, message });
-
-/** The trade definition on the canvas, so a requested contract is checked against the bot's own. */
-const readTradeDefinition = () => {
-    try {
-        const definition = globalThis?.window?.Blockly?.derivWorkspace?.getTradeDefinitionBlock?.();
-        return {
-            trade_type: definition?.getChildByType?.('trade_definition_tradetype')?.getFieldValue?.('TRADETYPE_LIST') ?? null,
-            contract_type:
-                definition?.getChildByType?.('trade_definition_contracttype')?.getFieldValue?.('TYPE_LIST') ?? null,
-        };
-    } catch (error) {
-        return { trade_type: null, contract_type: null };
-    }
-};
 
 export default Engine =>
     class EvenOdd extends Engine {
@@ -259,14 +246,12 @@ export default Engine =>
                 return reason ? `risk limits: ${reason}` : 'the session risk limits block new entries';
             }
 
-            const { trade_type, contract_type } = readTradeDefinition();
-            if (trade_type && trade_type !== 'evenodd') {
-                return `the trade definition trades ${trade_type}, not Even/Odd`;
-            }
+            // The trade definition only has to be a digit definition that lists `both` or this
+            // contract: the engine can buy the Even/Odd leg from an Over/Under bot (and the other way
+            // round) because the buy request carries its own contract type and barrier.
             const wanted = EO_CONTRACT_TYPES[normalizeParity(parity)];
-            if (contract_type && contract_type !== 'both' && contract_type !== wanted) {
-                return `the trade definition is set to ${contract_type}, so it cannot buy ${wanted}`;
-            }
+            const permitted = canTradeContract(readWorkspaceTradeDefinition(), wanted);
+            if (!permitted.ok) return permitted.reason;
 
             if (state.one_entry_per_signal && signalUsed(state, this.eoCurrentSignalKey())) {
                 return 'this signal already opened an entry';

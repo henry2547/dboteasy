@@ -8,9 +8,10 @@
  * the added bot takes over after a loss, each keeping its own contract, entry digits and filters.
  *
  * A combination is refused, with the reason, when the engine cannot run both rules in one bot: a
- * different trade family needs a different Trade type, and a second market would need a second
- * subscription. Refusing is deliberate — the alternative would silently drop half of what the user
- * asked for.
+ * second market would need a second subscription. A different contract family is NOT refused — the
+ * two-market engine buys each leg's own family (Over/Under and Even/Odd) in one session, so those
+ * two rules still combine. Refusing is deliberate — the alternative would silently drop half of
+ * what the user asked for.
  */
 
 import { CONTRACTS } from './builder';
@@ -46,17 +47,17 @@ export function combineSpecs(target: StrategySpec, addition: StrategySpec): Comb
     if (primary.market.scope === 'single' && primary.market.symbol !== secondary.market.symbol) {
         return refuse(`One bot subscribes to one market: "${primary.name}" uses ${primary.market.symbol}, "${secondary.name}" uses ${secondary.market.symbol}.`);
     }
-    if (familyOf(primary) !== familyOf(secondary)) {
-        return refuse(
-            `"${primary.name}" buys ${familyOf(primary)} contracts and "${secondary.name}" buys ${familyOf(secondary)} ones, and a bot has one Trade type. Combine bots from the same family (Over/Under with Over/Under, Even with Odd, Matches with Differs).`
-        );
-    }
+    // The two-market engine buys each leg's own contract family in one session (Over/Under and
+    // Even/Odd), so a different family is a real switch, not a refusal. The trade definition is set
+    // to `both` by the builder, which is what lets each Purchase name its own contract.
+    const crossesFamily = familyOf(primary) !== familyOf(secondary);
 
     const leg: StrategyLeg = {
         strategy: secondary.entry.strategy,
         barrier: secondary.entry.barrier,
         digits: secondary.entry.digits,
         filters: secondary.filters,
+        indicators: secondary.indicators,
         label: secondary.observation.strategyLabel,
     };
 
@@ -70,6 +71,8 @@ export function combineSpecs(target: StrategySpec, addition: StrategySpec): Comb
     return {
         ok: true,
         spec: combined,
-        message: `${primary.observation.strategyLabel} now runs with ${leg.label} as its second rule: it trades ${primary.observation.strategyLabel} until a contract loses, then ${leg.label} until the next win. Risk settings come from ${primary.name}.`,
+        message: `${primary.observation.strategyLabel} now runs with ${leg.label} as its second rule: it trades ${primary.observation.strategyLabel} until a contract loses, then ${leg.label} until the next win.${
+            crossesFamily ? ` The engine switches contract family between the two legs (${familyOf(primary)} → ${familyOf(secondary)}).` : ''
+        } Risk settings come from ${primary.name}.`,
     };
 }

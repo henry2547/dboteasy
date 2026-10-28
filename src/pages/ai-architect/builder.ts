@@ -49,6 +49,7 @@ const VAR_IDS = {
     losses: 'aa-var-losses',
     leg: 'aa-var-leg',
     prediction: 'aa-var-prediction',
+    entryStake: 'aa-var-entry-stake',
 } as const;
 type VarKey = keyof typeof VAR_IDS;
 
@@ -61,6 +62,10 @@ const VAR_NAMES: Record<VarKey, string> = {
     losses: 'architect:losses',
     leg: 'architect:leg',
     prediction: 'architect:prediction',
+    // The stake one entry really spends: the base stake plus/minus the configured variation. The
+    // name ends in `:stake` on purpose — the validator's "stake is seeded before the first quote"
+    // check reads that suffix.
+    entryStake: 'architect:live:stake',
 };
 
 // ── Node helpers ────────────────────────────────────────────────────────────────────────────────
@@ -108,6 +113,18 @@ const ifThen = (ids: Ids, condition: BlockNode, body: BlockNode[], otherwise?: B
 
 const journal = (ids: Ids, message: BlockNode, level: 'info' | 'warn' | 'error' = 'info', role?: string): BlockNode =>
     node(ids.next('log'), 'report_journal', { fields: { LEVEL: level }, values: { MESSAGE: [message] }, ...(role ? { role } : {}) });
+
+const arithmetic = (ids: Ids, op: 'ADD' | 'MINUS' | 'MULTIPLY' | 'DIVIDE', a: BlockNode, b: BlockNode): BlockNode =>
+    node(ids.next('math'), 'math_arithmetic', { fields: { OP: op }, values: { A: [a], B: [b] } });
+
+const randomFraction = (ids: Ids): BlockNode => node(ids.next('random'), 'math_random_float');
+
+const roundNumber = (ids: Ids, value: BlockNode): BlockNode =>
+    node(ids.next('round'), 'math_round', { fields: { OP: 'ROUND' }, values: { NUM: [value] } });
+
+/** "Run after a wait": the pacing block that keeps entries off a fixed, per-tick cadence. */
+const waitThen = (ids: Ids, seconds: BlockNode, body: BlockNode[], role?: string): BlockNode =>
+    node(ids.next('wait'), 'timeout', { values: { SECONDS: [seconds] }, statements: { TIMEOUTSTACK: body }, ...(role ? { role } : {}) });
 
 // ── Entry condition: the trigger, kept separate from the barrier and the filters ────────────────
 
@@ -168,7 +185,34 @@ function filterConditions(ids: Ids, leg: StrategyLeg): BlockNode[] {
     if (streakAtMost !== null) {
         conditions.push(compare(ids, 'LTE', node(ids.next('streak'), 'digits_streak'), num(ids, streakAtMost, true)));
     }
+    conditions.push(...indicatorConditions(ids, leg));
     return conditions;
+}
+
+/**
+ * The custom indicators of a leg, each as its own real block. They are ANDed with the rest of the
+ * entry, so the same rule gates the market scan and the buy that follows it.
+ */
+function indicatorConditions(ids: Ids, leg: StrategyLeg): BlockNode[] {
+    return (leg.indicators ?? []).map(indicator => {
+        if (indicator.kind === 'high_run') {
+            return node(ids.next('run'), 'digits_high_run', {
+                fields: { MODE: indicator.mode, DIGIT: String(indicator.digit) },
+                values: { COUNT: [num(ids, indicator.count ?? 3, true)] },
+                role: indicator.label,
+            });
+        }
+        return compare(
+            ids,
+            'EQ',
+            node(ids.next('hotcold'), 'digits_hot_cold', {
+                fields: { MODE: indicator.mode },
+                values: { SAMPLE: [num(ids, indicator.window, true)] },
+                role: `Indicator: the ${indicator.mode} digit of the window is ${indicator.digit}.`,
+            }),
+            num(ids, indicator.digit, true)
+        );
+    });
 }
 
 /** Trigger AND every filter, as one Boolean the switch block and the confirmation both use. */
@@ -219,6 +263,7 @@ function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
         seed.push(setVar(ids, 'leg', num(ids, 0)));
         if (hasPrediction) seed.push(setVar(ids, 'prediction', num(ids, primary.barrier ?? 0)));
     }
+    if (spec.realism.stakeJitterPercent > 0) seed.push(setVar(ids, 'entryStake', num(ids, spec.risk.stake)));
     const initialisation = ifThen(ids, not(ids, getVar(ids, 'initialised')), seed, undefined, 'Seeds the stake and counters before the first quote.');
 
     // A two-leg bot carries its barrier in a variable, because the leg that will trade next decides
@@ -232,7 +277,7 @@ function tradeDefinition(ids: Ids, spec: StrategySpec): BlockNode {
         fields: { DURATIONTYPE_LIST: 't', CURRENCY_LIST: 'USD', AMOUNT_LIMITS: '' },
         values: {
             DURATION: [num(ids, 1, true, 'math_number_positive')],
-            AMOUNT: [num(ids, spec.risk.stake, true, 'math_number_positive'), getVar(ids, 'stake')],
+            AMOUNT: [num(ids, spec.risk.stake, true, 'math_number_positive'), getVar(ids, spec.realism.stakeJitterPercent > 0 ? 'entryStake' : 'stake')],
             ...(hasPrediction ? { PREDICTION: [prediction] } : {}),
         },
         role: 'One-tick duration, the stake variable and the barrier digit.',
@@ -269,6 +314,34 @@ function virtualHook(ids: Ids, spec: StrategySpec, leg: StrategyLeg = legsOf(spe
     ];
 }
 
+// ── Session realism (pacing, cooldown, stake variation) ───────────────────────────────────────
+
+/** Seconds a bot waits before buying: the fixed delay plus a random part, so entries are not on one cadence. */
+const entryWaitSeconds = (spec: StrategySpec): number => spec.realism.entryDelaySeconds + spec.realism.entryJitterSeconds;
+
+function entryWait(ids: Ids, spec: StrategySpec): BlockNode {
+    const base = num(ids, spec.realism.entryDelaySeconds, true);
+    if (spec.realism.entryJitterSeconds <= 0) return base;
+    return arithmetic(ids, 'ADD', base, arithmetic(ids, 'MULTIPLY', randomFraction(ids), num(ids, spec.realism.entryJitterSeconds, true)));
+}
+
+/**
+ * The stake one entry really spends: the current stake moved by a random share of itself, rounded to
+ * a whole unit. A losing run still grows the base stake (the martingale), so variation never replaces
+ * the risk plan — it only stops every contract being the identical size.
+ */
+function jitteredStake(ids: Ids, spec: StrategySpec): BlockNode {
+    const span = (spec.realism.stakeJitterPercent / 100) * 2; // ±share around the current stake
+    const offset = arithmetic(
+        ids,
+        'MULTIPLY',
+        arithmetic(ids, 'MINUS', randomFraction(ids), num(ids, 0.5)),
+        num(ids, span)
+    );
+    const factor = arithmetic(ids, 'ADD', num(ids, 1), offset);
+    return roundNumber(ids, arithmetic(ids, 'MULTIPLY', getVar(ids, 'stake'), factor));
+}
+
 // ── Before purchase ─────────────────────────────────────────────────────────────────────────────
 
 function riskGuard(ids: Ids): BlockNode {
@@ -283,14 +356,34 @@ function beforePurchase(ids: Ids, spec: StrategySpec): BlockNode {
 
     const body: BlockNode[] = [];
 
-    // 1. Discover + switch. Both legs' conditions count, so a market is chosen when either leg fits.
-    if (spec.market.scope === 'all') {
+    // 1. Market selection. The parity scan measures every market's own even/odd split and moves the
+    // bot to the strongest one; otherwise the ordinary discovery + scan runs. Both legs' conditions
+    // count, so a market is chosen when either leg fits.
+    if (trading && spec.analysis.bestParityMarket) {
+        body.push(
+            node(ids.next('parity'), 'switch_best_parity_market', {
+                values: { TICKS: [num(ids, spec.filters.window, true)] },
+                role: 'Analysis tool: measures every eligible market and uses the strongest even/odd split.',
+            })
+        );
+    } else if (spec.market.scope === 'all') {
         body.push(
             node(ids.next('discover'), 'market_discover_eligible', {
                 fields: { CATEGORY: spec.market.category, VERIFY: 'no' },
                 values: { MIN_HISTORY: [num(ids, spec.market.minHistory, true)] },
                 role: 'Discovers the eligible volatility markets dynamically.',
-            }),
+            })
+        );
+        if (spec.analysis.rankMarkets) {
+            body.push(
+                node(ids.next('rank'), 'market_rank', {
+                    fields: { CRITERION: 'entry' },
+                    values: { MIN_SAMPLE: [num(ids, spec.filters.window, true)] },
+                    role: 'Analysis tool: ranks the discovered markets by how well the entry rule fits each one.',
+                })
+            );
+        }
+        body.push(
             node(ids.next('switch'), 'switch_active_market', {
                 fields: { ORDER: spec.market.order },
                 values: {
@@ -307,11 +400,28 @@ function beforePurchase(ids: Ids, spec: StrategySpec): BlockNode {
         const actions: BlockNode[] = [];
         if (spec.observation.virtualHook) actions.push(...virtualHook(ids, spec, leg));
         if (trading) {
+            if (spec.analysis.strategyReport) {
+                actions.push(
+                    node(ids.next('label'), 'learn_set_strategy', {
+                        fields: { NAME: leg.label },
+                        role: `Labels these contracts as “${leg.label}” so the engine measures this rule's own results.`,
+                    })
+                );
+            }
+            if (spec.realism.stakeJitterPercent > 0) {
+                actions.push({
+                    ...setVar(ids, 'entryStake', jitteredStake(ids, spec)),
+                    role: `Varies the stake by up to ${spec.realism.stakeJitterPercent}% so every contract is not the same size.`,
+                });
+            }
+            const buy = node(ids.next('buy'), 'purchase', {
+                fields: { PURCHASE_LIST: CONTRACTS[leg.strategy].contractType },
+                role: `Requests the ${leg.label} proposal and buys it through the engine.`,
+            });
             actions.push(
-                node(ids.next('buy'), 'purchase', {
-                    fields: { PURCHASE_LIST: CONTRACTS[leg.strategy].contractType },
-                    role: `Requests the ${leg.label} proposal and buys it through the engine.`,
-                })
+                entryWaitSeconds(spec) > 0
+                    ? waitThen(ids, entryWait(ids, spec), [buy], 'Analysis-based pacing: waits before buying instead of firing on every tick.')
+                    : buy
             );
             return actions;
         }
@@ -445,7 +555,41 @@ function afterPurchase(ids: Ids, spec: StrategySpec): BlockNode {
         stack.push(journal(ids, node(ids.next('report'), 'report_session'), 'info', 'Writes one measured session summary.'));
     }
 
-    stack.push(ifThen(ids, not(ids, getVar(ids, 'stop')), [node(ids.next('again'), 'trade_again', { role: 'Starts the next cycle unless a stop was raised.' })], undefined, 'Trade again only while not stopped.'));
+    // Analysis tool: when the session stops, the engine reports what each labelled strategy really did.
+    if (spec.analysis.strategyReport) {
+        stack.push(
+            ifThen(
+                ids,
+                getVar(ids, 'stop'),
+                [journal(ids, node(ids.next('learn'), 'learn_report'), 'info', 'Reports every strategy\'s own settled results when the session stops.')],
+                undefined,
+                'One strategy report per stopped session.'
+            )
+        );
+    }
+
+    const again = () => node(ids.next('again'), 'trade_again', { role: 'Starts the next cycle unless a stop was raised.' });
+    if (spec.realism.lossCooldownSeconds > 0) {
+        stack.push(
+            ifThen(
+                ids,
+                not(ids, getVar(ids, 'stop')),
+                [
+                    ifThen(
+                        ids,
+                        compare(ids, 'GT', getVar(ids, 'losses'), num(ids, 0, true)),
+                        [waitThen(ids, num(ids, spec.realism.lossCooldownSeconds, true), [again()], 'Waits after a loss before the next entry.')],
+                        [again()],
+                        'A losing contract is followed by a pause; a win re-enters at once.'
+                    ),
+                ],
+                undefined,
+                'Trade again only while not stopped.'
+            )
+        );
+    } else {
+        stack.push(ifThen(ids, not(ids, getVar(ids, 'stop')), [again()], undefined, 'Trade again only while not stopped.'));
+    }
 
     return node('aa-after-purchase', 'after_purchase', {
         attrs: { x: '760', y: '0' },

@@ -116,6 +116,39 @@ export function refineSpec(current: StrategySpec, instruction: string): RefineRe
         next.risk.multiplier = 1;
     }
 
+    // ── Session realism (pacing, cooldown, stake variation) ─────────────────────────────────────
+    const wait = text.match(/(?:wait|delay|pause|space)[^.]{0,25}?(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/);
+    if (wait) {
+        recognised += 1;
+        const value = Math.min(300, Math.max(0.5, Number(wait[1])));
+        change('Entry pacing', `${next.realism.entryDelaySeconds}s`, `${value}s`);
+        next.realism.entryDelaySeconds = value;
+    }
+    if (/\brandom\w*\b|\bjitter\w*\b|\brealistic\b|\bhuman[- ]?like\b|\bflagged\b/.test(text)) {
+        recognised += 1;
+        const jitter = Math.min(300, Math.max(next.realism.entryJitterSeconds, 3));
+        change('Random entry spread', `${next.realism.entryJitterSeconds}s`, `${jitter}s`);
+        next.realism.entryJitterSeconds = jitter;
+        if (next.realism.stakeJitterPercent === 0) {
+            change('Stake variation', 'off', '10%');
+            next.realism.stakeJitterPercent = 10;
+        }
+    }
+    const lossWait = text.match(/(?:cool[- ]?down|pause|wait)[^.]{0,25}?(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\s*(?:after|following)\s*(?:a\s*)?loss/);
+    if (lossWait) {
+        recognised += 1;
+        const value = Math.min(300, Math.max(0.5, Number(lossWait[1])));
+        change('Loss cooldown', `${next.realism.lossCooldownSeconds}s`, `${value}s`);
+        next.realism.lossCooldownSeconds = value;
+    }
+    const varyStake = text.match(/(?:vary|varies|varying|randomi[sz]e)\s*(?:the\s*)?stake\s*(?:by\s*)?(\d+(?:\.\d+)?)\s*%/);
+    if (varyStake) {
+        recognised += 1;
+        const value = Math.min(50, Math.max(0.5, Number(varyStake[1])));
+        change('Stake variation', next.realism.stakeJitterPercent ? `${next.realism.stakeJitterPercent}%` : 'off', `${value}%`);
+        next.realism.stakeJitterPercent = value;
+    }
+
     // ── Cooldown ─────────────────────────────────────────────────────────────────────────────────
     if (/\b(?:add|include|use|enable)\b[^.]{0,30}\bcool[- ]?down\b/.test(text)) {
         recognised += 1;

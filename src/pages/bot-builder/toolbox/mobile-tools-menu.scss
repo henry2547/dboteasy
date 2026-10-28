@@ -1,0 +1,125 @@
+/* The mobile-only collapsible menu that carries both the Quick strategy entry point and the Blocks
+   palette. It replaces the old floating "Blocks" drawer tab and the standalone Quick strategy button
+   the mobile toolbar used to hold. */
+.db-mobile-tools {
+    position: absolute;
+    top: 0.4rem;
+    inset-inline-start: 4.8rem;
+    z-index: 14;
+    width: calc(100% - 5.6rem);
+    max-width: 34rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 12px;
+    background: var(--general-main-1);
+    box-shadow: 0 4px 16px 0 var(--shadow-box);
+    overflow: hidden;
+    font-size: 1.3rem;
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        width: 100%;
+        min-height: 4rem;
+        padding: 0 1rem;
+        border: none;
+        background: var(--general-section-5);
+        color: var(--text-general);
+        font-size: 1.3rem;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    &__toggle-icon {
+        flex: 0 0 auto;
+        transition: transform 0.25s ease;
+    }
+
+    &--open &__toggle-icon {
+        transform: rotate(180deg);
+    }
+
+    &__body {
+        display: flex;
+        flex-direction: column;
+        max-height: 58vh;
+        border-top: 1px solid var(--general-section-1);
+    }
+
+    &__action {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        width: 100%;
+        padding: 0.9rem 1rem;
+        border: none;
+        background: var(--button-primary-default);
+        color: var(--text-colored-background);
+        text-align: start;
+        cursor: pointer;
+    }
+
+    &__action-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+    }
+
+    &__action-hint {
+        font-size: 1.1rem;
+        opacity: 0.85;
+    }
+
+    &__section {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    &__section-header {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        width: 100%;
+        min-height: 3.6rem;
+        padding: 0 1rem;
+        border: none;
+        background: var(--general-main-1);
+        color: var(--text-general);
+        font-size: 1.3rem;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    &__section-chevron {
+        flex: 0 0 auto;
+        transition: transform 0.25s ease;
+
+        &--open {
+            transform: rotate(180deg);
+        }
+    }
+
+    /* The palette keeps its own search box and rows; here the list scrolls inside the menu instead of
+       a fixed viewport height, so every category down to the last one is reachable. */
+    &__palette {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        border-top: 1px solid var(--general-section-1);
+
+        .db-toolbox__search {
+            height: auto;
+            padding: 0.8rem;
+        }
+
+        .db-toolbox__category-menu {
+            height: auto;
+            overflow: visible;
+        }
+    }
+}

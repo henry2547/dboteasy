@@ -8,16 +8,14 @@ import { useDevice } from '@deriv-com/ui';
 import OnboardTourHandler from '../tutorials/dbot-tours/onboarding-tour';
 import Announcements from './announcements';
 import Cards from './cards';
-import InfoPanel from './info-panel';
 
 type TMobileIconGuide = {
     handleTabChange: (active_number: number) => void;
 };
 
 const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
-    const { load_modal, dashboard, client, google_drive } = useStore();
+    const { load_modal, dashboard, client } = useStore();
     const { dashboard_strategies } = load_modal;
-    const { is_google_drive_configured } = google_drive;
     const { active_tab, active_tour } = dashboard;
     const has_dashboard_strategies = !!dashboard_strategies?.length;
     const { isDesktop, isTablet } = useDevice();
@@ -51,27 +49,11 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                                     {localize('Load or build your bot')}
                                 </Text>
                             )}
-                            <Text
-                                as='p'
-                                color='prominent'
-                                lineHeight='s'
-                                size={isDesktop ? 's' : 'xxs'}
-                                className={classNames('subtitle', { 'subtitle__has-list': has_dashboard_strategies })}
-                            >
-                                {is_google_drive_configured
-                                    ? localize(
-                                          'Import a bot from your computer or Google Drive, build it from scratch, or start with a quick strategy.'
-                                      )
-                                    : localize(
-                                          'Import a bot from your computer, build it from scratch, or start with a quick strategy.'
-                                      )}
-                            </Text>
                         </div>
                         <Cards has_dashboard_strategies={has_dashboard_strategies} is_mobile={!isDesktop} />
                     </div>
                 </div>
             </div>
-            <InfoPanel />
             {active_tab === 0 && <OnboardTourHandler is_mobile={!isDesktop} />}
         </React.Fragment>
     );

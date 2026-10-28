@@ -20,11 +20,26 @@ import {
     type LoadedBotMarket,
     type WorkspaceFacts,
 } from './bot-loader-store';
-import { applyMarketToXml, inspectFreeBotXml, parseBotXml } from './bot-xml';
+import { applyMarketToXml, inspectFreeBotXml } from './bot-xml';
 import { freeBotById, freeBotXml, type FreeBotTemplate } from './templates';
 
 interface KnownBlocks {
     Blocks?: Record<string, unknown>;
+}
+
+type LiveWorkspace = {
+    disposed?: boolean;
+    getAllBlocks?: (ordered?: boolean) => { type: string; getFieldValue: (name: string) => string }[];
+    getBlockById?: (id: string) => unknown;
+};
+
+/** How long a load waits for the Builder's own canvas to become ready. */
+const WORKSPACE_READY_TIMEOUT_MS = 20000;
+
+/** The Bot Builder's live canvas, or `null` when no workspace is mounted (or it was disposed). */
+function liveWorkspace(): LiveWorkspace | null {
+    const workspace = window.Blockly?.derivWorkspace as LiveWorkspace | undefined;
+    return workspace && !workspace.disposed ? workspace : null;
 }
 
 function isKnownBlockType(type: string): boolean {
@@ -34,10 +49,7 @@ function isKnownBlockType(type: string): boolean {
 
 /** What the live Blockly workspace currently holds. */
 function readWorkspaceFacts(): WorkspaceFacts | null {
-    const workspace = window.Blockly?.derivWorkspace as unknown as {
-        getAllBlocks?: (ordered?: boolean) => { type: string; getFieldValue: (name: string) => string }[];
-        getBlockById?: (id: string) => unknown;
-    } | undefined;
+    const workspace = liveWorkspace();
 
     if (!workspace?.getAllBlocks) return null;
 
@@ -106,6 +118,30 @@ export function useFreeBotLoader() {
     const runPanel = store?.run_panel;
     const dashboard = store?.dashboard;
 
+    /**
+     * The Builder pane owns the canvas and disposes it as soon as another tab is shown, so a bot
+     * loaded from the library has to land in a live canvas. The Builder is opened first and the wait
+     * lasts until its own default strategy has finished loading: loading into a workspace that the
+     * pending mount is about to replace would report success and then lose the bot.
+     */
+    const waitForBuilderWorkspace = useCallback(async (): Promise<LiveWorkspace | null> => {
+        const is_ready = (workspace: LiveWorkspace | null) =>
+            !!workspace && !store?.blockly_store?.is_loading && (workspace.getAllBlocks?.(true).length ?? 0) > 0;
+
+        const current = liveWorkspace();
+        if (is_ready(current)) return current;
+
+        dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
+
+        const deadline = Date.now() + WORKSPACE_READY_TIMEOUT_MS;
+        while (Date.now() < deadline) {
+            const workspace = liveWorkspace();
+            if (is_ready(workspace)) return workspace;
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        return null;
+    }, [dashboard, store]);
+
     const loadBot = useCallback<UseFreeBotLoader['loadBot']>(
         async ({ template, market, marketSource, marketSupported, marketSupportReason }) => {
             const account = readAccount(store);
@@ -151,7 +187,7 @@ export function useFreeBotLoader() {
                 return;
             }
 
-            const workspace = window.Blockly?.derivWorkspace;
+            const workspace = await waitForBuilderWorkspace();
             if (!workspace) {
                 botLoaderStore.beginLoad({
                     template,
@@ -242,13 +278,15 @@ export function useFreeBotLoader() {
                     return;
                 }
 
-                // An Even/Odd template has no barrier, so the workspace must report none;
-                // a two-leg template holds the barrier in a variable and must report that block.
-                const predictionMatches = template.recoveryLeg
-                    ? facts.predictionIsVariable
-                    : template.prediction === null
-                      ? facts.prediction === null || facts.prediction === ''
-                      : Number(facts.prediction) === template.prediction;
+                // An Even/Odd template has no barrier, so the workspace must report none; a two-leg
+                // template holds the barrier in a variable; a parity-recovery template carries no
+                // barrier in its trade options at all, because both legs read theirs from its block.
+                const predictionMatches = (() => {
+                    if (template.parityRecovery) return facts.prediction === null || facts.prediction === '';
+                    if (template.recoveryLeg) return facts.predictionIsVariable;
+                    if (template.prediction === null) return facts.prediction === null || facts.prediction === '';
+                    return Number(facts.prediction) === template.prediction;
+                })();
 
                 if (!predictionMatches) {
                     botLoaderStore.failLoad(
@@ -277,7 +315,7 @@ export function useFreeBotLoader() {
                 );
             }
         },
-        [store, runPanel, dashboard]
+        [store, runPanel, dashboard, waitForBuilderWorkspace]
     );
 
     const validateBot = useCallback(() => {
