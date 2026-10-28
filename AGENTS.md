@@ -498,6 +498,14 @@ that applies it (wrapped just inside `EvenOdd` in `trade/index.js`).
 - **`Bot.purchase(contract, { barrier })`** is the block-facing form (`Interface/BotInterface.js`
   forwards the second argument). `digits_parity_recovery` uses it to buy its Over 1 / Under 8 leg
   from an Even/Odd bot; the Even/Odd leg keeps buying through `eoBuyEven` / `eoBuyOdd`.
+- **The mandatory-block gate has to accept it.** `PURCHASE_BLOCK_TYPES` in `scratch/utils/index.js`
+  is the list of block types that buy through the engine's own purchase path, and `getMissingBlocks`
+  treats `purchase` as satisfied when the canvas holds any of them. The two-market
+  "Trade Over 1 / Under 8, recover on Even/Odd" block buys **both** of its legs itself, so such a
+  canvas carries no `purchase` block at all and was refused with "The Purchase block is mandatory and
+  cannot be deleted/disabled" (`isAllRequiredBlocksEnabled` → `getMissingBlocks`) the moment Run was
+  pressed. Keep that list complete when a buying block is added to the palette —
+  `scratch/utils/__tests__/required-blocks.test.js` pins one case per buy path.
 - Coverage: `utils/__tests__/contract-families.test.js` (rules), `contract-family-engine.test.js`
   (mixin + request builders) and `scratch/blocks/Digits/__tests__/digits-parity-recovery.test.js`
   (the generated call carries the barrier). A live two-leg purchase needs a logged-in Demo account,
