@@ -1,29 +1,44 @@
 services:
-  web:
+  # One-shot dependency installer. It is the ONLY thing that ever writes node_modules, and it runs
+  # before the dev server starts. Installing inside the serving container rewrote node_modules under
+  # the live Rsbuild process, which then died mid-request with
+  # `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/0~range-parser.js` (a lazily imported chunk that had
+  # disappeared from disk). Keeping the install out of `web` removes that failure mode entirely.
+  # The lock hash is written only after a finished install, so an interrupted install is re-run
+  # by the next `docker compose up -d`.
+  install:
     image: node:22-slim
     working_dir: /app
     volumes:
       - .:/app
-      - /app/node_modules
-    ports:
-      - "3000:4003"
-    environment:
-      - BASE44_PREVIEW_MODE
-    # `npm ci` only when the mounted node_modules is missing or was installed from a different
-    # package-lock.json. Re-installing on every start wipes node_modules for ~45 s while a container
-    # of the same compose project may still be serving, and Rsbuild then dies with
-    # ERR_MODULE_NOT_FOUND (`@rsbuild/core/dist/…` chunks disappear mid-serve). The hash file is
-    # written only after an install has finished, so an interrupted install is re-run next start.
+      - node_modules:/app/node_modules
     command:
       - sh
       - -ec
       - |
         lock_hash=$$(md5sum package-lock.json | cut -d' ' -f1)
-        if [ ! -f node_modules/.package-lock.json ] || [ "$$(cat node_modules/.base44-lock-hash 2>/dev/null)" != "$$lock_hash" ]; then
-            npm ci --no-audit --no-fund
-            printf '%s\n' "$$lock_hash" > node_modules/.base44-lock-hash
+        if [ -f node_modules/.package-lock.json ] && [ "$$(cat node_modules/.base44-lock-hash 2>/dev/null)" = "$$lock_hash" ]; then
+            echo "node_modules already matches package-lock.json — nothing to install"
+            exit 0
         fi
-        exec npm run dev -- --host 0.0.0.0
+        npm ci --no-audit --no-fund
+        printf '%s\n' "$$lock_hash" > node_modules/.base44-lock-hash
+    restart: "no"
+
+  web:
+    image: node:22-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "3000:4003"
+    environment:
+      - BASE44_PREVIEW_MODE
+    command: ["sh", "-ec", "exec npm run dev -- --host 0.0.0.0"]
+    depends_on:
+      install:
+        condition: service_completed_successfully
     restart: on-failure
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4003/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -31,3 +46,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 120s
+
+volumes:
+  node_modules:

@@ -6,18 +6,25 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
 
 ## Running in the Sandbox
 - `docker compose -f docker-compose.base44.yml up -d` starts the dev server.
-- Node 22 base image; source is bind-mounted at `/app`; `node_modules` lives in an anonymous volume.
+- Two services: the one-shot `install` service owns the `node_modules` volume, and `web` (the dev server) starts
+  only after `install` exits 0 (`depends_on: condition: service_completed_successfully`). Node 22 base image;
+  source is bind-mounted at `/app`; `node_modules` lives in the project's named `node_modules` volume, shared by
+  both services.
 - Dev server listens on port 4003 inside the container, mapped to host port 3000.
-- `npm ci --no-audit --no-fund` runs on container startup before `npm run dev`, but **only** when the anonymous
-  volume has no `node_modules/.package-lock.json` or its recorded `node_modules/.base44-lock-hash` no longer
-  matches `md5sum package-lock.json` (see the `command` in `docker-compose.base44.yml`). Re-installing on every
-  start wipes `node_modules` for ~45 s while a container of the same compose project may still be serving, and
-  Rsbuild then dies mid-request with `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/…`.
+- `install` runs `npm ci --no-audit --no-fund` **only** when the volume has no
+  `node_modules/.package-lock.json` or its recorded `node_modules/.base44-lock-hash` no longer matches
+  `md5sum package-lock.json`; otherwise it prints `node_modules already matches package-lock.json` and exits 0.
+  So a repeat `docker compose -f docker-compose.base44.yml up -d` costs one hash check, not an install.
+- **Nothing installs inside the running `web` container, on purpose.** An install rewrites `node_modules` under
+  the live dev server and Rsbuild then dies mid-request with
+  `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/0~range-parser.js` (a lazily imported chunk that had vanished from
+  disk) — which is exactly why the installer is a separate one-shot service, started before `web`.
 - **Never run `npm ci` / `npm install` inside the running `web` container** — it rewrites `node_modules` under the
-  live dev server and kills it the same way. Run tooling with `exec` instead, e.g.
-  `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots` (no install step). If the
-  dev server does crash this way, `docker compose -f docker-compose.base44.yml up -d` brings it back; the
-  conditional install above then re-syncs `node_modules` before serving.
+  live dev server and kills it. Run tooling with `exec` and no install step, e.g.
+  `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots`. If `web` is ever restarted
+  mid-serve, `restart: on-failure` brings it back.
+- After a `package-lock.json` change, run `docker compose -f docker-compose.base44.yml up -d`: `install` re-syncs
+  the volume and `web` starts against the finished install.
 
 ### Sandbox-only dev override: eager compilation
 Rsbuild turns on Rspack's lazy ("compile on demand") dev compilation by default. Here the browser
