@@ -57,3 +57,63 @@ describe('parity recovery block generation', () => {
         expect(() => generate(blockWith({ ...fields, RUN: 1 }))).toThrow();
     });
 });
+
+describe('parity recovery program after a settled loss', () => {
+    const generate = loadGenerator();
+    // The interpreter awaits the interface's async calls before the branch is evaluated, so a
+    // boolean stands in for `Bot.eoRecoveryPrepare()` here.
+    const run = (fields_override, bot) => new Function('Bot', generate(blockWith(fields_override)))(bot);
+
+    const createBot = ({ open = false, result = 'lost', ready = true, signal = 'ODD', digit = 0 } = {}) => {
+        const bot = {
+            sessionHasOpenContract: jest.fn(() => open),
+            sessionLastResult: jest.fn(() => result),
+            eoRecoveryPrepare: jest.fn(() => ready),
+            eoSignalDirection: jest.fn(() => signal),
+            eoBuyEven: jest.fn(),
+            eoBuyOdd: jest.fn(),
+            getLastDigit: jest.fn(() => digit),
+            riskCanTrade: jest.fn(() => true),
+            purchase: jest.fn(),
+        };
+        return bot;
+    };
+
+    it('buys the reversal of the last digits after a loss', () => {
+        const bot = createBot({ signal: 'ODD' });
+        run(fields, bot);
+        expect(bot.eoRecoveryPrepare).toHaveBeenCalledWith({ run: 2, direction: 'both', ticks: 100 });
+        expect(bot.eoBuyOdd).toHaveBeenCalledTimes(1);
+        expect(bot.eoBuyEven).not.toHaveBeenCalled();
+        expect(bot.purchase).not.toHaveBeenCalled();
+    });
+
+    it('buys EVEN when the reversal reads the other side', () => {
+        const bot = createBot({ signal: 'EVEN' });
+        run(fields, bot);
+        expect(bot.eoBuyEven).toHaveBeenCalledTimes(1);
+        expect(bot.eoBuyOdd).not.toHaveBeenCalled();
+    });
+
+    it('waits without trading while the reversal window is not ready', () => {
+        const bot = createBot({ ready: false, signal: 'NO SIGNAL' });
+        run(fields, bot);
+        expect(bot.eoBuyEven).not.toHaveBeenCalled();
+        expect(bot.eoBuyOdd).not.toHaveBeenCalled();
+    });
+
+    it('never trades the recovery leg while a contract is open', () => {
+        const bot = createBot({ open: true });
+        run(fields, bot);
+        expect(bot.eoRecoveryPrepare).not.toHaveBeenCalled();
+        expect(bot.eoBuyOdd).not.toHaveBeenCalled();
+        expect(bot.purchase).not.toHaveBeenCalled();
+    });
+
+    it('buys the primary Over 1 leg before any loss', () => {
+        const bot = createBot({ result: null, digit: 5 });
+        run(fields, bot);
+        expect(bot.purchase).toHaveBeenCalledWith('DIGITOVER', { barrier: 1 });
+        expect(bot.eoRecoveryPrepare).not.toHaveBeenCalled();
+    });
+});
