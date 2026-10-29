@@ -13,6 +13,7 @@ const getTicksInterface = tradeEngine => {
         getDigitFrequency: (...args) => tradeEngine.getDigitFrequency(...args),
         getDigitCount: (...args) => tradeEngine.getDigitCount(...args),
         getHotColdDigit: (...args) => tradeEngine.getHotColdDigit(...args),
+        isDigitParityRun: (...args) => tradeEngine.isDigitParityRun(...args),
         getDigitStreak: (...args) => tradeEngine.getDigitStreak(...args),
         getTicks: (...args) => tradeEngine.getTicks(...args),
         checkDirection: (...args) => tradeEngine.checkDirection(...args),

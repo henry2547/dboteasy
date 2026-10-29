@@ -132,14 +132,17 @@ describe('connected block sequences generate code', () => {
         const workspace = new BlocklyModule.Workspace();
         try {
             const tick = workspace.newBlock('obs_on_tick');
+            const ifBlock = workspace.newBlock('obs_if');
             const compare = workspace.newBlock('obs_freq_above');
             compare.setFieldValue('5', 'DIGIT');
             compare.setFieldValue('12', 'PERCENT');
             const note = workspace.newBlock('obs_note');
             note.setFieldValue('Frequency high', 'TEXT');
 
-            tick.getInput('DO').connection.connect(compare.previousConnection);
-            compare.nextConnection.connect(note.previousConnection);
+            // A frequency comparison is a condition, so it hangs off the IF condition socket.
+            tick.getInput('DO').connection.connect(ifBlock.previousConnection);
+            ifBlock.getInput('CONDITION').connection.connect(compare.outputConnection);
+            ifBlock.getInput('DO').connection.connect(note.previousConnection);
 
             const code = generator().workspaceToCode(workspace);
             expect(code).not.toContain('does not know how to generate');
@@ -152,13 +155,15 @@ describe('connected block sequences generate code', () => {
         const workspace = new BlocklyModule.Workspace();
         try {
             const tick = workspace.newBlock('obs_on_tick');
+            const ifBlock = workspace.newBlock('obs_if');
             const streak = workspace.newBlock('obs_streak_minimum');
             streak.setFieldValue('3', 'N');
             const note = workspace.newBlock('obs_note');
             note.setFieldValue('Streak detected', 'TEXT');
 
-            tick.getInput('DO').connection.connect(streak.previousConnection);
-            streak.nextConnection.connect(note.previousConnection);
+            tick.getInput('DO').connection.connect(ifBlock.previousConnection);
+            ifBlock.getInput('CONDITION').connection.connect(streak.outputConnection);
+            ifBlock.getInput('DO').connection.connect(note.previousConnection);
 
             const code = generator().workspaceToCode(workspace);
             expect(code).not.toContain('does not know how to generate');
@@ -171,14 +176,16 @@ describe('connected block sequences generate code', () => {
         const workspace = new BlocklyModule.Workspace();
         try {
             const tick = workspace.newBlock('obs_on_tick');
+            const ifBlock = workspace.newBlock('obs_if');
             const transition = workspace.newBlock('obs_digit_transition');
             transition.setFieldValue('2', 'DIGIT');
             transition.setFieldValue('3', 'TO');
             const note = workspace.newBlock('obs_note');
             note.setFieldValue('Transition 2 to 3', 'TEXT');
 
-            tick.getInput('DO').connection.connect(transition.previousConnection);
-            transition.nextConnection.connect(note.previousConnection);
+            tick.getInput('DO').connection.connect(ifBlock.previousConnection);
+            ifBlock.getInput('CONDITION').connection.connect(transition.outputConnection);
+            ifBlock.getInput('DO').connection.connect(note.previousConnection);
 
             const code = generator().workspaceToCode(workspace);
             expect(code).not.toContain('does not know how to generate');
@@ -217,6 +224,7 @@ describe('Digits blocks generate code', () => {
         'digits_frequency_count',
         'digits_hot_cold',
         'digits_streak',
+        'digits_parity_run',
     ];
 
     digitsBlocks.forEach(type => {

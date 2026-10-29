@@ -226,6 +226,10 @@ const canvasFields = (type: string): TBotBlockFields => {
     }
 
     let workspace: any;
+    // Introspection is not a user edit: don't queue change listeners for a throwaway block
+    // that will already be disposed by the time Blockly delivers its events.
+    const events = blockly().Events;
+    events.disable();
     try {
         workspace = new (blockly().Workspace)();
         const block = workspace.newBlock(type);
@@ -279,6 +283,8 @@ const canvasFields = (type: string): TBotBlockFields => {
             workspace?.dispose();
         } catch {
             /* a workspace that refuses to dispose must not break the tab */
+        } finally {
+            events.enable();
         }
     }
 };

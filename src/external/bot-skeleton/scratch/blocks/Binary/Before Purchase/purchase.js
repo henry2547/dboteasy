@@ -1,5 +1,5 @@
 import { localize } from '@deriv-com/translations';
-import { getContractTypeOptions } from '../../../shared';
+import { getPurchaseContractTypeOptions } from '../../../shared';
 import { excludeOptionFromContextMenu, modifyContextMenu } from '../../../utils';
 
 window.Blockly.Blocks.purchase = {
@@ -66,7 +66,7 @@ window.Blockly.Blocks.purchase = {
             const contract_type = contract_type_block.getFieldValue('TYPE_LIST');
             const purchase_type_list = this.getField('PURCHASE_LIST');
             const purchase_type = purchase_type_list.getValue();
-            const contract_type_options = getContractTypeOptions(contract_type, trade_type);
+            const contract_type_options = getPurchaseContractTypeOptions(contract_type, trade_type);
 
             purchase_type_list.updateOptions(contract_type_options, {
                 default_value: purchase_type,

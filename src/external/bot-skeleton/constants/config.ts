@@ -2,6 +2,12 @@ import { localize } from '@deriv-com/translations';
 
 const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'LTC', 'BCH', 'UST'];
 
+/** The three digit trade types that together make up the Digits trade type category. */
+export const DIGIT_TRADE_TYPES = ['matchesdiffers', 'evenodd', 'overunder'];
+
+/** Digit contracts that settle on parity: they take no barrier and no last-digit prediction. */
+export const PARITY_CONTRACT_TYPES = ['DIGITEVEN', 'DIGITODD'];
+
 export const config = () => ({
     lists: {
         PAYOUTTYPE: [
@@ -263,6 +269,8 @@ export const config = () => ({
     BARRIER_TRADE_TYPES: ['higherlower', 'touchnotouch', 'endsinout', 'staysinout', 'callputspread'],
     PREDICTION_TRADE_TYPES: ['matchesdiffers', 'overunder', 'highlowticks'],
     DIGIT_CATEGORIES: ['digits', 'highlowticks'],
+    DIGIT_TRADE_TYPES,
+    PARITY_CONTRACT_TYPES,
     INDEPEDENT_BLOCKS: ['block_holder', 'tick_analysis', 'loader', 'procedures_defreturn', 'procedures_defnoreturn'],
     bbResult: [
         [localize('upper'), '1'],

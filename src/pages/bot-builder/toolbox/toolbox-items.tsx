@@ -208,6 +208,10 @@ export const ToolboxItems = () =>
                     </Value>
                 </Block>
                 <Block type='digits_streak' />
+                <Block type='digits_parity_run'>
+                    <Field name='COUNT'>2</Field>
+                    <Field name='PARITY'>even</Field>
+                </Block>
             </Category>
 
             {/* Observational digit blocks, grouped the same way as the observer palette they

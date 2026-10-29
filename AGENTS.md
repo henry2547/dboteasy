@@ -116,8 +116,8 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
   group to `GROUPS` shows it here automatically, but its "what it is / how to use it" copy needs an entry
   in that file's `GROUP_TEXT`.
 - **Blockly digit blocks:** implemented — `digits_over_under`, `digits_even_odd`,
-  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold` and
-  `digits_streak` live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot
+  `digits_matches_differs`, `digits_frequency`, `digits_frequency_count`, `digits_hot_cold`,
+  `digits_streak` and `digits_parity_run` live in `src/external/bot-skeleton/scratch/blocks/Digits/` and show up under the Bot
   Builder's "Digits" category (its Blocks-menu flyout lists them with an add button). Mind the import
   depth: those files sit one level under `blocks/`, so shared helpers come from `../../utils` —
   importing `modifyContextMenu` from `../../../utils` breaks the whole dev build.
@@ -125,6 +125,27 @@ ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below
   and `Bot.getDigitStreak()`. Those helpers live in `services/tradeEngine/trade/Ticks.js` and are
   exposed through `services/tradeEngine/Interface/TicksInterface.js` — both files must be updated
   together, or the generated code calls an undefined function.
+- **Digits is one contract family.** Over/Under, Even/Odd and Matches/Differs are the three trade
+  types of the same Digits category, and one bot may buy any of their contracts in a single session —
+  an Over 1 / Under 8 bot that switches to Even/Odd after a loss does exactly that. Three rules keep
+  that working together:
+  - The Trade parameters block subscribes a proposal for every digit contract the canvas's Purchase
+    blocks can pick, not only the trade type's own pair (`digitContractTypesForTrade` in
+    `scratch/shared.js`, used by the `trade_definition` generator). Without those proposals the later
+    purchase threw `SelectedProposalNotExist` and the parity leg never traded.
+  - The Purchase block's dropdown offers all six digit contracts for a digit trade type
+    (`getPurchaseContractTypeOptions`); every other trade type keeps its own pair.
+  - Even/Odd (`PARITY_CONTRACT_TYPES` in `constants/config.ts`) settle on parity alone, so their
+    proposals and buys carry no `barrier`/`selected_tick`; Over/Under still do.
+  `digits_parity_run` ("Last N digits are all Even/Odd") is the digit-pair rule the Even/Odd leg
+  uses: last 2 both even buys Odd, both odd buys Even (`Bot.isDigitParityRun(parity, count)` in
+  `trade/Ticks.js`, exposed through `TicksInterface.js`).
+- **Digit contract coverage:** `scratch/__tests__/digit-contract-types.test.js` (options offered,
+  proposals subscribed, parity block generation) and
+  `services/tradeEngine/utils/__tests__/digit-proposal.test.js` (barrier present for Over/Under,
+  absent for Even/Odd; the parity run helper). The jest `localize` mock
+  (`__mocks__/translation.mock.js`) must interpolate `{{ key }}` values — block messages pass their
+  `%1` placeholders that way, and without it no placeholder-based block can be built in a test.
 - **Digit blocks guide:** the toolbar's `?` icon (`#db-toolbar__digit-help-button` in
   `toolbar/workspace-group.tsx`) opens `toolbar/digit-blocks-help.tsx`, a step-by-step modal for the
   digit blocks. Its stylesheet widens the shared dialog (`dc-dialog__dialog`) and makes

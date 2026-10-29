@@ -50,6 +50,9 @@ const HOW_TO_ADD = [
 const OTHER_BLOCKS = [
     localize('Last digit is over / under — true when the newest digit is above or below the one you pick.'),
     localize('Last digit is even / odd — true for 0, 2, 4, 6, 8 or for 1, 3, 5, 7, 9.'),
+    localize(
+        'Last 2 digits are all even / odd — the digit-pair rule: both even buys Odd, both odd buys Even.'
+    ),
     localize('Last digit matches / differs — true when the newest digit is, or is not, the digit you pick.'),
     localize('Frequency (%) of digit — the same idea as the count block, shown as a percentage instead of a count.'),
 ];

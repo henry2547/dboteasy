@@ -171,6 +171,21 @@ export default Engine =>
             );
         }
 
+        /** True when the newest `count` digits are all of one parity — the digit-pair rule at 2. */
+        isDigitParityRun(parity, count) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Math.floor(Number(count) || 2));
+                    if (digits.length < size) {
+                        resolve(false);
+                        return;
+                    }
+                    const wants_even = String(parity).toLowerCase() !== 'odd';
+                    resolve(digits.slice(-size).every(value => (Number(value) % 2 === 0) === wants_even));
+                })
+            );
+        }
+
         getDigitStreak() {
             return new Promise(resolve =>
                 this.getLastDigitList().then(digits => {

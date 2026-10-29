@@ -59,17 +59,24 @@ export const applySelectionToWorkspace = async (xml: string): Promise<string[] |
     const workspace = window_blockly?.derivWorkspace;
     if (!workspace || !xml) return null;
 
+    const previous_group = window_blockly.Events.getGroup();
     try {
         const xml_dom = window_blockly.utils.xml.textToDom(xml);
         window_blockly.Events.setGroup(`bot_tab_load${Date.now()}`);
-        await workspace.asyncClear();
+        // This API already clears the workspace. A separate awaited clear lets change listeners
+        // run against disposed blocks before their replacements have been installed.
         window_blockly.Xml.clearWorkspaceAndLoadFromXml(xml_dom, workspace);
         workspace.cleanUp();
+        window_blockly.svgResize(workspace);
+        const first_block = workspace.getTopBlocks(true)[0];
+        if (first_block) workspace.centerOnBlock(first_block.id);
 
         const types = (workspace.getAllBlocks(false) ?? []).map((block: any) => block.type);
         return types.length ? types : null;
     } catch {
         return null;
+    } finally {
+        window_blockly.Events.setGroup(previous_group);
     }
 };
 

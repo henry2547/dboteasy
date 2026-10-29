@@ -1,6 +1,6 @@
 import { findValueByKeyRecursively, formatTime, getRoundedNumber, isEmptyObject } from '@/components/shared';
 import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
-import { config } from '@/external/bot-skeleton/constants';
+import { config, PARITY_CONTRACT_TYPES } from '@/external/bot-skeleton/constants';
 import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
 import { error as logError } from './broadcast';
@@ -22,10 +22,15 @@ export const tradeOptionToProposal = (trade_option, purchase_reference) =>
             proposal: 1,
             underlying_symbol: trade_option.symbol,
         };
-        if (trade_option.prediction !== undefined) {
+        // Even/Odd contracts settle on parity alone, so a barrier or last-digit prediction makes
+        // the proposal invalid. A bot that trades them alongside Over/Under must send neither.
+        const is_parity = PARITY_CONTRACT_TYPES.includes(type);
+        if (!is_parity && trade_option.prediction !== undefined) {
             proposal.selected_tick = trade_option.prediction;
         }
-        if (!['TICKLOW', 'TICKHIGH'].includes(type) && trade_option.prediction !== undefined) {
+        if (is_parity) {
+            /* parity contracts take no barrier */
+        } else if (!['TICKLOW', 'TICKHIGH'].includes(type) && trade_option.prediction !== undefined) {
             proposal.barrier = trade_option.prediction;
         } else if (trade_option.barrierOffset !== undefined) {
             proposal.barrier = trade_option.barrierOffset;
@@ -58,10 +63,13 @@ export const tradeOptionToBuy = (contract_type, trade_option) => {
             underlying_symbol: trade_option.symbol,
         },
     };
-    if (trade_option.prediction !== undefined) {
+    const is_parity = PARITY_CONTRACT_TYPES.includes(contract_type);
+    if (!is_parity && trade_option.prediction !== undefined) {
         buy.parameters.selected_tick = trade_option.prediction;
     }
-    if (!['TICKLOW', 'TICKHIGH'].includes(contract_type) && trade_option.prediction !== undefined) {
+    if (is_parity) {
+        /* parity contracts take no barrier */
+    } else if (!['TICKLOW', 'TICKHIGH'].includes(contract_type) && trade_option.prediction !== undefined) {
         buy.parameters.barrier = trade_option.prediction;
     } else if (trade_option.barrierOffset !== undefined) {
         buy.parameters.barrier = trade_option.barrierOffset;

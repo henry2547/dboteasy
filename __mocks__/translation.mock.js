@@ -13,7 +13,14 @@ const useTranslations = () => ({
     currentLang: 'EN',
 });
 
-const localize = jest.fn(text => text);
+// The real helper replaces `{{ name }}` with the value passed for it. Block messages rely on that
+// (their `%1` placeholders arrive through the values), so a mock that returns the raw text leaves
+// Blockly with a message that references no arguments and no block can be built.
+const localize = jest.fn((text, values) =>
+    values && typeof text === 'string'
+        ? text.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => (key in values ? values[key] : match))
+        : text
+);
 
 const getAllowedLanguages = jest.fn(() => ({ EN: 'English', VI: 'Tiếng Việt' }));
 
