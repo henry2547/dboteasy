@@ -7,19 +7,23 @@ const PRIMARY_LEGS = {
     under_8: { contract: 'DIGITUNDER', barrier: 8, compare: '<' },
 };
 
-const MAX_TICKS = 1000;
+const MIN_RUN = 2;
+const MAX_RUN = 100;
 
 /**
  * "Trade Over 1 / Under 8, recover on Even/Odd" — both legs of a digit strategy in one block.
  *
  * The first leg buys the bot's own Over/Under contract when the newest genuine digit passes the
- * barrier the block is configured with. Only after a settled loss does the second leg run: it
- * measures every eligible volatility market through the engine's own parity scan
- * (`Bot.marketScanBestParity`), configures the Even/Odd window on the market it kept
- * (`Bot.eoConfigure` / `Bot.eoMonitor`) and enters through the engine's own purchase path
- * (`Bot.eoBuyEven` / `Bot.eoBuyOdd`). That entry is refused — with the reason in the journal — while
- * the window is incomplete, the risk limits block new entries, or the trade definition is not set to
- * Even/Odd, so the block never invents an entry. A contract that is already open is never doubled.
+ * barrier the block is configured with. Only after a settled loss does the second leg run: it reads
+ * the newest RUN digits of the market the bot is already trading (`Bot.eoParityReversal`) and buys
+ * the parity those digits predict to break — the last RUN digits all even → ODD, all odd → EVEN, a
+ * mixed run → no entry. The read is synchronous and comes from the same genuine tick stream the
+ * trade loop runs on, so the run always belongs to the market the contract is bought on.
+ *
+ * Both buys go through the engine's own purchase path (`Bot.purchase`), which carries the contract
+ * type — and the barrier only for the family that reads one — and records the session entry, so the
+ * martingale and the take-profit / stop-loss keep working across the switch. A contract that is
+ * already open is never doubled.
  */
 window.Blockly.Blocks.digits_parity_recovery = {
     init() {
@@ -28,12 +32,11 @@ window.Blockly.Blocks.digits_parity_recovery = {
     definition() {
         return {
             message0: localize(
-                'Trade {{ primary }}, then after a loss find an {{ parity }} entry over the last {{ ticks }} ticks (at least {{ percent }}%)',
+                'Trade {{ primary }}, then after a loss buy {{ parity }} when the last {{ run }} digits share a parity',
                 {
                     primary: '%1',
                     parity: '%2',
-                    ticks: '%3',
-                    percent: '%4',
+                    run: '%3',
                 }
             ),
             args0: [
@@ -49,26 +52,18 @@ window.Blockly.Blocks.digits_parity_recovery = {
                     type: 'field_dropdown',
                     name: 'PARITY',
                     options: [
-                        [localize('stronger even/odd side'), 'both'],
-                        [localize('EVEN'), 'even'],
-                        [localize('ODD'), 'odd'],
+                        [localize('both reversals'), 'both'],
+                        [localize('EVEN only'), 'even'],
+                        [localize('ODD only'), 'odd'],
                     ],
                 },
                 {
                     type: 'field_number',
-                    name: 'TICKS',
-                    value: 100,
-                    min: 1,
-                    max: MAX_TICKS,
+                    name: 'RUN',
+                    value: 2,
+                    min: MIN_RUN,
+                    max: MAX_RUN,
                     precision: 0,
-                },
-                {
-                    type: 'field_number',
-                    name: 'PERCENT',
-                    value: 55,
-                    min: 0,
-                    max: 100,
-                    precision: 1,
                 },
             ],
             previousStatement: null,
@@ -77,7 +72,7 @@ window.Blockly.Blocks.digits_parity_recovery = {
             colourSecondary: window.Blockly.Colours.Base.colourSecondary,
             colourTertiary: window.Blockly.Colours.Base.colourTertiary,
             tooltip: localize(
-                'Buys Over 1 (or Under 8) when the newest digit passes that barrier. After a settled loss it scans every eligible volatility market, keeps the one whose own last ticks are the most lopsided between even and odd, and enters the Even/Odd contract the trade definition offers — refused, with the reason in the log, while the window is incomplete, the risk limits block it, or the trade definition is not set to Even/Odd.'
+                'Buys Over 1 (or Under 8) when the newest digit passes that barrier. After a settled loss it buys the parity the newest digits predict to break, on the market it is already trading: the last N digits all even → ODD, all odd → EVEN. A mixed run is no entry, so the block waits for one instead of trading blind.'
             ),
             category: window.Blockly.Categories.Digits,
         };
@@ -86,9 +81,9 @@ window.Blockly.Blocks.digits_parity_recovery = {
         return {
             display_name: localize('Trade Over 1 / Under 8, recover on Even/Odd'),
             description: localize(
-                'One two-leg entry: the Over 1 or Under 8 digit trade first, then — after a loss — the best even/odd market it finds.'
+                'One two-leg entry: the Over 1 or Under 8 digit trade first, then — after a loss — the reversal of the newest digits (all even → ODD, all odd → EVEN) on the same market.'
             ),
-            key_words: localize('over 1 under 8 even odd recovery loss scan market parity digit'),
+            key_words: localize('over 1 under 8 even odd recovery loss reversal parity digit'),
         };
     },
     customContextMenu(menu) {
@@ -99,32 +94,26 @@ window.Blockly.Blocks.digits_parity_recovery = {
 window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_parity_recovery = block => {
     const primary = PRIMARY_LEGS[block.getFieldValue('PRIMARY')] ?? PRIMARY_LEGS.over_1;
     const parity = block.getFieldValue('PARITY');
-    const ticks = Number(block.getFieldValue('TICKS'));
-    const percent = Number(block.getFieldValue('PERCENT'));
+    const run = Number(block.getFieldValue('RUN'));
 
-    if (!Number.isInteger(ticks) || ticks < 1 || ticks > MAX_TICKS) {
+    if (!Number.isInteger(run) || run < MIN_RUN || run > MAX_RUN) {
         throw new Error(
-            localize('Ticks to analyse must be a whole number between 1 and {{ max }}', { max: MAX_TICKS })
+            localize('Digits to reverse must be a whole number between {{ min }} and {{ max }}', {
+                min: MIN_RUN,
+                max: MAX_RUN,
+            })
         );
     }
-    if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-        throw new Error(localize('The even/odd share must be a percentage between 0 and 100'));
-    }
 
-    // The first leg reads the newest genuine digit against the barrier it was configured with; the
-    // second leg only runs on a settled loss, so an open contract is never doubled.
+    // The engine reports a settled contract as `win` or `loss`, so the loss branch has to read
+    // `loss` — the recovery never ran while this compared against anything else.
     return `
         if (!Bot.sessionHasOpenContract()) {
-            if (Bot.sessionLastResult() === 'lost') {
-                Bot.marketScanBestParity({ ticks: ${ticks} });
-                Bot.eoConfigure({ ticks: ${ticks}, percent: ${percent}, direction: '${parity}' });
-                Bot.eoMonitor(${ticks});
-                if (Bot.eoWindowReady() && Bot.eoEntryAllowed()) {
-                    if (Bot.eoSignalDirection() === 'EVEN') {
-                        Bot.eoBuyEven();
-                    } else {
-                        Bot.eoBuyOdd();
-                    }
+            if (Bot.sessionLastResult() === 'loss') {
+                if (Bot.eoParityReversal(${run}, '${parity}') === 'ODD') {
+                    Bot.purchase('DIGITODD');
+                } else if (Bot.eoParityReversal(${run}, '${parity}') === 'EVEN') {
+                    Bot.purchase('DIGITEVEN');
                 }
             } else if (Bot.getLastDigit() ${primary.compare} ${primary.barrier} && Bot.riskCanTrade()) {
                 Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });

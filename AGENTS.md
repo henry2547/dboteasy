@@ -503,8 +503,42 @@ that applies it (wrapped just inside `EvenOdd` in `trade/index.js`).
   the purchase waits for it, so `selectProposal` never throws `SelectedProposalNotExist` when a leg
   switches family.
 - **`Bot.purchase(contract, { barrier })`** is the block-facing form (`Interface/BotInterface.js`
-  forwards the second argument). `digits_parity_recovery` uses it to buy its Over 1 / Under 8 leg
-  from an Even/Odd bot; the Even/Odd leg keeps buying through `eoBuyEven` / `eoBuyOdd`.
+  forwards the second argument). `digits_parity_recovery` uses it for BOTH of its legs — the Over 1 /
+  Under 8 leg carries the barrier, the Even/Odd leg carries none — so the stake, risk limits, session
+  ledger and martingale stay on one path.
+- **The recovery leg is a synchronous parity REVERSAL.** The generated block is
+  `if (!Bot.sessionHasOpenContract()) { if (Bot.sessionLastResult() === 'loss') { …eoParityReversal… }
+  else if (last digit passes the barrier && Bot.riskCanTrade()) { Bot.purchase(primary) } }`.
+  Two things there are load-bearing:
+  - **The comparison is `'loss'`.** `sessionLastResult()` returns `'win'` / `'loss'` / `''`
+    (`utils/session-control.js` `lastTradeResult`). The block compared against `'lost'` for a while,
+    so the recovery branch never ran at all — the Even/Odd leg was dead code.
+  - **The reversal is read, not scanned.** `Bot.eoParityReversal(run, direction)` (sync,
+    `trade/EvenOdd.js`) reads `this.eo_digits`, the newest digits of the market being traded, fed from
+    the engine's own tick callback (`recordReversalDigit`); the rule is `resolveReversalSignal`
+    (`utils/even-odd.js`) — the last N digits all **even → buy ODD**, all **odd → buy EVEN**, a mixed
+    run is no entry, and `direction` limits which side may be bought. Do **not** reintroduce
+    `marketScanBestParity` / `eoRecoveryPrepare` into this path: the scan re-subscribed every market,
+    each switch invalidated the Even/Odd window (`Ticks.js` `eoInvalidate`), and a parity read from a
+    market other than the one being traded is meaningless anyway. `config.rule` (`threshold` |
+    `reversal`) still drives the Even/Odd STRATEGY blocks (`evenOddSnapshot`), which are unchanged.
+  - **The XML gate must let a loss through.** The shipped template's observer gate is
+    `… AND (Parity Switched OR last trade result = "loss")`. A gate that only accepts `Parity
+    Switched` requires the newest two digits to have DIFFERENT parity — exactly what the reversal
+    reads as "no entry" — so the recovery could never fire. `templates.test.ts` ("lets a settled loss
+    reach its Even/Odd leg") pins the OR.
+  - **That OR must NOT be an operand of an `obs_…` condition.** The observer runtime evaluates a
+    condition only from blocks its own catalogue knows (`observer-program.js` `readProgram` keeps
+    just those); any ordinary block reached through a `value` socket answers
+    `Inconclusive: the connected block is no longer on the canvas`, `observer-evaluators.js` `and`
+    turns that into Inconclusive, and `Bot.observerCondition` reports Inconclusive as `false`. The gate
+    therefore never passed and the `digits_parity_recovery` block inside it never ran — the whole bot
+    traded nothing, which is why the recovery looked dead even after the `'loss'` comparison was
+    fixed. The observer conditions are now ONE `obs_and` tree, and the settled-loss OR is combined
+    with it by an ordinary `logic_operation` AND (`freebot-pr-observer-gate-and`) that the generated
+    program evaluates itself. `templates.test.ts` ("never nests an ordinary block inside an observer
+    condition") walks every template and fails if any `obs_…` block has a non-`obs_…` value operand —
+    keep that rule when editing a gate.
 - **The mandatory-block gate has to accept it.** `PURCHASE_BLOCK_TYPES` in `scratch/utils/index.js`
   is the list of block types that buy through the engine's own purchase path, and `getMissingBlocks`
   treats `purchase` as satisfied when the canvas holds any of them. The two-market
@@ -514,9 +548,12 @@ that applies it (wrapped just inside `EvenOdd` in `trade/index.js`).
   pressed. Keep that list complete when a buying block is added to the palette —
   `scratch/utils/__tests__/required-blocks.test.js` pins one case per buy path.
 - Coverage: `utils/__tests__/contract-families.test.js` (rules), `contract-family-engine.test.js`
-  (mixin + request builders) and `scratch/blocks/Digits/__tests__/digits-parity-recovery.test.js`
-  (the generated call carries the barrier). A live two-leg purchase needs a logged-in Demo account,
-  so the settlement path stays manual.
+  (mixin + request builders), `utils/__tests__/even-odd.test.js` ("the parity-reversal rule") and
+  `scratch/blocks/Digits/__tests__/digits-parity-recovery.test.js` (the generated call carries the
+  barrier and the reversal buy, and compares the settled result against `'loss'`), plus
+  `utils/__tests__/even-odd-runtime.test.js` ("Even/Odd recovery leg after a loss": the reversal read
+  per digit run, a mixed run and a market change). A live two-leg purchase needs a logged-in Demo
+  account, so the settlement path stays manual.
 
 ## Strategy Learning blocks (Bot Builder)
 The "Strategy Learning" palette category (`strategy_learning`) measures how each **named** strategy

@@ -15,6 +15,16 @@ export const EO_BEST_MARKET_TICKS = 100;
 export const EO_MIN_TICKS = 1;
 /** Sanity cap: the window is a rolling slice of the live feed, never an unbounded buffer. */
 export const EO_MAX_TICKS = 1000;
+/**
+ * The two rules a window can resolve its signal with. `threshold` reads the parity share of the
+ * whole window; `reversal` reads a run of same-parity digits and buys the OPPOSITE parity.
+ */
+export const EO_RULE_THRESHOLD = 'threshold';
+export const EO_RULE_REVERSAL = 'reversal';
+export const EO_SIGNAL_RULES = [EO_RULE_THRESHOLD, EO_RULE_REVERSAL];
+/** The parity run the reversal rule reads by default — the last 2 digits. */
+export const EO_DEFAULT_RUN = 2;
+export const EO_MAX_RUN = 100;
 export const EO_DIRECTIONS = ['even', 'odd', 'both'];
 export const EO_EVEN = 'EVEN';
 export const EO_ODD = 'ODD';
@@ -42,10 +52,22 @@ export const normalizeDirection = value => {
     return EO_DIRECTIONS.includes(direction) ? direction : 'both';
 };
 
+export const normalizeRule = value =>
+    String(value ?? '').toLowerCase() === EO_RULE_REVERSAL ? EO_RULE_REVERSAL : EO_RULE_THRESHOLD;
+
+/** The digits a reversal reads: a whole number of at least two, capped like the window. */
+export const resolveReversalRun = value => {
+    const wanted = Number(value);
+    if (!Number.isInteger(wanted) || wanted < EO_DEFAULT_RUN) return EO_DEFAULT_RUN;
+    return Math.min(wanted, EO_MAX_RUN);
+};
+
 export const createEvenOddConfig = () => ({
     ticks: EO_DEFAULT_TICKS,
     percent: EO_DEFAULT_PERCENT,
     direction: 'both',
+    rule: EO_RULE_THRESHOLD,
+    run: EO_DEFAULT_RUN,
 });
 
 /**
@@ -53,7 +75,7 @@ export const createEvenOddConfig = () => ({
  * the documented default and is reported, so a mistake is visible in the run log instead of being
  * traded on.
  */
-export const validateEvenOddConfig = ({ ticks, percent, direction } = {}) => {
+export const validateEvenOddConfig = ({ ticks, percent, direction, rule, run } = {}) => {
     const errors = [];
 
     const wanted_ticks = Number(ticks);
@@ -80,6 +102,14 @@ export const validateEvenOddConfig = ({ ticks, percent, direction } = {}) => {
         );
     }
 
+    const wanted_rule = String(rule ?? EO_RULE_THRESHOLD).toLowerCase();
+    const rule_ok = EO_SIGNAL_RULES.includes(wanted_rule);
+    if (!rule_ok) {
+        errors.push(
+            `The signal rule must be THRESHOLD or REVERSAL; "${rule}" is not, so THRESHOLD is used.`
+        );
+    }
+
     return {
         ok: errors.length === 0,
         errors,
@@ -87,6 +117,8 @@ export const validateEvenOddConfig = ({ ticks, percent, direction } = {}) => {
             ticks: ticks_ok ? wanted_ticks : EO_DEFAULT_TICKS,
             percent: percent_ok ? wanted_percent : EO_DEFAULT_PERCENT,
             direction: direction_ok ? wanted_direction : 'both',
+            rule: rule_ok ? wanted_rule : EO_RULE_THRESHOLD,
+            run: resolveReversalRun(run),
         },
     };
 };
@@ -211,11 +243,61 @@ export const resolveSignal = ({ evenPercent, oddPercent, threshold, direction } 
     return { direction: EO_NO_SIGNAL, reason: `neither parity reached ${limit}% (${observed})` };
 };
 
+/**
+ * The recovery rule: a run of same-parity digits is expected to break, so the OPPOSITE parity is
+ * bought — the last `run` digits all even → ODD, all odd → EVEN. A mixed run is no signal at all.
+ *
+ * The configured direction limits which reversal may be bought (`both` allows either), so an ODD
+ * setup never buys EVEN. Nothing here reads the future: the run is the digits already received.
+ */
+export const resolveReversalSignal = (digits, { run = EO_DEFAULT_RUN, direction = 'both' } = {}) => {
+    const list = toDigitList(digits);
+    const size = resolveReversalRun(run);
+    if (list.length < size) {
+        return {
+            direction: EO_NO_SIGNAL,
+            reason: `only ${list.length} of the last ${size} digit(s) collected`,
+        };
+    }
+
+    const window = list.slice(-size);
+    const evens = window.filter(digit => digit % 2 === 0).length;
+    if (evens !== 0 && evens !== size) {
+        return {
+            direction: EO_NO_SIGNAL,
+            reason: `the last ${size} digits (${window.join(', ')}) are mixed, so there is no run to reverse`,
+        };
+    }
+
+    const run_parity = evens === size ? 'even' : 'odd';
+    const wanted = run_parity === 'even' ? EO_ODD : EO_EVEN;
+    const allowed = normalizeDirection(direction);
+    if (allowed !== 'both' && allowed !== wanted.toLowerCase()) {
+        return {
+            direction: EO_NO_SIGNAL,
+            reason: `the last ${size} digits (${window.join(', ')}) are all ${run_parity}, so ${wanted} is bought — outside the configured ${allowed.toUpperCase()} side`,
+        };
+    }
+
+    return {
+        direction: wanted,
+        reason: `the last ${size} digits (${window.join(', ')}) are all ${run_parity}, so ${wanted} is bought`,
+    };
+};
+
 /** The window size the strategy actually monitors: the monitor block's number, else the config. */
 export const evenOddWindowSize = state => {
     const size = Number(state?.window_size);
-    if (Number.isInteger(size) && size >= EO_MIN_TICKS && size <= EO_MAX_TICKS) return size;
-    return Number(state?.config?.ticks) || EO_DEFAULT_TICKS;
+    const monitored =
+        Number.isInteger(size) && size >= EO_MIN_TICKS && size <= EO_MAX_TICKS
+            ? size
+            : Number(state?.config?.ticks) || EO_DEFAULT_TICKS;
+    // The reversal rule only ever reads the last `run` digits, so a smaller window would never
+    // become ready: the monitored window is widened to the run it has to hold.
+    if (normalizeRule(state?.config?.rule) === EO_RULE_REVERSAL) {
+        return Math.max(monitored, resolveReversalRun(state?.config?.run));
+    }
+    return monitored;
 };
 
 export const createEvenOddState = () => ({
@@ -246,7 +328,9 @@ export const configureEvenOdd = (state, next) => {
 export const startEvenOddMonitoring = (state, ticks) => {
     const wanted = Number(ticks);
     const usable = Number.isInteger(wanted) && wanted >= EO_MIN_TICKS && wanted <= EO_MAX_TICKS;
-    const size = usable ? wanted : evenOddWindowSize({ ...state, window_size: 0 });
+    const requested = usable ? wanted : evenOddWindowSize({ ...state, window_size: 0 });
+    // The reversal rule reads a run of digits, so the armed window is at least that long.
+    const size = evenOddWindowSize({ ...state, window_size: requested });
 
     if (state.monitoring && state.window_size === size) return state;
 
@@ -315,10 +399,25 @@ export const evenOddSnapshot = (state, { connected = true } = {}) => {
     const window = toDigitList(state.window).slice(-size);
     const { even, odd, total } = parityPercentages(window);
     const ready = Boolean(state.monitoring) && size > 0 && total >= size && !state.stale && connected;
+    const rule = normalizeRule(state?.config?.rule);
+    const run = resolveReversalRun(state?.config?.run);
 
     const signal = ready
-        ? resolveSignal({ evenPercent: even, oddPercent: odd, threshold: state.config.percent, direction: state.config.direction })
-        : { direction: EO_NO_SIGNAL, reason: 'the tick window is not complete yet' };
+        ? rule === EO_RULE_REVERSAL
+            ? resolveReversalSignal(window, { run, direction: state.config.direction })
+            : resolveSignal({
+                  evenPercent: even,
+                  oddPercent: odd,
+                  threshold: state.config.percent,
+                  direction: state.config.direction,
+              })
+        : {
+              direction: EO_NO_SIGNAL,
+              reason:
+                  rule === EO_RULE_REVERSAL
+                      ? `only ${total} of the last ${run} digit(s) collected`
+                      : 'the tick window is not complete yet',
+          };
 
     return {
         ready,
@@ -330,6 +429,8 @@ export const evenOddSnapshot = (state, { connected = true } = {}) => {
         evenPercent: even,
         oddPercent: odd,
         threshold: state.config.percent,
+        rule,
+        run,
         configuredDirection: normalizeDirection(state.config.direction),
         stale: Boolean(state.stale),
         connected,
@@ -354,6 +455,10 @@ export const rememberSignal = (state, key) => {
     return { ...state, used_signals: [key, ...state.used_signals].slice(0, EO_MAX_REMEMBERED_SIGNALS) };
 };
 
-/** The parity the observed percentages point at, used to describe a decision in the journal. */
+/** The parity the observed digits point at, used to describe a decision in the journal. */
 export const describeWindow = snapshot =>
-    `${snapshot.collected}/${snapshot.window} ${snapshot.symbol || 'market'} ticks · even ${snapshot.evenPercent}% · odd ${snapshot.oddPercent}% · threshold ${snapshot.threshold}%`;
+    snapshot.rule === EO_RULE_REVERSAL
+        ? `${snapshot.collected}/${snapshot.window} ${snapshot.symbol || 'market'} ticks · last ${snapshot.run}: ${
+              (snapshot.digits || []).slice(-snapshot.run).join(', ') || '—'
+          } · reversal rule`
+        : `${snapshot.collected}/${snapshot.window} ${snapshot.symbol || 'market'} ticks · even ${snapshot.evenPercent}% · odd ${snapshot.oddPercent}% · threshold ${snapshot.threshold}%`;

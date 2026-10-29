@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">13.38% </span>
+                <span class="strong">16.21% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>17/127</span>
+                <span class='fraction'>24/148</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">13.38% </span>
+                <span class="strong">16.21% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>17/127</span>
+                <span class='fraction'>24/148</span>
             </div>
         
             
@@ -190,7 +190,28 @@
 <a name='L125'></a><a href='#L125'>125</a>
 <a name='L126'></a><a href='#L126'>126</a>
 <a name='L127'></a><a href='#L127'>127</a>
-<a name='L128'></a><a href='#L128'>128</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -201,8 +222,15 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -312,14 +340,28 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { LogTypes } from '../../../constants/messages';
 import { api_base } from '../../api/api-base';
-import { contractStatus, info, log } from '../utils/broadcast';
+import { contractStatus, info, log, notify } from '../utils/broadcast';
 import { doUntilDone, getUUID, recoverFromError, tradeOptionToBuy } from '../utils/helpers';
 import { purchaseSuccessful } from './state/actions';
 import { BEFORE_PURCHASE } from './state/constants';
@@ -329,11 +371,25 @@ let purchase_reference;
 &nbsp;
 export default Engine<span class="branch-0 cbranch-no" title="branch not covered" > =&gt;</span>
     class Purchase extends Engine {
-<span class="fstat-no" title="function not covered" >        purchase(contract_type) {</span>
+        /**
+         * Buys one contract.
+         *
+         * `options.barrier` sets the digit barrier for a contract that reads one, so a leg can trade
+         * a family the trade definition does not carry itself (Over 1 from an Even/Odd bot). The trade
+         * options are resolved per contract, so an Even/Odd buy never carries the definition's barrier.
+         */
+<span class="fstat-no" title="function not covered" >        purchase(contract_type, options = {}) {</span>
 <span class="cstat-no" title="statement not covered" >            // Prevent calling purchase twice</span>
 <span class="cstat-no" title="statement not covered" >            if (this.store.getState().scope !== BEFORE_PURCHASE) {</span>
 <span class="cstat-no" title="statement not covered" >                return Promise.resolve();</span>
 <span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >            const resolved = this.resolveContractTradeOptions?.(contract_type, options);</span>
+<span class="cstat-no" title="statement not covered" >            if (resolved &amp;&amp; !resolved.ok) {</span>
+<span class="cstat-no" title="statement not covered" >                notify('warn', `Cannot buy ${contract_type}: ${resolved.error}.`);</span>
+<span class="cstat-no" title="statement not covered" >                return Promise.resolve();</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" >            const trade_options = resolved?.tradeOptions ?? this.tradeOptions;</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >            const onSuccess = response =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >                // Don't unnecessarily send a forget request for a purchased contract.</span>
@@ -358,6 +414,9 @@ export default Engine<span class="branch-0 cbranch-no" title="branch not covered
 <span class="cstat-no" title="statement not covered" >                    this.renewProposalsOnPurchase();</span>
 <span class="cstat-no" title="statement not covered" >                }</span>
 <span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >                // The family this contract really used, so a cross-family switch is journalled.</span>
+<span class="cstat-no" title="statement not covered" >                this.recordContractFamily?.(resolved?.family ?? this.contractFamilyOf?.(contract_type));</span>
+<span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >                delayIndex = 0;</span>
 <span class="cstat-no" title="statement not covered" >                log(LogTypes.PURCHASE, { transaction_id: buy.transaction_id });</span>
 <span class="cstat-no" title="statement not covered" >                info({</span>
@@ -370,44 +429,48 @@ export default Engine<span class="branch-0 cbranch-no" title="branch not covered
 <span class="cstat-no" title="statement not covered" >            };</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >            if (this.is_proposal_subscription_required) {</span>
-<span class="cstat-no" title="statement not covered" >                const { id, askPrice } = this.selectProposal(contract_type);</span>
+<span class="cstat-no" title="statement not covered" >                // A cross-family entry asks for a contract the definition does not list, so its own</span>
+<span class="cstat-no" title="statement not covered" >                // proposal is requested and awaited before it can be selected.</span>
+<span class="cstat-no" title="statement not covered" >                return this.ensureContractProposals(contract_type, trade_options).then(() =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >                    const { id, askPrice } = this.selectProposal(contract_type);</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >                const action = () =&gt; api_base.api.send({ buy: id, price: askPrice });</span>
+<span class="cstat-no" title="statement not covered" >                    const action = () =&gt; api_base.api.send({ buy: id, price: askPrice });</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >                this.isSold = false;</span>
+<span class="cstat-no" title="statement not covered" >                    this.isSold = false;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >                contractStatus({</span>
-<span class="cstat-no" title="statement not covered" >                    id: 'contract.purchase_sent',</span>
-<span class="cstat-no" title="statement not covered" >                    data: askPrice,</span>
-<span class="cstat-no" title="statement not covered" >                });</span>
+<span class="cstat-no" title="statement not covered" >                    contractStatus({</span>
+<span class="cstat-no" title="statement not covered" >                        id: 'contract.purchase_sent',</span>
+<span class="cstat-no" title="statement not covered" >                        data: askPrice,</span>
+<span class="cstat-no" title="statement not covered" >                    });</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >                if (!this.options.timeMachineEnabled) {</span>
-<span class="cstat-no" title="statement not covered" >                    return doUntilDone(action).then(onSuccess);</span>
-<span class="cstat-no" title="statement not covered" >                }</span>
+<span class="cstat-no" title="statement not covered" >                    if (!this.options.timeMachineEnabled) {</span>
+<span class="cstat-no" title="statement not covered" >                        return doUntilDone(action).then(onSuccess);</span>
+<span class="cstat-no" title="statement not covered" >                    }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >                return recoverFromError(</span>
-<span class="cstat-no" title="statement not covered" >                    action,</span>
-<span class="cstat-no" title="statement not covered" >                    (errorCode, makeDelay) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >                        // if disconnected no need to resubscription (handled by live-api)</span>
-<span class="cstat-no" title="statement not covered" >                        if (errorCode !== 'DisconnectError') {</span>
-<span class="cstat-no" title="statement not covered" >                            this.renewProposalsOnPurchase();</span>
-<span class="cstat-no" title="statement not covered" >                        } else {</span>
-<span class="cstat-no" title="statement not covered" >                            this.clearProposals();</span>
-<span class="cstat-no" title="statement not covered" >                        }</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >                        const unsubscribe = this.store.subscribe(() =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >                            const { scope, proposalsReady } = this.store.getState();</span>
-<span class="cstat-no" title="statement not covered" >                            if (scope === BEFORE_PURCHASE &amp;&amp; proposalsReady) {</span>
-<span class="cstat-no" title="statement not covered" >                                makeDelay().then(() =&gt; this.observer.emit('REVERT', 'before'));</span>
-<span class="cstat-no" title="statement not covered" >                                unsubscribe();</span>
+<span class="cstat-no" title="statement not covered" >                    return recoverFromError(</span>
+<span class="cstat-no" title="statement not covered" >                        action,</span>
+<span class="cstat-no" title="statement not covered" >                        (errorCode, makeDelay) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >                            // if disconnected no need to resubscription (handled by live-api)</span>
+<span class="cstat-no" title="statement not covered" >                            if (errorCode !== 'DisconnectError') {</span>
+<span class="cstat-no" title="statement not covered" >                                this.renewProposalsOnPurchase();</span>
+<span class="cstat-no" title="statement not covered" >                            } else {</span>
+<span class="cstat-no" title="statement not covered" >                                this.clearProposals();</span>
 <span class="cstat-no" title="statement not covered" >                            }</span>
-<span class="cstat-no" title="statement not covered" >                        });</span>
-<span class="cstat-no" title="statement not covered" >                    },</span>
-<span class="cstat-no" title="statement not covered" >                    ['PriceMoved', 'InvalidContractProposal'],</span>
-<span class="cstat-no" title="statement not covered" >                    delayIndex++</span>
-<span class="cstat-no" title="statement not covered" >                ).then(onSuccess);</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >                            const unsubscribe = this.store.subscribe(() =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >                                const { scope, proposalsReady } = this.store.getState();</span>
+<span class="cstat-no" title="statement not covered" >                                if (scope === BEFORE_PURCHASE &amp;&amp; proposalsReady) {</span>
+<span class="cstat-no" title="statement not covered" >                                    makeDelay().then(() =&gt; this.observer.emit('REVERT', 'before'));</span>
+<span class="cstat-no" title="statement not covered" >                                    unsubscribe();</span>
+<span class="cstat-no" title="statement not covered" >                                }</span>
+<span class="cstat-no" title="statement not covered" >                            });</span>
+<span class="cstat-no" title="statement not covered" >                        },</span>
+<span class="cstat-no" title="statement not covered" >                        ['PriceMoved', 'InvalidContractProposal'],</span>
+<span class="cstat-no" title="statement not covered" >                        delayIndex++</span>
+<span class="cstat-no" title="statement not covered" >                    ).then(onSuccess);</span>
+<span class="cstat-no" title="statement not covered" >                });</span>
 <span class="cstat-no" title="statement not covered" >            }</span>
-<span class="cstat-no" title="statement not covered" >            const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions);</span>
+<span class="cstat-no" title="statement not covered" >            const trade_option = tradeOptionToBuy(contract_type, trade_options);</span>
 <span class="cstat-no" title="statement not covered" >            const action = () =&gt; api_base.api.send(trade_option);</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >            this.isSold = false;</span>
@@ -451,7 +514,7 @@ export default Engine<span class="branch-0 cbranch-no" title="branch not covered
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-24T08:04:45.127Z
+                at 2026-10-29T09:36:04.882Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

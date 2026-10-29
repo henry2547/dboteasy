@@ -36,6 +36,19 @@ The threshold-reading blocks do not override the configured buy signal: a Buy bl
 
 Place it once, in the branch that runs before an entry (the shipped `even_odd_window` free bot runs it on the first trade loop of the run and remembers that it has scanned; a contract that settles as a loss clears that memory, so the next trade loop scans the pool again before it looks for an entry). The scan subscribes to each market through the trade engine's ordinary tick path, skips closed, suspended, cooling-down or contract-less markets with the reason in the run log, and journalling every measurement it made — so the market it kept can be checked against the ticks it was chosen on. It never places a trade and refuses to change the market while a contract is open; the entries, stake, risk limits and Demo/Real protections stay where they were. A split describes the ticks already seen, never the next digit, and stopping and starting the bot scans again.
 
+## Recovery after a loss (Trade Over 1 / Under 8, recover on Even/Odd)
+
+`digits_parity_recovery` holds both legs in one block, so no `purchase` block is needed:
+
+- **First leg:** buys `DIGITOVER` (Over 1) or `DIGITUNDER` (Under 8) when the newest digit passes that barrier.
+- **Second leg, only after a settled loss:** `Bot.eoParityReversal(run, direction)` reads the newest `RUN` digits of the market the bot is already trading — synchronously, on the same pass of the trade loop, with no market scan and no window to arm.
+- **The rule:** the last `RUN` digits (default **2**) all **even → buy ODD**, all **odd → buy EVEN**. A mixed run is no entry. `PARITY` limits which reversal may be bought (`both`, `EVEN only`, `ODD only`).
+- The digits come from the engine's own tick subscription (`trade/Ticks.js` → `eoFeedTick` → `recordReversalDigit`): a repeated tick is ignored, an out-of-order tick restarts the run, and a market change starts a fresh run, so the reversal is never read from another market's ticks.
+- Both buys go through the engine's own purchase path, so the stake, risk limits, the selected contract and the Demo/Real protections are unchanged. Set the trade definition's contract type to **Both**, otherwise `canTradeContract` refuses the family the leg needs and the journal says why.
+- The engine reports a settled contract as `win` or `loss`, so the loss branch compares against `'loss'`. A block that keeps its recovery behind a "Parity Switched" observer gate can never fire: that gate requires the newest two digits to have **different** parity, which is exactly what the reversal rule reads as "no entry". The shipped template ORs the gate with "last trade lost".
+- **Keep that OR outside the observer block.** The observer runtime evaluates a condition only from observer blocks; an ordinary `logic_operation` connected into an `obs_and`/`obs_or` reads as Inconclusive, which `Bot.observerCondition` reports as `false`. The shipped gate groups its observer conditions in one `obs_and` and combines them with the "last trade lost" OR through an ordinary AND, so the generated entry reads
+  `if (Bot.observerCondition('…and') && (Bot.observerCondition('…parity') || Bot.sessionLastResult() === 'loss'))`.
+
 ## Execution and safety
 
 The window uses the trade engine's existing tick subscription, not the Digits dashboard feed or a second socket. Repeated ticks are ignored, out-of-order ticks invalidate the window, market changes restart it, and disconnected feeds cannot qualify. Buys also check the existing session state, stake, risk limits, selected contract and open contract. A signal is marked used only after the existing purchase path records a contract id.

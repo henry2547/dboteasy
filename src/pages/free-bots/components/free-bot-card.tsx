@@ -54,9 +54,9 @@ function FreeBotCard({
                       'Recovery',
                       `Even/Odd after a loss — ${
                           template.parityRecovery.parity === 'both'
-                              ? 'the strongest parity wins'
+                              ? 'the newest digits all even → ODD, all odd → EVEN'
                               : template.parityRecovery.parity.toUpperCase()
-                      } on the best market the scan finds`,
+                      } on the market it is already trading`,
                   ],
               ] as [string, string][])
             : []),

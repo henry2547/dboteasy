@@ -326,12 +326,11 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         fields: [
             dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1'),
             dropdown('PARITY', ['both', 'even', 'odd'], 'both'),
-            number('TICKS', 1, 1000, 100, true),
-            number('PERCENT', 0, 100, 55),
+            number('RUN', 2, 100, 2),
         ],
         semantics:
-            'Buys Over 1 (or Under 8) when the newest digit passes that barrier; after a settled loss it scans every market for the strongest even/odd split and enters the Even/Odd contract through the engine’s own purchase path, which refuses the entry with its reason while the window is incomplete or the trade definition is not Even/Odd.',
-        requires: ['ticks', 'market_scan', 'proposal', 'buy'],
+            'Buys Over 1 (or Under 8) when the newest digit passes that barrier; after a settled loss it buys the reversal of the newest digits of the market it is trading, through the engine’s own purchase path — the last RUN digits all even → ODD, all odd → EVEN, a mixed run is no entry. The reversal never trades on an incomplete read or on another market’s digits.',
+        requires: ['ticks', 'proposal', 'buy'],
     }),
 
     // ── Market intelligence ─────────────────────────────────────────────────────────────────────

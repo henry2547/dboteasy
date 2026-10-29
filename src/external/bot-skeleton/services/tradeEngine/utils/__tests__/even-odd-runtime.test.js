@@ -79,3 +79,75 @@ describe('Even/Odd engine entries', () => {
         await expect(stopped).resolves.toBe(false);
     });
 });
+
+describe('Even/Odd recovery leg after a loss', () => {
+    /** An engine fed real tick digits, with no market scan and no strategy window to arm. */
+    const recoveryEngine = () => {
+        const Engine = EvenOdd(class {});
+        const engine = new Engine();
+        engine.symbol = 'R_100';
+        return engine;
+    };
+
+    it.each([
+        [[2, 4], 'ODD'],
+        [[0, 6], 'ODD'],
+        [[3, 5], 'EVEN'],
+        [[9, 1], 'EVEN'],
+    ])('reverses the run %j and buys %s', (digits, expected) => {
+        const engine = recoveryEngine();
+        digits.forEach((digit, index) => engine.eoFeedTick({ digit, epoch: index + 1, symbol: 'R_100' }));
+        expect(engine.eoParityReversal(2, 'both')).toBe(expected);
+    });
+
+    it('has no signal on a mixed run or an incomplete read', () => {
+        const engine = recoveryEngine();
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+
+        engine.eoFeedTick({ digit: 2, epoch: 1, symbol: 'R_100' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+
+        engine.eoFeedTick({ digit: 3, epoch: 2, symbol: 'R_100' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+    });
+
+    it('only buys the side the block was configured with', () => {
+        const engine = recoveryEngine();
+        [2, 4].forEach((digit, index) => engine.eoFeedTick({ digit, epoch: index + 1, symbol: 'R_100' }));
+
+        expect(engine.eoParityReversal(2, 'both')).toBe('ODD');
+        expect(engine.eoParityReversal(2, 'odd')).toBe('ODD');
+        // An all-even run buys ODD, so an EVEN-only block waits instead of trading it.
+        expect(engine.eoParityReversal(2, 'even')).toBe('NO SIGNAL');
+    });
+
+    it('never reads a run across two markets', () => {
+        const engine = recoveryEngine();
+        engine.eoFeedTick({ digit: 2, epoch: 1, symbol: 'R_100' });
+        engine.eoFeedTick({ digit: 4, epoch: 2, symbol: 'R_100' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('ODD');
+
+        engine.eoFeedTick({ digit: 3, epoch: 3, symbol: 'R_50' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+    });
+
+    it('ignores a repeated tick and restarts after an out-of-order one', () => {
+        const engine = recoveryEngine();
+        engine.eoFeedTick({ digit: 2, epoch: 5, symbol: 'R_100' });
+        engine.eoFeedTick({ digit: 2, epoch: 5, symbol: 'R_100' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+
+        engine.eoFeedTick({ digit: 4, epoch: 4, symbol: 'R_100' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+
+        engine.eoFeedTick({ digit: 6, epoch: 6, symbol: 'R_100' });
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+    });
+
+    it('clears the run when the session is reset', () => {
+        const engine = recoveryEngine();
+        [2, 4].forEach((digit, index) => engine.eoFeedTick({ digit, epoch: index + 1, symbol: 'R_100' }));
+        engine.resetEvenOdd();
+        expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
+    });
+});

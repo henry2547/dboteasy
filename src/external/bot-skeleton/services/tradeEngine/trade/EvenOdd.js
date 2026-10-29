@@ -16,7 +16,9 @@ import { api_base } from '../../api/api-base';
 import { canTradeContract, readWorkspaceTradeDefinition } from '../utils/contract-families';
 import {
     EO_CONTRACT_TYPES,
+    EO_MAX_RUN,
     EO_NO_SIGNAL,
+    EO_RULE_REVERSAL,
     configureEvenOdd,
     createEvenOddState,
     describeWindow,
@@ -25,6 +27,7 @@ import {
     invalidateEvenOdd,
     normalizeParity,
     rememberSignal,
+    resolveReversalSignal,
     signalKey,
     signalUsed,
     startEvenOddMonitoring,
@@ -40,6 +43,11 @@ export default Engine =>
             super();
             this.even_odd_state = createEvenOddState();
             this.even_odd_waiters = [];
+            /** The newest digits of the current market, kept for the recovery leg's reversal read. */
+            this.eo_digits = [];
+            this.eo_digits_epoch = null;
+            this.eo_digits_symbol = '';
+            this.eo_reversal_note = '';
             globalObserver.register('statistics.clear', this.resetEvenOdd.bind(this));
             // A stopped session must not leave the program suspended on a tick that will never come.
             globalObserver.register('bot.stop_button_click', this.releaseEvenOddWaiters.bind(this));
@@ -52,7 +60,15 @@ export default Engine =>
 
         resetEvenOdd() {
             this.even_odd_state = createEvenOddState();
+            this.clearReversalDigits();
             this.releaseEvenOddWaiters();
+        }
+
+        clearReversalDigits() {
+            this.eo_digits = [];
+            this.eo_digits_epoch = null;
+            this.eo_digits_symbol = '';
+            this.eo_reversal_note = '';
         }
 
         /** Resolves every pending "wait for next valid tick" with `false`. */
@@ -70,11 +86,19 @@ export default Engine =>
 
             errors.forEach(error => notify(`Even/Odd: ${error}`, 'warn'));
 
-            const { ticks, percent, direction } = state.config;
+            const { ticks, percent, direction, rule, run } = state.config;
             const changed =
-                before.ticks !== ticks || before.percent !== percent || before.direction !== direction;
+                before.ticks !== ticks ||
+                before.percent !== percent ||
+                before.direction !== direction ||
+                before.rule !== rule ||
+                before.run !== run;
             if (ok && changed) {
-                notify(`Even/Odd strategy configured: last ${ticks} ticks, ${percent}% threshold, ${direction} signals.`);
+                notify(
+                    rule === EO_RULE_REVERSAL
+                        ? `Even/Odd strategy configured: reversal of the last ${run} digits, ${direction} signals.`
+                        : `Even/Odd strategy configured: last ${ticks} ticks, ${percent}% threshold, ${direction} signals.`
+                );
             }
             return { ...state.config };
         }
@@ -94,8 +118,57 @@ export default Engine =>
             return state.window_size;
         }
 
+        /**
+         * Keeps the newest digits of the market the bot is trading, for the parity-recovery leg.
+         *
+         * It is deliberately independent of the strategy window: the recovery only ever reads a
+         * short run, it must keep collecting whether or not a window was armed, and the digits must
+         * belong to the market being traded — a market change starts a fresh run.
+         */
+        recordReversalDigit({ digit, epoch, symbol } = {}) {
+            const value = Number(digit);
+            const tick_epoch = Number(epoch);
+            if (!Number.isInteger(value) || value < 0 || value > 9 || !Number.isFinite(tick_epoch)) return;
+
+            if (this.eo_digits_symbol && symbol && symbol !== this.eo_digits_symbol) {
+                this.clearReversalDigits();
+            }
+            this.eo_digits_symbol = symbol || this.eo_digits_symbol;
+
+            if (this.eo_digits_epoch !== null) {
+                if (tick_epoch === this.eo_digits_epoch) return;
+                if (tick_epoch < this.eo_digits_epoch) {
+                    // Continuity cannot be trusted, so the run starts again on the next tick.
+                    this.eo_digits = [];
+                    this.eo_digits_epoch = null;
+                    return;
+                }
+            }
+
+            this.eo_digits_epoch = tick_epoch;
+            this.eo_digits = [...this.eo_digits, value].slice(-EO_MAX_RUN);
+        }
+
+        /**
+         * The recovery leg's read: the newest digits of the market the bot is trading, all even →
+         * ODD, all odd → EVEN, a mixed run → no entry. Synchronous, so the block's own condition
+         * reads it on every pass of the trade loop; nothing is forecast and nothing is taken from
+         * another market's feed.
+         */
+        eoParityReversal(run = 2, direction = 'both') {
+            const signal = resolveReversalSignal(this.eo_digits ?? [], { run, direction });
+            const waiting = signal.direction === EO_NO_SIGNAL;
+            // One journal line per distinct read, never one per trade-loop pass.
+            const note = `Even/Odd recovery${waiting ? ' waiting' : ''} — ${signal.reason}.`;
+            if (note !== this.eo_reversal_note) notify(note);
+            this.eo_reversal_note = note;
+
+            return signal.direction;
+        }
+
         /** Called from the engine's own tick callback — the only source of window digits. */
         eoFeedTick({ digit, epoch, symbol } = {}) {
+            this.recordReversalDigit({ digit, epoch, symbol });
             const result = feedEvenOddTick(this.getEvenOddState(), { digit, epoch, symbol });
             this.even_odd_state = result.state;
 
