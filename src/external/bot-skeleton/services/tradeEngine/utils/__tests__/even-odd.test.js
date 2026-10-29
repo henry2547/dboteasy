@@ -7,10 +7,13 @@
  */
 import {
     EO_DEFAULT_PERCENT,
+    EO_DEFAULT_RUN,
     EO_DEFAULT_TICKS,
     EO_EVEN,
     EO_NO_SIGNAL,
     EO_ODD,
+    EO_RULE_REVERSAL,
+    EO_RULE_THRESHOLD,
     configureEvenOdd,
     createEvenOddState,
     evenOddSnapshot,
@@ -19,6 +22,7 @@ import {
     meetsThreshold,
     parityPercentages,
     rememberSignal,
+    resolveReversalSignal,
     resolveSignal,
     signalKey,
     signalUsed,
@@ -39,7 +43,13 @@ describe('configured Even/Odd settings', () => {
 
         expect(ok).toBe(true);
         expect(errors).toEqual([]);
-        expect(config).toEqual({ ticks: 20, percent: 65, direction: 'even' });
+        expect(config).toEqual({
+            ticks: 20,
+            percent: 65,
+            direction: 'even',
+            rule: EO_RULE_THRESHOLD,
+            run: EO_DEFAULT_RUN,
+        });
     });
 
     it('falls back to the documented default and reports what was unusable', () => {
@@ -47,8 +57,68 @@ describe('configured Even/Odd settings', () => {
 
         expect(ok).toBe(false);
         expect(errors).toHaveLength(3);
-        expect(config).toEqual({ ticks: EO_DEFAULT_TICKS, percent: EO_DEFAULT_PERCENT, direction: 'both' });
+        expect(config).toEqual({
+            ticks: EO_DEFAULT_TICKS,
+            percent: EO_DEFAULT_PERCENT,
+            direction: 'both',
+            rule: EO_RULE_THRESHOLD,
+            run: EO_DEFAULT_RUN,
+        });
         expect(configureEvenOdd(createEvenOddState(), { ticks: 0 }).state.config.ticks).toBe(EO_DEFAULT_TICKS);
+    });
+});
+
+describe('the parity-reversal rule', () => {
+    /** A monitored window armed with the reversal rule and fed genuine ticks. */
+    const reversalWindow = (digits, { run = 2, direction = 'both' } = {}) => {
+        const configured = configureEvenOdd(createEvenOddState(), { rule: EO_RULE_REVERSAL, run, direction }).state;
+        return digits.reduce(
+            (state, digit, index) =>
+                feedEvenOddTick(state, { digit, epoch: index + 1, symbol: 'R_100' }).state,
+            startEvenOddMonitoring(configured, run)
+        );
+    };
+
+    it('buys ODD when the last digits are all even', () => {
+        expect(resolveReversalSignal([2, 4]).direction).toBe(EO_ODD);
+        expect(evenOddSnapshot(reversalWindow([2, 4])).signal).toBe(EO_ODD);
+    });
+
+    it('buys EVEN when the last digits are all odd', () => {
+        expect(resolveReversalSignal([3, 5]).direction).toBe(EO_EVEN);
+        expect(evenOddSnapshot(reversalWindow([3, 5])).signal).toBe(EO_EVEN);
+    });
+
+    it('reads only the newest run and treats a mixed run as no signal', () => {
+        expect(resolveReversalSignal([2, 4, 1, 3]).direction).toBe(EO_EVEN);
+        expect(resolveReversalSignal([1, 3, 2, 2]).direction).toBe(EO_ODD);
+        expect(resolveReversalSignal([2, 3]).direction).toBe(EO_NO_SIGNAL);
+        expect(evenOddSnapshot(reversalWindow([6, 5])).signal).toBe(EO_NO_SIGNAL);
+    });
+
+    it('never buys a side the configuration does not allow', () => {
+        expect(resolveReversalSignal([2, 4], { direction: 'even' }).direction).toBe(EO_NO_SIGNAL);
+        expect(resolveReversalSignal([3, 5], { direction: 'even' }).direction).toBe(EO_EVEN);
+        expect(evenOddSnapshot(reversalWindow([2, 4], { direction: 'even' })).signal).toBe(EO_NO_SIGNAL);
+    });
+
+    it('is not ready before the whole run is collected', () => {
+        const state = reversalWindow([2]);
+
+        expect(evenOddSnapshot(state)).toMatchObject({ ready: false, signal: EO_NO_SIGNAL });
+        expect(evenOddSnapshot(state).signalReason).toContain('only 1 of the last 2');
+    });
+
+    it('widens the window to the run it reads, so a 1-tick window can never stall', () => {
+        const configured = configureEvenOdd(createEvenOddState(), {
+            rule: EO_RULE_REVERSAL,
+            run: 3,
+            ticks: 1,
+        }).state;
+        const state = startEvenOddMonitoring(configured, 1);
+
+        expect(state.window_size).toBe(3);
+        expect(evenOddSnapshot(state).window).toBe(3);
     });
 });
 

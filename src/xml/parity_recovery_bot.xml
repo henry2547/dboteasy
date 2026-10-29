@@ -235,8 +235,8 @@
             <block type="digits_parity_recovery" id="freebot-pr-parity-recovery-entry">
                 <field name="PRIMARY">over_1</field>
                 <field name="PARITY">both</field>
+                <field name="RUN">2</field>
                 <field name="TICKS">100</field>
-                <field name="PERCENT">55</field>
               </block>
                 </statement>
                 <statement name="ELSE">

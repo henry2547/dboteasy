@@ -36,6 +36,18 @@ The threshold-reading blocks do not override the configured buy signal: a Buy bl
 
 Place it once, in the branch that runs before an entry (the shipped `even_odd_window` free bot runs it on the first trade loop of the run and remembers that it has scanned; a contract that settles as a loss clears that memory, so the next trade loop scans the pool again before it looks for an entry). The scan subscribes to each market through the trade engine's ordinary tick path, skips closed, suspended, cooling-down or contract-less markets with the reason in the run log, and journalling every measurement it made — so the market it kept can be checked against the ticks it was chosen on. It never places a trade and refuses to change the market while a contract is open; the entries, stake, risk limits and Demo/Real protections stay where they were. A split describes the ticks already seen, never the next digit, and stopping and starting the bot scans again.
 
+## Recovery after a loss (Trade Over 1 / Under 8, recover on Even/Odd)
+
+`digits_parity_recovery` holds both legs in one block, so no `purchase` block is needed:
+
+- **First leg:** buys `DIGITOVER` (Over 1) or `DIGITUNDER` (Under 8) when the newest digit passes that barrier.
+- **Second leg, only after a settled loss:** `Bot.eoRecoveryPrepare({ run, direction, ticks })` scans every eligible volatility market **once for that loss**, keeps the best even/odd market, switches the window to the reversal rule and arms it for the last `RUN` digits. Every later pass of the trade loop only reads that window.
+- **The rule:** the last `RUN` digits (default **2**) all **even → buy ODD**, all **odd → buy EVEN**. A mixed run is no entry. `PARITY` limits which reversal may be bought (`both`, `EVEN only`, `ODD only`).
+- **`TICKS`** is the per-market sample the scan compares (1–1000, default 100). It is not the window the rule reads.
+- The buy still goes through the engine's own purchase path, so the stake, risk limits, the selected contract and the Demo/Real protections are unchanged. An entry is refused, with the reason in the journal, while the window is incomplete, a contract is open, the risk limits block it, or the trade definition cannot buy that contract (set the contract type to **Both**).
+
+The preparation is keyed on the number of settled trades, so a loss re-scans once and the following loop passes wait for the reversal instead of re-scanning (a re-scan re-subscribes every market and restarts the window, which is why the Even/Odd leg never reached a signal before).
+
 ## Execution and safety
 
 The window uses the trade engine's existing tick subscription, not the Digits dashboard feed or a second socket. Repeated ticks are ignored, out-of-order ticks invalidate the window, market changes restart it, and disconnected feeds cannot qualify. Buys also check the existing session state, stake, risk limits, selected contract and open contract. A signal is marked used only after the existing purchase path records a contract id.

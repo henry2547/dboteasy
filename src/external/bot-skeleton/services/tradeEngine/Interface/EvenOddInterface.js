@@ -27,6 +27,7 @@ const getEvenOddInterface = tradeEngine => ({
  */
 export const getEvenOddAsyncInterface = tradeEngine => ({
     eoWaitTick: () => tradeEngine.eoWaitTick(),
+    eoRecoveryPrepare: config => tradeEngine.eoRecoveryPrepare(config),
     eoBuyEven: () => tradeEngine.eoBuyEven(),
     eoBuyOdd: () => tradeEngine.eoBuyOdd(),
 });

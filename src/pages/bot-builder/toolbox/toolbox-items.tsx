@@ -261,8 +261,8 @@ export const ToolboxItems = () =>
                 <Block type='digits_parity_recovery'>
                     <Field name='PRIMARY'>over_1</Field>
                     <Field name='PARITY'>both</Field>
+                    <Field name='RUN'>2</Field>
                     <Field name='TICKS'>100</Field>
-                    <Field name='PERCENT'>55</Field>
                 </Block>
                 {/* Even/Odd strategy: configure the window it reads, then the conditions above the
                     two entries. Every value is the engine call the block generates. */}

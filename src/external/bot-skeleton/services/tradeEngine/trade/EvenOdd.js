@@ -17,6 +17,7 @@ import { canTradeContract, readWorkspaceTradeDefinition } from '../utils/contrac
 import {
     EO_CONTRACT_TYPES,
     EO_NO_SIGNAL,
+    EO_RULE_REVERSAL,
     configureEvenOdd,
     createEvenOddState,
     describeWindow,
@@ -25,6 +26,7 @@ import {
     invalidateEvenOdd,
     normalizeParity,
     rememberSignal,
+    resolveReversalRun,
     signalKey,
     signalUsed,
     startEvenOddMonitoring,
@@ -40,6 +42,8 @@ export default Engine =>
             super();
             this.even_odd_state = createEvenOddState();
             this.even_odd_waiters = [];
+            /** The settled-trade count the recovery leg last prepared (scanned + armed) for. */
+            this.eo_recovery_trades = null;
             globalObserver.register('statistics.clear', this.resetEvenOdd.bind(this));
             // A stopped session must not leave the program suspended on a tick that will never come.
             globalObserver.register('bot.stop_button_click', this.releaseEvenOddWaiters.bind(this));
@@ -52,6 +56,7 @@ export default Engine =>
 
         resetEvenOdd() {
             this.even_odd_state = createEvenOddState();
+            this.eo_recovery_trades = null;
             this.releaseEvenOddWaiters();
         }
 
@@ -70,11 +75,19 @@ export default Engine =>
 
             errors.forEach(error => notify(`Even/Odd: ${error}`, 'warn'));
 
-            const { ticks, percent, direction } = state.config;
+            const { ticks, percent, direction, rule, run } = state.config;
             const changed =
-                before.ticks !== ticks || before.percent !== percent || before.direction !== direction;
+                before.ticks !== ticks ||
+                before.percent !== percent ||
+                before.direction !== direction ||
+                before.rule !== rule ||
+                before.run !== run;
             if (ok && changed) {
-                notify(`Even/Odd strategy configured: last ${ticks} ticks, ${percent}% threshold, ${direction} signals.`);
+                notify(
+                    rule === EO_RULE_REVERSAL
+                        ? `Even/Odd strategy configured: reversal of the last ${run} digits, ${direction} signals.`
+                        : `Even/Odd strategy configured: last ${ticks} ticks, ${percent}% threshold, ${direction} signals.`
+                );
             }
             return { ...state.config };
         }
@@ -92,6 +105,42 @@ export default Engine =>
                 notify(`Even/Odd: monitoring the last ${state.window_size} valid ticks.`);
             }
             return state.window_size;
+        }
+
+        /**
+         * The recovery leg's preparation, run at most once per settled trade: it finds the best
+         * even/odd market, switches the window to the parity-reversal rule and arms it on the market
+         * it kept. It answers `true` only once that window holds the digits the rule reads.
+         *
+         * The scan used to run on every pass of the trade loop, and every pass re-subscribed every
+         * market — which restarted the window it had just armed. The window therefore never reached
+         * a full sample and the Even/Odd leg never traded. Keying the preparation on the settled
+         * trade count keeps exactly one scan per loss while the loop waits for the next reversal.
+         */
+        async eoRecoveryPrepare({ run = 2, direction = 'both', ticks } = {}) {
+            const trades = this.sessionTradesTaken?.() ?? 0;
+            const prepared =
+                this.eo_recovery_trades === trades && this.getEvenOddState().config.rule === EO_RULE_REVERSAL;
+
+            if (!prepared) {
+                const scanned =
+                    typeof this.marketScanBestParity === 'function'
+                        ? await this.marketScanBestParity({ ticks })
+                        : null;
+                if (scanned && scanned.ok === false) {
+                    notify(
+                        `Even/Odd recovery: ${scanned.reason || 'no market could be measured'} — staying on ${this.symbol || 'the current market'}.`,
+                        'warn'
+                    );
+                }
+
+                const size = resolveReversalRun(run);
+                this.eoConfigure({ ticks: size, percent: 100, direction, rule: EO_RULE_REVERSAL, run: size });
+                this.eoMonitor(size);
+                this.eo_recovery_trades = trades;
+            }
+
+            return this.eoWindowReady();
         }
 
         /** Called from the engine's own tick callback — the only source of window digits. */
