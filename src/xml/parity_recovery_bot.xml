@@ -86,45 +86,25 @@
                           </block>
                         </value>
                         <next>
-                          <block type="eo_configure" id="freebot-pr-configure">
-                            <field name="TICKS">20</field>
-                            <field name="PERCENT">65</field>
-                            <field name="DIRECTION">both</field>
+                          <block type="risk_set_limits" id="freebot-pr-risk-limits">
+                            <field name="MAX_LOSSES">6</field>
+                            <field name="MAX_GIVE_BACK">0</field>
+                            <field name="MAX_EXPOSURE">0</field>
+                            <field name="RISK_PERCENT">0</field>
                             <next>
-                              <block type="eo_monitor_ticks" id="freebot-pr-monitor">
-                                <value name="TICKS">
-                                  <shadow type="math_number" id="freebot-pr-monitor-window">
-                                    <field name="NUM">20</field>
-                                  </shadow>
-                                </value>
+                              <block type="risk_reset_session" id="freebot-pr-risk-reset">
                                 <next>
-                                  <block type="eo_one_entry_per_signal" id="freebot-pr-one-entry">
+                                  <block type="learn_set_strategy" id="freebot-pr-learn-strategy">
+                                    <field name="NAME">Over 1 — Even/Odd Recovery</field>
                                     <next>
-                                      <block type="risk_set_limits" id="freebot-pr-risk-limits">
-                                        <field name="MAX_LOSSES">6</field>
-                                        <field name="MAX_GIVE_BACK">0</field>
-                                        <field name="MAX_EXPOSURE">0</field>
-                                        <field name="RISK_PERCENT">0</field>
-                                        <next>
-                                          <block type="risk_reset_session" id="freebot-pr-risk-reset">
-                                            <next>
-                                              <block type="learn_set_strategy" id="freebot-pr-learn-strategy">
-                                                <field name="NAME">Over 1 — Even/Odd Recovery</field>
-                                                <next>
-                                                  <block type="market_discover_eligible" id="freebot-pr-market-discover">
-                                                    <field name="CATEGORY">1-Second Volatility Indices</field>
-                                                    <field name="VERIFY">no</field>
-                                                    <value name="MIN_HISTORY">
-                                                      <shadow type="math_number" id="freebot-pr-market-history">
-                                                        <field name="NUM">20</field>
-                                                      </shadow>
-                                                    </value>
-                                                  </block>
-                                                </next>
-                                              </block>
-                                            </next>
-                                          </block>
-                                        </next>
+                                      <block type="market_discover_eligible" id="freebot-pr-market-discover">
+                                        <field name="CATEGORY">1-Second Volatility Indices</field>
+                                        <field name="VERIFY">no</field>
+                                        <value name="MIN_HISTORY">
+                                          <shadow type="math_number" id="freebot-pr-market-history">
+                                            <field name="NUM">20</field>
+                                          </shadow>
+                                        </value>
                                       </block>
                                     </next>
                                   </block>
@@ -225,7 +205,25 @@
                           </block>
                         </value>
                         <value name="B">
-                          <block type="obs_parity_switched" id="freebot-pr-observer-parity"></block>
+                            <block type="logic_operation" id="freebot-pr-observer-parity-or-recovery">
+                              <field name="OP">OR</field>
+                              <value name="A">
+                                <block type="obs_parity_switched" id="freebot-pr-observer-parity"></block>
+                              </value>
+                              <value name="B">
+                                <block type="logic_compare" id="freebot-pr-observer-recovering">
+                                  <field name="OP">EQ</field>
+                                  <value name="A">
+                                    <block type="exec_last_result" id="freebot-pr-observer-last-result"></block>
+                                  </value>
+                                  <value name="B">
+                                    <block type="text" id="freebot-pr-observer-loss-text">
+                                      <field name="TEXT">loss</field>
+                                    </block>
+                                  </value>
+                                </block>
+                              </value>
+                            </block>
                         </value>
                       </block>
                     </value>
@@ -236,7 +234,6 @@
                 <field name="PRIMARY">over_1</field>
                 <field name="PARITY">both</field>
                 <field name="RUN">2</field>
-                <field name="TICKS">100</field>
               </block>
                 </statement>
                 <statement name="ELSE">

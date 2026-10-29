@@ -15,6 +15,7 @@ const getEvenOddInterface = tradeEngine => ({
     eoEvenMeets: percent => tradeEngine.eoEvenMeets(percent),
     eoOddMeets: percent => tradeEngine.eoOddMeets(percent),
     eoSignalDirection: () => tradeEngine.eoSignalDirection(),
+    eoParityReversal: (run, direction) => tradeEngine.eoParityReversal(run, direction),
     eoAllowOneEntry: () => tradeEngine.eoAllowOneEntry(),
     eoEntryAllowed: () => tradeEngine.eoEntryAllowed(),
     eoStatus: () => tradeEngine.eoStatus(),
@@ -27,7 +28,6 @@ const getEvenOddInterface = tradeEngine => ({
  */
 export const getEvenOddAsyncInterface = tradeEngine => ({
     eoWaitTick: () => tradeEngine.eoWaitTick(),
-    eoRecoveryPrepare: config => tradeEngine.eoRecoveryPrepare(config),
     eoBuyEven: () => tradeEngine.eoBuyEven(),
     eoBuyOdd: () => tradeEngine.eoBuyOdd(),
 });

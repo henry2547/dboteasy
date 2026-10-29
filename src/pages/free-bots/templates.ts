@@ -107,9 +107,9 @@ export interface FreeBotRecoveryLeg {
 
 /**
  * The two-leg entry the `digits_parity_recovery` Digits block builds: it trades one
- * digit Over/Under leg first and, only after a settled loss, an Even/Odd leg on the
- * best market its own scan finds. Both legs live inside that one block, so the
- * barrier travels with the block instead of a prediction input.
+ * digit Over/Under leg first and, only after a settled loss, the Even/Odd reversal of
+ * the newest digits on the market it is already trading. Both legs live inside that
+ * one block, so the barrier travels with the block instead of a prediction input.
  */
 export interface FreeBotParityRecovery {
     /** Primary leg the block trades first. */
@@ -618,15 +618,15 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Newest digit above 1 · 20 genuine ticks observed · fresh market data · parity switched · risk guard, no open contract, trade cap',
+            'Newest digit above 1 · 20 genuine ticks observed · fresh market data · parity switched for the first leg · risk guard, no open contract, trade cap',
         buyCondition:
-            'Nothing is bought until the observer gate passes. Then the first leg buys Over 1 as soon as the newest genuine digit is above 1 — 2 to 9 wins, 0 and 1 lose — while the risk guard allows a trade, no contract is still open and the trade cap is not reached. After a settled loss the second leg takes over: the block scans every eligible volatility market, keeps the one whose own last ticks are the most lopsided between even and odd, configures the Even/Odd window on that market and buys EVEN or ODD only once the window is full, the winning parity reaches 65% and the selected signal matches. A refused entry is journalled with its reason, so a waiting bot always says why it did not trade.',
+            'Nothing is bought until the observer gate passes. Then the first leg buys Over 1 as soon as the newest genuine digit is above 1 — 2 to 9 wins, 0 and 1 lose — while the risk guard allows a trade, no contract is still open and the trade cap is not reached. After a settled loss the second leg takes over on the same market: the last 2 genuine digits all even → buy ODD, both odd → buy EVEN, and a mixed pair is no entry, so the bot waits for the next pair instead of trading blind. Every refusal or wait is journalled with the digits it read, so a waiting bot always says why it did not trade.',
         afterPurchase:
-            'Win → stake back to 10 and Over 1 again · Loss → stake × 1.5 and the next entry is the Even/Odd leg on the best parity market · stops at +10 profit or −20 loss',
+            'Win → stake back to 10 and Over 1 again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the newest digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back on Over 1, after a loss it scans for the best even/odd market and waits for that window to confirm a signal, until the take profit or the stop loss ends the run.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back on Over 1, after a loss it waits for the next pair of same-parity digits and buys the opposite parity, until the take profit or the stop loss ends the run.',
         blocksUsed:
-            'Digits: Trade Over 1 / Under 8, recover on Even/Odd · best even/odd market scan · Configure Even/Odd strategy · Monitor last N valid ticks · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+            'Digits: Trade Over 1 / Under 8, recover on Even/Odd · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · OR · AND',
     },
 ];
 

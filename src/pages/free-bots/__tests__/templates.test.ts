@@ -170,6 +170,32 @@ describe('Free Bots templates', () => {
         });
     });
 
+    it('the parity-recovery bot lets a settled loss reach its Even/Odd leg', () => {
+        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_parity_recovery')!;
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+
+        const block = doc.querySelector('block[type="before_purchase"] block[type="digits_parity_recovery"]');
+        expect(block).not.toBeNull();
+        expect(block!.querySelector('field[name="RUN"]')?.textContent).toBe('2');
+        expect(block!.querySelector('field[name="PARITY"]')?.textContent).toBe('both');
+        // The reversal is read synchronously from the live digits, so the block carries no scan sample.
+        expect(block!.querySelector('field[name="TICKS"]')).toBeNull();
+
+        // The reversal buys the OPPOSITE of a run of same-parity digits, so a gate that only accepts
+        // "parity switched" could never reach it: the gate has to let a settled loss through too.
+        const recovering = doc.querySelector(
+            'block[type="before_purchase"] block[id="freebot-pr-observer-recovering"]'
+        );
+        expect(recovering).not.toBeNull();
+        expect(recovering!.querySelector('block[type="exec_last_result"]')).not.toBeNull();
+        expect(recovering!.querySelector('block[type="text"] field[name="TEXT"]')?.textContent).toBe('loss');
+        expect(
+            doc.querySelector(
+                'block[type="before_purchase"] block[id="freebot-pr-observer-parity-or-recovery"] field[name="OP"]'
+            )?.textContent
+        ).toBe('OR');
+    });
+
     it('the observer-gated templates really carry observer blocks', () => {
         const gated = FREE_BOT_TEMPLATES.filter(template =>
             /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed)

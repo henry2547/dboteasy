@@ -256,13 +256,12 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
-                {/* The two-leg entry: the Over 1 / Under 8 digit trade first, then the best even/odd
-                    entry the scan finds after a settled loss. */}
+                {/* The two-leg entry: the Over 1 / Under 8 digit trade first, then the reversal of the
+                    newest digits after a settled loss. */}
                 <Block type='digits_parity_recovery'>
                     <Field name='PRIMARY'>over_1</Field>
                     <Field name='PARITY'>both</Field>
                     <Field name='RUN'>2</Field>
-                    <Field name='TICKS'>100</Field>
                 </Block>
                 {/* Even/Odd strategy: configure the window it reads, then the conditions above the
                     two entries. Every value is the engine call the block generates. */}
