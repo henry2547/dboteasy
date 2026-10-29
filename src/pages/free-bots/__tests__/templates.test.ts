@@ -196,6 +196,44 @@ describe('Free Bots templates', () => {
         ).toBe('OR');
     });
 
+    it('never nests an ordinary block inside an observer condition', () => {
+        // The observer runtime evaluates a condition from observer blocks only: `readProgram` keeps
+        // just the blocks its catalogue knows, so any other block reached through a `value` socket
+        // answers Inconclusive, which `Bot.observerCondition` reports as false. A plain OR glued
+        // into an `obs_and` therefore made the whole gate — and the parity-recovery entry it guards —
+        // unreachable, however correct the recovery logic behind it was.
+        const operandsOf = (block: Element): Element[] =>
+            Array.from(block.children)
+                .filter(child => child.localName === 'value')
+                .flatMap(value => Array.from(value.children).filter(child => child.localName === 'block'));
+
+        FREE_BOT_TEMPLATES.forEach(template => {
+            const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+            Array.from(doc.querySelectorAll('block')).forEach(block => {
+                const type = block.getAttribute('type') ?? '';
+                if (!type.startsWith('obs_')) return;
+                operandsOf(block).forEach(operand => {
+                    expect({ template: template.id, operand: operand.getAttribute('type') }).toEqual({
+                        template: template.id,
+                        operand: expect.stringMatching(/^obs_/),
+                    });
+                });
+            });
+        });
+
+        // The loss OR is combined with the observer conditions by an ordinary AND, so the generated
+        // program evaluates it while the observer keeps judging its own conditions.
+        const doc = new DOMParser().parseFromString(
+            assetOf(FREE_BOT_TEMPLATES.find(item => item.id === 'over1_parity_recovery')!),
+            'application/xml'
+        );
+        const gate = doc.querySelector('block[id="freebot-pr-observer-gate-and"]');
+        expect(gate?.querySelector('field[name="OP"]')?.textContent).toBe('AND');
+        const loss_or = gate?.querySelector('block[id="freebot-pr-observer-parity-or-recovery"]') ?? null;
+        expect(loss_or).not.toBeNull();
+        expect(loss_or!.closest('block[type^="obs_"]')).toBeNull();
+    });
+
     it('the observer-gated templates really carry observer blocks', () => {
         const gated = FREE_BOT_TEMPLATES.filter(template =>
             /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed)

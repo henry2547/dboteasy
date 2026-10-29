@@ -46,6 +46,8 @@ Place it once, in the branch that runs before an entry (the shipped `even_odd_wi
 - The digits come from the engine's own tick subscription (`trade/Ticks.js` → `eoFeedTick` → `recordReversalDigit`): a repeated tick is ignored, an out-of-order tick restarts the run, and a market change starts a fresh run, so the reversal is never read from another market's ticks.
 - Both buys go through the engine's own purchase path, so the stake, risk limits, the selected contract and the Demo/Real protections are unchanged. Set the trade definition's contract type to **Both**, otherwise `canTradeContract` refuses the family the leg needs and the journal says why.
 - The engine reports a settled contract as `win` or `loss`, so the loss branch compares against `'loss'`. A block that keeps its recovery behind a "Parity Switched" observer gate can never fire: that gate requires the newest two digits to have **different** parity, which is exactly what the reversal rule reads as "no entry". The shipped template ORs the gate with "last trade lost".
+- **Keep that OR outside the observer block.** The observer runtime evaluates a condition only from observer blocks; an ordinary `logic_operation` connected into an `obs_and`/`obs_or` reads as Inconclusive, which `Bot.observerCondition` reports as `false`. The shipped gate groups its observer conditions in one `obs_and` and combines them with the "last trade lost" OR through an ordinary AND, so the generated entry reads
+  `if (Bot.observerCondition('…and') && (Bot.observerCondition('…parity') || Bot.sessionLastResult() === 'loss'))`.
 
 ## Execution and safety
 

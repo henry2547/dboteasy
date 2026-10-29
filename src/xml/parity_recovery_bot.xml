@@ -184,15 +184,16 @@
             <statement name="DO0">
               <block type="controls_if" id="freebot-pr-observer-gate"><mutation else="1"></mutation>
                 <value name="IF0">
-                  <block type="obs_and" id="freebot-pr-observer-and">
+                  <block type="logic_operation" id="freebot-pr-observer-gate-and">
+                    <field name="OP">AND</field>
                     <value name="A">
-                      <block type="obs_min_sample" id="freebot-pr-window-sample">
-                        <field name="N">20</field>
-                      </block>
-                    </value>
-                    <value name="B">
-                      <block type="obs_and" id="freebot-pr-observer-monitor">
+                      <block type="obs_and" id="freebot-pr-observer-and">
                         <value name="A">
+                          <block type="obs_min_sample" id="freebot-pr-window-sample">
+                            <field name="N">20</field>
+                          </block>
+                        </value>
+                        <value name="B">
                           <block type="obs_and" id="freebot-pr-observer-data">
                             <value name="A">
                               <block type="obs_fresh" id="freebot-pr-observer-fresh"></block>
@@ -204,26 +205,26 @@
                             </value>
                           </block>
                         </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_operation" id="freebot-pr-observer-parity-or-recovery">
+                        <field name="OP">OR</field>
+                        <value name="A">
+                          <block type="obs_parity_switched" id="freebot-pr-observer-parity"></block>
+                        </value>
                         <value name="B">
-                            <block type="logic_operation" id="freebot-pr-observer-parity-or-recovery">
-                              <field name="OP">OR</field>
-                              <value name="A">
-                                <block type="obs_parity_switched" id="freebot-pr-observer-parity"></block>
-                              </value>
-                              <value name="B">
-                                <block type="logic_compare" id="freebot-pr-observer-recovering">
-                                  <field name="OP">EQ</field>
-                                  <value name="A">
-                                    <block type="exec_last_result" id="freebot-pr-observer-last-result"></block>
-                                  </value>
-                                  <value name="B">
-                                    <block type="text" id="freebot-pr-observer-loss-text">
-                                      <field name="TEXT">loss</field>
-                                    </block>
-                                  </value>
-                                </block>
-                              </value>
-                            </block>
+                          <block type="logic_compare" id="freebot-pr-observer-recovering">
+                            <field name="OP">EQ</field>
+                            <value name="A">
+                              <block type="exec_last_result" id="freebot-pr-observer-last-result"></block>
+                            </value>
+                            <value name="B">
+                              <block type="text" id="freebot-pr-observer-loss-text">
+                                <field name="TEXT">loss</field>
+                              </block>
+                            </value>
+                          </block>
                         </value>
                       </block>
                     </value>

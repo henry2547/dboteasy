@@ -527,6 +527,18 @@ that applies it (wrapped just inside `EvenOdd` in `trade/index.js`).
     Switched` requires the newest two digits to have DIFFERENT parity — exactly what the reversal
     reads as "no entry" — so the recovery could never fire. `templates.test.ts` ("lets a settled loss
     reach its Even/Odd leg") pins the OR.
+  - **That OR must NOT be an operand of an `obs_…` condition.** The observer runtime evaluates a
+    condition only from blocks its own catalogue knows (`observer-program.js` `readProgram` keeps
+    just those); any ordinary block reached through a `value` socket answers
+    `Inconclusive: the connected block is no longer on the canvas`, `observer-evaluators.js` `and`
+    turns that into Inconclusive, and `Bot.observerCondition` reports Inconclusive as `false`. The gate
+    therefore never passed and the `digits_parity_recovery` block inside it never ran — the whole bot
+    traded nothing, which is why the recovery looked dead even after the `'loss'` comparison was
+    fixed. The observer conditions are now ONE `obs_and` tree, and the settled-loss OR is combined
+    with it by an ordinary `logic_operation` AND (`freebot-pr-observer-gate-and`) that the generated
+    program evaluates itself. `templates.test.ts` ("never nests an ordinary block inside an observer
+    condition") walks every template and fails if any `obs_…` block has a non-`obs_…` value operand —
+    keep that rule when editing a gate.
 - **The mandatory-block gate has to accept it.** `PURCHASE_BLOCK_TYPES` in `scratch/utils/index.js`
   is the list of block types that buy through the engine's own purchase path, and `getMissingBlocks`
   treats `purchase` as satisfied when the canvas holds any of them. The two-market

@@ -110,6 +110,10 @@
 
     &__grid {
         display: grid;
+        /* Every card owns its own height: with the default `stretch`, opening one card in a
+           two-column row grew the collapsed card beside it to the same height, so it looked
+           like both bots had opened. */
+        align-items: start;
         gap: 1.2rem;
 
         @media (min-width: 900px) {
