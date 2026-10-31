@@ -5,7 +5,7 @@ These twelve blocks live in the existing Bot Builder's **Digits** category, alon
 ## Connecting a strategy
 
 1. Set the existing trade parameters to **Digits → Even/Odd**, with **Both** contracts if the strategy may buy either parity. Set the stake and duration using the existing trade options. Initialise any stake variable in **Run once at start**.
-2. In **Run once at start**, connect **Configure Even/Odd strategy** (window, percentage threshold and direction), **Monitor last N valid ticks**, and optionally **Allow one entry per signal**. Use the same window size in Configure and Monitor.
+2. In **Run once at start**, connect **Configure Even/Odd strategy** (signal rule, window, percentage threshold, parity run and direction), **Monitor last N valid ticks**, and optionally **Allow one entry per signal**. Use the same window size in Configure and Monitor. With the rule set to **Reversal of the last N digits** the entry buys the opposite parity of a run — the last 2 digits both even → ODD, both odd → EVEN, a mixed pair is no entry — and the window/threshold apply to the **Threshold** rule only.
 3. In the existing purchase conditions, use **Even/Odd window ready** and either **Even percentage meets threshold**, **Odd percentage meets threshold**, or a comparison against **Even/Odd signal direction**. Connect **Buy EVEN** or **Buy ODD** in the matching branch.
 4. **Wait for next valid tick** can suspend a waiting branch until another genuine tick arrives; stopping the bot releases that wait. Preserve the existing after-purchase, restart and risk controls.
 
@@ -13,7 +13,7 @@ These twelve blocks live in the existing Bot Builder's **Digits** category, alon
 
 | Block type | Behaviour |
 | --- | --- |
-| `eo_configure` | Sets the window (1–1000), threshold (>0–100%) and direction (even, odd or both). Invalid settings are reported and use defaults: 20 ticks, 65%, both. |
+| `eo_configure` | Sets the signal rule (`threshold` — the parity share of the window — or `reversal` — buy the opposite of the last N same-parity digits), the window (1–1000), threshold (>0–100%), parity run (2–100) and direction (even, odd or both). Invalid settings are reported and use defaults: threshold rule, 20 ticks, 65%, run 2, both. |
 | `eo_monitor_ticks` | Arms a rolling window. Repeating the same size preserves collected ticks. Changing size clears it. |
 | `eo_window_ready` | True only after the full window is collected on a connected feed. |
 | `eo_even_percentage` | Even count × 100 / collected count. |

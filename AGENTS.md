@@ -178,12 +178,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **111** for the first (Over 1) template — the six plain `*_entry_every_time` templates carry one
-  `digits_frequency` "losing digit stays cold" compare per losing digit (see "Researched entries" below),
-  which is why they are no longer the bare 66-block shape — **83** for `even_odd_window`, **83** for every template with an
-  extra observer gate (`over1_two_low_digits`, `under8_two_high_digits`, `under7_rare_nine`,
-  `under5_nine_rare`, `over4_five_hot`), **87** for `over2_three_low_digits` and **163** for the two-leg
-  `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
+  **110** for the first (Under 8) template and **112** for `over1_entry_every_time` — the two
+  `*_entry_every_time` templates carry one `digits_frequency` "losing digit stays cold" compare per losing
+  digit (see "Researched entries" below) plus a `logic_compare` `OP=EQ` per entry digit — **114** for each
+  `*_two_*_digits` template (their observer gate adds the blocks), **113** for `even_odd_window`, **90** for
+  `over1_parity_recovery` and **163** for the two-leg `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
   `-3`, …). **A `controls_if` also drops its branch silently when its `<mutation>` does not declare it**:
@@ -195,7 +194,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `declares every branch its IF blocks use` test now pins the mutation against the branches each asset
   uses. `loadBot` compares the block count with `derivWorkspace.getAllBlocks(true).length`, so a
   canvas that kept blocks from a previous bot is reported as stale instead of being called valid. Keep
-  that formula in sync if a template gains blocks (the unit test pins 101 for the first template only).
+  that formula in sync if a template gains blocks (the unit test pins 110 for the first template only).
 - **Never hang a block chain off `trade_again`'s `<next>`.** `trade_again` calls
   `setNextStatement(false)`, so it has no next connection at all. An asset that nests its
   `report_journal` chain as `trade_again`'s `<next>` loads as far as that block and then throws
@@ -208,20 +207,20 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   working templates use. Keep `trade_again` the last block of any stack, and reach for
   `python3 -c` / a scratch `Blockly.Workspace` check on `trade_again`'s `<next>` before shipping an
   asset: the unit tests read block TYPES and counts, so this shape loads "fine" on paper.
-- **Free Bots library (fourteen templates).** `templates.ts` describes every asset in `src/xml/`; the first
-  two are the uploaded files, the derived ones add variants (Over 2/3, Under 6/7) and a second
-  entry gate built from
-  the observer blocks — `over1_two_low_digits` / `under8_two_high_digits` (`obs_ago` + `obs_compare_*` +
-  `obs_number`), `over2_three_low_digits` (`obs_and` over two `obs_ago` compares), `under7_rare_nine` /
-  `under5_nine_rare` (`obs_and` over `obs_min_sample` + `obs_freq_below`) and `over4_five_hot`
-  (`obs_min_sample` + `obs_freq_above` on the digit the contract wins on). **Each of those six gates draws on
-  all four palette groups**: the digit/frequency condition (`obs_ago`, `obs_compare_*`, `obs_number`,
-  `obs_min_sample`, `obs_freq_*`) is ANDed — through three nested `obs_and` — with `obs_parity_switched`
-  (Pattern detection & parity), `obs_fresh` (Observer control, market data within the 15 s freshness limit)
-  and `obs_require_sample` N=100 (Entry & monitoring). The gate blocks therefore add six blocks per template
-  (83/87 canvas count above), and `templates.test.ts` ("gates on all four block groups") maps every `obs_*`
-  type in the asset through the catalogue's `GROUP_OF_CATEGORY` and fails unless all four `GROUPS` ids
-  contribute — so a template cannot silently drop back to one group. Those observer blocks sit NESTED inside the
+- **Free Bots library (seven templates).** `templates.ts` describes every asset in `src/xml/`; the first
+  two are the uploaded files, and `over1_two_low_digits` / `under8_two_high_digits` derive from them by
+  adding a second entry gate built from the observer blocks (`obs_ago` + `obs_compare_*` + `obs_number`,
+  plus the three data-quality reads below). **Both of those gates draw on all four palette groups**: the
+  digit/frequency condition (`obs_ago`, `obs_compare_*`, `obs_number`, `obs_min_sample`, `obs_freq_*`) is
+  ANDed — through nested `obs_and` — with `obs_parity_switched` (Pattern detection & parity), `obs_fresh`
+  (Observer control, market data within the 15 s freshness limit) and `obs_require_sample` N=100 (Entry &
+  monitoring). The gate blocks therefore add six blocks per template (114 canvas count above), and
+  `templates.test.ts` ("gates on all four block groups") maps every `obs_*` type in the asset through the
+  catalogue's `GROUP_OF_CATEGORY` and fails unless all four `GROUPS` ids contribute — so a template cannot
+  silently drop back to one group. The two `*_entry_every_time` bots carry no observer gate at all: their
+  entry is the digits/frequencies/bars rule spelled out on the card (see "Researched entries" below), which
+  the `$name draws on every palette group` test therefore only applies to the observer-gated templates.
+  Those observer blocks sit NESTED inside the
   `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
   then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
   gate/restart cycle competing with the template's own `after_purchase` martingale. `findEntryCondition`
@@ -234,7 +233,13 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `after_purchase` loss branch (`freebot-eo-rescan-after-loss`) sets it back to `FALSE`, so the next
   trade loop measures every market again and re-picks the best one before looking for an entry — a win
   leaves it set, so a winning run stays on the market it picked. Those two blocks are why the canvas
-  count is 83 for this template (see the block-count note above).
+  count is 113 for this template (see the block-count note above).
+- **The Even/Odd bot trades the reversal of the last 2 digits.** `eo_configure` carries the signal rule,
+  so `even_odd_window` sets `RULE=reversal` and `RUN=2`: `Bot.eoSignalDirection()` then answers the parity
+  the last two digits predict to break — both even → ODD, both odd → EVEN, a mixed pair → NO SIGNAL — and
+  the existing `Buy EVEN` / `Buy ODD` branches buy exactly that. The window (`TICKS`) and `PERCENT` still
+  gate readiness and only decide the signal under the `threshold` rule, which is what every other template
+  and the Even/Odd strategy blocks use.
 - **Two-leg bot (`over1_under6_recovery`):** the only template whose trade definition carries
   `contractType: 'both'`. Its `trade_definition_tradeoptions` PREDICTION input holds the
   `freebot:prediction` variable, so the primary branch sets it to 1 and buys `DIGITOVER` while the
@@ -244,7 +249,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `before_purchase` tag selector matches nothing and silently reports zero purchases. Mind `logic_and`
   too: this builder registers `logic_operation` only, so an AND must be `logic_operation` with
   `OP=AND`, otherwise the load reports an unsupported block type.
-- **Bot 15 keeps every number in a variable seeded by "Run once at start".** `INITIALIZATION` sets
+- **`over1_parity_recovery` (the last card) keeps every number in a variable seeded by "Run once at start".** `INITIALIZATION` sets
   `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 20,
   `freebot:stop-loss` −50 and `freebot:runs` 3 (plus a stake of 20/profit/stop/trades/initialised), and the
   blocks call those variables instead of repeating literals. Only the digit gates keep literal numbers
@@ -1020,14 +1025,18 @@ builds exactly the workspace it did.
   `report_journal(learn_report)` generates `Bot.sessionJournal(Bot.learnReport(), "info")`.
 
 ### Researched entries (every Free Bots template)
-Every bot in the Free Bots tab — the fifteen XML templates and the nine multi-market presets — carries an
+Every bot in the Free Bots tab — the seven XML templates and the nine multi-market presets — carries an
 entry rule taken from the published Deriv digit setups, not a bare "trade on this digit" trigger:
-- **Over/Under** (Over 1/2/3, Under 6/7/8 and the presets): the digits the contract *loses to* have to stay
-  cold — below the fair 10.3% share of the last 100 ticks — and carry neither the green nor the red bar
-  ("Over 1: make sure digit 0 and 1 are less than 10%; avoid the green or red bar at digit 0 or 1"). Over 1
-  also enters on its own barrier digit once digits 0/1 are cold, Over 2 on digit 0 or 2.
-- **Even/Odd**: three of the parity's own digits must run hot (published guide: > 10.5%; the shared 10.3%
-  boundary is used) before the parity is bought — `even` → digits 0/2/4, `odd` → 1/3/5.
+- **Over/Under** (Over 1 and Under 8 plus the presets): the digits the contract *loses to* have to stay
+  cold — below the fair 10.3% share of the last 100 ticks. **Under 8 (bot 1)** takes the entry digits
+  4, 7 and 9 and needs digits 8 and 9 to carry neither the green (hottest) nor the red (coldest) bar;
+  **Over 1 (bot 2)** takes 2, 5 and 6, needs digits 0 and 1 below 10.3%, and requires one of digits 0/1 to
+  carry the green or the red bar (`digits_bar_neutral` read through `logic_negate`). Both gates are an OR of
+  `logic_compare` `OP=EQ` on `last_digit`, which is what `entryDigits` / `entryOperator: 'EQ'` describe.
+- **Even/Odd**: the shipped Even/Odd bot uses the **reversal** rule — the last 2 digits both even → buy
+  ODD, both odd → buy EVEN, a mixed pair is no entry (`eo_configure` `RULE=reversal`, `RUN=2`). The
+  presets still use the published hot-parity rule (three of the parity's own digits above 10.3%:
+  `even` → 0/2/4, `odd` → 1/3/5).
 - **Matches/Differs**: Matches buys its target while it is hot (≥ 10.3%), Differs buys the same target while
   it is cold (< 10.3%) — the 90%/10% split of the two contracts in one observation.
 - **Two-leg / parity-recovery bots** keep their own gates (cold losing digits, `digits_high_run`, parity
@@ -1036,12 +1045,13 @@ entry rule taken from the published Deriv digit setups, not a bare "trade on thi
 Where it lives: `MultiMarketConfig.maxFrequencyDigits` adds the "stays below 10.3%" compares to the
 generated switch + purchase condition (alongside `minFrequencyDigits` for the hot rules);
 `entryConditionText` writes the same rule into the card copy, so a card never shows a rule the XML does not
-carry. The nine static Over/Under XML assets — the six `*_entry_every_time` ones plus `over1_two_low_digits`,
-`under8_two_high_digits` and `over2_three_low_digits` — add one `logic_compare` (`OP=LT`, 10.3, sample 100)
+carry. The four static Over/Under XML assets — the two `*_entry_every_time` ones plus
+`over1_two_low_digits` and `under8_two_high_digits` — add one `logic_compare` (`OP=LT`, 10.3, sample 100)
 around a `digits_frequency` block per losing digit, ANDed with the existing bar/parity/freshness guards
-(the derived three keep their `freebot-o1two` / `freebot-u8two` / `freebot-o2three` block-id prefixes so
-every id stays unique inside one asset). Tests: `templates.test.ts` ("every Over/Under template keeps the
-losing digits cold") and `multi-market-xml.test.ts` ("gives every preset an entry rule, not just a contract").
+(the derived two keep their `freebot-o1two` / `freebot-u8two` block-id prefixes so every id stays unique
+inside one asset). Tests: `templates.test.ts` ("every Over/Under template keeps the losing digits cold",
+"the two entry-every-time bots gate exactly as their cards say", "the Even/Odd bot reverses the last two
+digits") and `multi-market-xml.test.ts` ("gives every preset an entry rule, not just a contract").
 
 ## Multi-Market Digit Entry Hunter (Free Bots, section 3)
 `src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;

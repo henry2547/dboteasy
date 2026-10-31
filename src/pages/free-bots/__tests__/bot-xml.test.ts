@@ -12,12 +12,6 @@ jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml, parseBotXml, readMarketFromXml } from '../bot-xml';
@@ -58,10 +52,9 @@ describe('inspectFreeBotXml', () => {
     });
 
     it('fails an entry condition that does not match the template', () => {
-        const xml = xmlOf().replace(
-            '<field name="OP">LTE</field>',
-            '<field name="OP">GTE</field>'
-        );
+        // The Over 1 gate is a list of `last digit = d` compares (2, 5, 6); turning the first
+        // one into a barrier comparison is exactly the drift the loader must refuse.
+        const xml = xmlOf().replace('<field name="OP">EQ</field>', '<field name="OP">GTE</field>');
         const report = inspectFreeBotXml(xml, over1, isKnown);
 
         expect(report.ok).toBe(false);

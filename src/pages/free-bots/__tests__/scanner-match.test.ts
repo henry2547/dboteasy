@@ -9,12 +9,6 @@ jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 
 import { MIN_SETUP_SAMPLE, matchFreeBotSetup } from '../scanner-match';
@@ -84,12 +78,13 @@ describe('matchFreeBotSetup', () => {
         expect(setup?.reason).toMatch(/conditions passed/);
     });
 
-    it('arms the entry when the latest tick sits on the trigger digit', () => {
+    it('arms the entry when the latest tick sits on an entry digit', () => {
         const digits = sample([1, 1, 8, 8, 8, 22, 4, 4, 4, 0]);
-        digits.push(0); // latest tick on 0 arms Over 1
+        digits.push(5); // Over 1 enters on 2, 5 or 6 — 5 arms it
 
         const setup = matchFreeBotSetup(digits);
         expect(setup?.strategy).toBe('over1');
         expect(setup?.armed).toBe(true);
+        expect(setup?.triggerLabel).toBe('Last digit 2, 5, 6');
     });
 });

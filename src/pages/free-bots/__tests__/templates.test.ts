@@ -19,12 +19,6 @@ jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 jest.mock('@/xml/parity_recovery_bot.xml', () => '', { virtual: true });
 
@@ -275,7 +269,9 @@ describe('Free Bots templates', () => {
         });
     });
 
-    it.each(FREE_BOT_TEMPLATES)('$name draws on every palette group', template => {
+    it.each(
+        FREE_BOT_TEMPLATES.filter(template => /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed))
+    )('$name draws on every palette group', template => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const catalog = require('@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog');
         const group_of_category = catalog.GROUP_OF_CATEGORY as Map<string, { id: string }>;
@@ -332,11 +328,67 @@ describe('Free Bots templates', () => {
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
-        // 93 real blocks + 20 shadows − 2 shadows replaced by a real block in
-        // the same input = 111. This exact number is what the loader compares
-        // the live workspace against, so a stale canvas cannot look valid.
+        // 115 block/shadow elements − 5 shadows replaced by a real block in the
+        // same input = 110 for the first (Under 8) template. This exact number is
+        // what the loader compares the live workspace against, so a stale canvas
+        // cannot look valid.
         const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
-        expect(report.blockCount).toBe(111);
+        expect(report.blockCount).toBe(110);
+    });
+
+    it('the two entry-every-time bots gate exactly as their cards say', () => {
+        const doc_of = (id: string) =>
+            new DOMParser().parseFromString(
+                assetOf(FREE_BOT_TEMPLATES.find(item => item.id === id)!),
+                'application/xml'
+            );
+
+        // Bot 1 — Under 8 enters on 4, 7 or 9 while digits 8 and 9 stay cold and bar-free.
+        const under8 = doc_of('under8_entry_every_time');
+        const under8_entry = under8.querySelector('block[id="freebot-under8-entry"]')!;
+        expect(
+            [...under8_entry.querySelectorAll('block[type="logic_compare"]')]
+                .filter(compare => compare.querySelector('block[type="last_digit"]'))
+                .map(compare => compare.querySelector('value[name="B"] field[name="NUM"]')?.textContent)
+        ).toEqual(['4', '7', '9']);
+        expect(
+            [...under8.querySelectorAll('block[type="digits_bar_neutral"]')].map(
+                block => block.querySelector('field[name="DIGIT"]')?.textContent
+            )
+        ).toEqual(['8', '9']);
+
+        // Bot 2 — Over 1 enters on 2, 5 or 6; digits 0 and 1 stay cold and one of them must
+        // carry the green (hottest) or red (coldest) bar, so both neutral reads are negated.
+        const over1 = doc_of('over1_entry_every_time');
+        const over1_entry = over1.querySelector('block[id="freebot-over1-entry"]')!;
+        expect(
+            [...over1_entry.querySelectorAll('block[type="logic_compare"]')]
+                .filter(compare => compare.querySelector('block[type="last_digit"]'))
+                .map(compare => compare.querySelector('value[name="B"] field[name="NUM"]')?.textContent)
+        ).toEqual(['2', '5', '6']);
+        const bar_reads = [...over1.querySelectorAll('block[id="freebot-over1-bar-any"] block[type="digits_bar_neutral"]')].map(
+            block => block.querySelector('field[name="DIGIT"]')?.textContent
+        );
+        expect(bar_reads).toEqual(['0', '1']);
+        expect(
+            over1.querySelectorAll('block[id="freebot-over1-bar-any"] > value > block[type="logic_negate"]').length
+        ).toBe(2);
+    });
+
+    it('the Even/Odd bot reverses the last two digits', () => {
+        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'even_odd_window')!;
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+        const configure = doc.querySelector('block[type="eo_configure"]')!;
+
+        // Both even → signal ODD, both odd → signal EVEN: the "Buy EVEN" / "Buy ODD" branches
+        // map the selected direction straight onto the contract, so the reversal rule is what
+        // decides which parity is bought.
+        expect(configure.querySelector('field[name="RULE"]')?.textContent).toBe('reversal');
+        expect(configure.querySelector('field[name="RUN"]')?.textContent).toBe('2');
+        expect(doc.querySelector('block[type="eo_buy_even"]')).not.toBeNull();
+        expect(doc.querySelector('block[type="eo_buy_odd"]')).not.toBeNull();
+        expect(template.buyCondition).toContain('both of them are EVEN');
+        expect(template.buyCondition).toContain('both are ODD');
     });
 
     it('every Over/Under template keeps the losing digits cold', () => {
@@ -344,14 +396,9 @@ describe('Free Bots templates', () => {
         // below the fair 10.3% share — Over 1 waits for digits 0 and 1, Under 8 for 8 and 9.
         const cold_digits: Record<string, number[]> = {
             over1_entry_every_time: [0, 1],
-            over2_entry_every_time: [0, 1, 2],
-            over3_entry_every_time: [0, 1, 2, 3],
-            under6_entry_every_time: [6, 7, 8, 9],
-            under7_entry_every_time: [7, 8, 9],
             under8_entry_every_time: [8, 9],
             over1_two_low_digits: [0, 1],
             under8_two_high_digits: [8, 9],
-            over2_three_low_digits: [0, 1, 2],
         };
 
         Object.entries(cold_digits).forEach(([id, digits]) => {

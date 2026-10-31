@@ -8,12 +8,6 @@ jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_three_low_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/over2_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/over3_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under6_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/under7_rare_nine.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml, parseBotXml } from '../bot-xml';

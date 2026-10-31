@@ -87,6 +87,8 @@
                         </value>
                         <next>
                           <block type="eo_configure" id="freebot-eo-configure">
+                            <field name="RULE">reversal</field>
+                            <field name="RUN">2</field>
                             <field name="TICKS">20</field>
                             <field name="PERCENT">65</field>
                             <field name="DIRECTION">both</field>

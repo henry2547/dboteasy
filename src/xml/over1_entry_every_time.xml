@@ -84,7 +84,7 @@
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
-                      <next><block type="risk_set_limits" id="freebot-over1-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-over1-risk-reset"><next><block type="learn_set_strategy" id="freebot-over1-learn-strategy"><field name="NAME">Over 1 — Entry Every Time</field><next><block type="market_discover_eligible" id="freebot-over1-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-over1-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block>
+                      <next><block type="risk_set_limits" id="freebot-over1-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-over1-risk-reset"><next><block type="learn_set_strategy" id="freebot-over1-learn-strategy"><field name="NAME">Over 1 — Entries 2, 5, 6</field><next><block type="market_discover_eligible" id="freebot-over1-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-over1-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block>
                     </next>
                   </block>
                 </next>
@@ -125,21 +125,195 @@
     <statement name="BEFOREPURCHASE_STACK">
       <block type="controls_if" id="freebot-over1-entry"><mutation else="1"></mutation>
         <value name="IF0">
-          <block type="logic_compare" id="freebot-over1-entry-compare">
-            <field name="OP">LTE</field>
+          <block type="logic_operation" id="freebot-over1-entry-any">
+            <field name="OP">OR</field>
             <value name="A">
-              <block type="last_digit" id="freebot-over1-entry-digit"></block>
+              <block type="logic_operation" id="freebot-over1-entry-any-low">
+                <field name="OP">OR</field>
+                <value name="A">
+                  <block type="logic_compare" id="freebot-over1-entry-compare">
+                    <field name="OP">EQ</field>
+                    <value name="A">
+                      <block type="last_digit" id="freebot-over1-entry-digit"></block>
+                    </value>
+                    <value name="B">
+                      <shadow type="math_number" id="freebot-over1-entry-trigger">
+                        <field name="NUM">2</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="logic_compare" id="freebot-over1-entry-compare-five">
+                    <field name="OP">EQ</field>
+                    <value name="A">
+                      <block type="last_digit" id="freebot-over1-entry-digit-five"></block>
+                    </value>
+                    <value name="B">
+                      <shadow type="math_number" id="freebot-over1-entry-trigger-five">
+                        <field name="NUM">5</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+              </block>
             </value>
             <value name="B">
-              <shadow type="math_number" id="freebot-over1-entry-trigger">
-                <field name="NUM">1</field>
-              </shadow>
+              <block type="logic_compare" id="freebot-over1-entry-compare-six">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="last_digit" id="freebot-over1-entry-digit-six"></block>
+                </value>
+                <value name="B">
+                  <shadow type="math_number" id="freebot-over1-entry-trigger-six">
+                    <field name="NUM">6</field>
+                  </shadow>
+                </value>
+              </block>
             </value>
           </block>
         </value>
-        <statement name="DO0"><block type="controls_if" id="freebot-over1-strategy-entry"><mutation else="1"></mutation><value name="IF0"><block type="logic_operation" id="freebot-over1-session-guards"><field name="OP">AND</field><value name="A"><block type="logic_operation" id="freebot-over1-session-guards-strategy"><field name="OP">AND</field><value name="A"><block type="digits_bar_neutral" id="freebot-over1-digit-bar-neutral"><field name="DIGIT">1</field><value name="SAMPLE"><shadow type="math_number" id="freebot-over1-digit-bar-sample"><field name="NUM">100</field></shadow></value></block></value><value name="B"><block type="logic_operation" id="freebot-over1-cold-guards"><field name="OP">AND</field><value name="A"><block type="logic_operation" id="freebot-over1-cold-chain-1"><field name="OP">AND</field><value name="A"><block type="logic_compare" id="freebot-over1-cold-0"><field name="OP">LT</field><value name="A"><block type="digits_frequency" id="freebot-over1-freq-0"><field name="DIGIT">0</field><value name="SAMPLE"><shadow type="math_number" id="freebot-over1-freq-0-sample"><field name="NUM">100</field></shadow></value></block></value><value name="B"><shadow type="math_number" id="freebot-over1-cold-0-max"><field name="NUM">10.3</field></shadow></value></block></value><value name="B"><block type="logic_compare" id="freebot-over1-cold-1"><field name="OP">LT</field><value name="A"><block type="digits_frequency" id="freebot-over1-freq-1"><field name="DIGIT">1</field><value name="SAMPLE"><shadow type="math_number" id="freebot-over1-freq-1-sample"><field name="NUM">100</field></shadow></value></block></value><value name="B"><shadow type="math_number" id="freebot-over1-cold-1-max"><field name="NUM">10.3</field></shadow></value></block></value></block></value><value name="B"><block type="risk_can_trade" id="freebot-over1-risk-guard"></block></value></block></value></block></value><value name="B"><block type="logic_operation" id="freebot-over1-session-guards-execution"><field name="OP">AND</field><value name="A"><block type="logic_negate" id="freebot-over1-no-open-contract"><value name="BOOL"><block type="exec_has_open_contract" id="freebot-over1-open-contract"></block></value></block></value><value name="B"><block type="logic_negate" id="freebot-over1-trade-limit-ok"><value name="BOOL"><block type="bot_trade_limit_reached" id="freebot-over1-trade-limit"><value name="LIMIT"><shadow type="math_number" id="freebot-over1-trade-limit-value"><field name="NUM">250</field></shadow></value></block></value></block></value></block></value></block></value><statement name="DO0"><block type="controls_if" id="freebot-over1-observer-entry"><mutation else="1"></mutation><value name="IF0"><block type="obs_and" id="freebot-over1-observer-gate"><value name="A"><block type="obs_compare_lte" id="freebot-over1-prev-digit"><value name="A"><block type="obs_ago" id="freebot-over1-prev-digit-ago"><field name="N">1</field></block></value><value name="B"><block type="obs_number" id="freebot-over1-prev-digit-limit"><field name="VALUE">1</field></block></value></block></value><value name="B"><block type="obs_and" id="freebot-over1-monitor-gates"><value name="A"><block type="obs_and" id="freebot-over1-data-gates"><value name="A"><block type="obs_fresh" id="freebot-over1-data-fresh"></block></value><value name="B"><block type="obs_require_sample" id="freebot-over1-entry-sample"><field name="N">100</field></block></value></block></value><value name="B"><block type="obs_parity_switched" id="freebot-over1-parity-switch"></block></value></block></value></block></value><statement name="DO0"><block type="purchase" id="freebot-over1-purchase">
-            <field name="PURCHASE_LIST">DIGITOVER</field>
-          </block></statement><statement name="ELSE"><block type="notify" id="freebot-over1-observer-wait-notify"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field><value name="MESSAGE"><shadow type="text" id="freebot-over1-observer-wait-notify-text"><field name="TEXT">Waiting · observer gate</field></shadow></value></block></statement></block></statement><statement name="ELSE"><block type="notify" id="freebot-over1-strategy-wait-notify"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field><value name="MESSAGE"><shadow type="text" id="freebot-over1-strategy-wait-notify-text"><field name="TEXT">Waiting · strategy guard</field></shadow></value></block></statement></block></statement>
+        <statement name="DO0">
+          <block type="controls_if" id="freebot-over1-strategy-entry"><mutation else="1"></mutation>
+            <value name="IF0">
+              <block type="logic_operation" id="freebot-over1-strategy-guards">
+                <field name="OP">AND</field>
+                <value name="A">
+                  <block type="logic_operation" id="freebot-over1-cold-guards">
+                    <field name="OP">AND</field>
+                    <value name="A">
+                      <block type="logic_compare" id="freebot-over1-cold-0">
+                        <field name="OP">LT</field>
+                        <value name="A">
+                          <block type="digits_frequency" id="freebot-over1-freq-0">
+                            <field name="DIGIT">0</field>
+                            <value name="SAMPLE">
+                              <shadow type="math_number" id="freebot-over1-freq-0-sample">
+                                <field name="NUM">100</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="freebot-over1-cold-0-max">
+                            <field name="NUM">10.3</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_compare" id="freebot-over1-cold-1">
+                        <field name="OP">LT</field>
+                        <value name="A">
+                          <block type="digits_frequency" id="freebot-over1-freq-1">
+                            <field name="DIGIT">1</field>
+                            <value name="SAMPLE">
+                              <shadow type="math_number" id="freebot-over1-freq-1-sample">
+                                <field name="NUM">100</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="freebot-over1-cold-1-max">
+                            <field name="NUM">10.3</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="logic_operation" id="freebot-over1-bar-guards">
+                    <field name="OP">AND</field>
+                    <value name="A">
+                      <block type="logic_operation" id="freebot-over1-bar-any">
+                        <field name="OP">OR</field>
+                        <value name="A">
+                          <block type="logic_negate" id="freebot-over1-bar-zero">
+                            <value name="BOOL">
+                              <block type="digits_bar_neutral" id="freebot-over1-digit-bar-zero">
+                                <field name="DIGIT">0</field>
+                                <value name="SAMPLE">
+                                  <shadow type="math_number" id="freebot-over1-digit-bar-zero-sample">
+                                    <field name="NUM">100</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="logic_negate" id="freebot-over1-bar-one">
+                            <value name="BOOL">
+                              <block type="digits_bar_neutral" id="freebot-over1-digit-bar-one">
+                                <field name="DIGIT">1</field>
+                                <value name="SAMPLE">
+                                  <shadow type="math_number" id="freebot-over1-digit-bar-one-sample">
+                                    <field name="NUM">100</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_operation" id="freebot-over1-session-guards">
+                        <field name="OP">AND</field>
+                        <value name="A">
+                          <block type="risk_can_trade" id="freebot-over1-risk-guard"></block>
+                        </value>
+                        <value name="B">
+                          <block type="logic_operation" id="freebot-over1-session-guards-execution">
+                            <field name="OP">AND</field>
+                            <value name="A">
+                              <block type="logic_negate" id="freebot-over1-no-open-contract">
+                                <value name="BOOL">
+                                  <block type="exec_has_open_contract" id="freebot-over1-open-contract"></block>
+                                </value>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="logic_negate" id="freebot-over1-trade-limit-ok">
+                                <value name="BOOL">
+                                  <block type="bot_trade_limit_reached" id="freebot-over1-trade-limit">
+                                    <value name="LIMIT">
+                                      <shadow type="math_number" id="freebot-over1-trade-limit-value">
+                                        <field name="NUM">250</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="purchase" id="freebot-over1-purchase">
+                <field name="PURCHASE_LIST">DIGITOVER</field>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="notify" id="freebot-over1-strategy-wait-notify">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="freebot-over1-strategy-wait-notify-text">
+                    <field name="TEXT">Waiting · strategy guard</field>
+                  </shadow>
+                </value>
+              </block>
+            </statement>
+          </block>
+        </statement>
         <statement name="ELSE">
           <block type="text_join" id="freebot-over1-entry-wait-notice">
             <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
@@ -181,7 +355,8 @@
       </block>
     </statement>
   </block>
-  <block type="after_purchase" id="freebot-over1-after-purchase" x="720" y="0">
+  
+<block type="after_purchase" id="freebot-over1-after-purchase" x="720" y="0">
     <statement name="AFTERPURCHASE_STACK">
       <block type="variables_set" id="freebot-over1-set-won">
         <field name="VAR" id="freebot-won" variabletype="">freebot:won</field>
