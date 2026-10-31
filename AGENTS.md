@@ -94,6 +94,10 @@ working while the bot-side symbol list is empty.
   must own its own scrolling. `.digits` uses a viewport-based height with `overflow-y: auto`.
 - The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because seven tabs
   do not fit a narrow phone viewport.
+- **Dashboard tiles** use `@deriv/quill-icons/Standalone` glyphs inside a tinted badge whose accent comes
+  from `data-tile` (`dashboard.tsx` cards + `dashboard.scss`). The `Cards` `useMemo` deps must include
+  `is_mobile` / `isDesktop`: they pick the tile wording ("Local" vs "My computer"), and without them the
+  labels stay at their first-render value after the viewport is resized.
 - The digit-frequency grid (`.digits-grid`) is a fixed 5-column grid at every width — digits 0–4 on
   the first row, 5–9 on the second — so it never scrolls sideways on a phone; below the 768px
   breakpoint `.digit-bubble` / `.digits-badge` tighten their type and padding to keep five columns

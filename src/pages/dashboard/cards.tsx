@@ -11,12 +11,11 @@ import Text from '@/components/shared_ui/text';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import {
-    DerivLightBotBuilderIcon,
-    DerivLightGoogleDriveIcon,
-    DerivLightLocalDeviceIcon,
-    DerivLightMyComputerIcon,
-    DerivLightQuickStrategyIcon,
-} from '@deriv/quill-icons/Illustration';
+    StandaloneComputerRegularIcon,
+    StandaloneGoogleIcon,
+    StandaloneLightbulbRegularIcon,
+    StandalonePuzzlePieceTwoRegularIcon,
+} from '@deriv/quill-icons/Standalone';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
@@ -59,11 +58,7 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
     const actions: TCardArray[] = [
         {
             id: 'my-computer',
-            icon: is_mobile ? (
-                <DerivLightLocalDeviceIcon height='48px' width='48px' />
-            ) : (
-                <DerivLightMyComputerIcon height='48px' width='48px' />
-            ),
+            icon: <StandaloneComputerRegularIcon fill='currentColor' height='48px' width='48px' />,
             content: is_mobile ? <Localize i18n_default_text='Local' /> : <Localize i18n_default_text='My computer' />,
             callback: () => {
                 openFileLoader();
@@ -73,7 +68,7 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
         },
         {
             id: 'google-drive',
-            icon: <DerivLightGoogleDriveIcon height='48px' width='48px' />,
+            icon: <StandaloneGoogleIcon fill='currentColor' height='48px' width='48px' />,
             content: <Localize i18n_default_text='Google Drive' />,
             callback: () => {
                 openGoogleDriveDialog();
@@ -83,7 +78,7 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
         },
         {
             id: 'bot-builder',
-            icon: <DerivLightBotBuilderIcon height='48px' width='48px' />,
+            icon: <StandalonePuzzlePieceTwoRegularIcon fill='currentColor' height='48px' width='48px' />,
             content: <Localize i18n_default_text='Bot Builder' />,
             callback: () => {
                 setActiveTab(DBOT_TABS.BOT_BUILDER);
@@ -93,7 +88,7 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
         },
         {
             id: 'quick-strategy',
-            icon: <DerivLightQuickStrategyIcon height='48px' width='48px' />,
+            icon: <StandaloneLightbulbRegularIcon fill='currentColor' height='48px' width='48px' />,
             content: <Localize i18n_default_text='Quick strategy' />,
             callback: () => {
                 setActiveTab(DBOT_TABS.BOT_BUILDER);
@@ -132,9 +127,7 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
                                     className={classNames('tab__dashboard__table__images', {
                                         'tab__dashboard__table__images--minimized': has_dashboard_strategies,
                                     })}
-                                    width='8rem'
-                                    height='8rem'
-                                    icon={icon}
+                                    data-tile={id}
                                     id={id}
                                     onClick={() => {
                                         callback();
@@ -181,7 +174,7 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
             </div>
         ),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [is_dialog_open, has_dashboard_strategies, is_google_drive_configured]
+        [is_dialog_open, has_dashboard_strategies, is_google_drive_configured, is_mobile, isDesktop]
     );
 });
 
