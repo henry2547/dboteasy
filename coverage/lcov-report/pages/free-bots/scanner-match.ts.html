@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.56% </span>
+                <span class="strong">99.2% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>230/231</span>
+                <span class='fraction'>249/251</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.35% </span>
+                <span class="strong">72.41% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>41/53</span>
+                <span class='fraction'>42/58</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.71% </span>
+                <span class="strong">87.5% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/7</span>
+                <span class='fraction'>7/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.56% </span>
+                <span class="strong">99.2% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>230/231</span>
+                <span class='fraction'>249/251</span>
             </div>
         
             
@@ -294,7 +294,27 @@
 <a name='L229'></a><a href='#L229'>229</a>
 <a name='L230'></a><a href='#L230'>230</a>
 <a name='L231'></a><a href='#L231'>231</a>
-<a name='L232'></a><a href='#L232'>232</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -355,6 +375,15 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
@@ -463,6 +492,15 @@
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
@@ -473,6 +511,8 @@
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
@@ -587,6 +627,15 @@ interface SetupDraft {
     armed: boolean;
 }
 &nbsp;
+/**
+ * The digits the matching template really enters on, read from the library so the scan and the XML
+ * can never disagree about what "armed" means.
+ */
+function entryDigitsFor(strategy: 'over1' | 'under8'): number[] {
+    const template = freeBotById(strategy === 'over1' ? 'over1_entry_every_time' : 'under8_entry_every_time');
+    return template?.entryDigits<span class="branch-0 cbranch-no" title="branch not covered" > ?? (strategy === 'over1' ? [0, 1] : [8, 9]);</span>
+}
+&nbsp;
 function peakDigitsOf(frequencies: { digit: number; count: number }[]): number[] {
     const max = Math.max(...frequencies.map(item =&gt; item.count));
     if (max &lt;= 0) <span class="branch-0 cbranch-no" title="branch not covered" >return [];</span>
@@ -636,7 +685,7 @@ function buildOver1(digits: number[], frequencies: { digit: number; count: numbe
         peakDigits: peaks,
         latestDigit,
         ready: zeroSuppressed &amp;&amp; oneSuppressed &amp;&amp; peakHighOdd,
-        armed: latestDigit !== null &amp;&amp; latestDigit &lt;= 1,
+        armed: latestDigit !== null &amp;&amp; entryDigitsFor('over1').includes(latestDigit),
     };
 }
 &nbsp;
@@ -679,7 +728,7 @@ function buildUnder8(digits: number[], frequencies: { digit: number; count: numb
         peakDigits: peaks,
         latestDigit,
         ready: eightSuppressed &amp;&amp; nineSuppressed &amp;&amp; peakLowEven,
-        armed: latestDigit !== null &amp;&amp; latestDigit &gt;= 8,
+        armed: latestDigit !== null &amp;&amp; entryDigitsFor('under8').includes(latestDigit),
     };
 }
 &nbsp;
@@ -696,14 +745,25 @@ function toSetup(draft: SetupDraft): FreeBotSetup | null {
     if (contractType !== 'DIGITOVER' &amp;&amp; contractType !== 'DIGITUNDER') <span class="branch-0 cbranch-no" title="branch not covered" >return null;</span>
     if (prediction === null || triggerDigit === null) <span class="branch-0 cbranch-no" title="branch not covered" >return null;</span>
 &nbsp;
-    const triggerLabel =
-        draft.strategy === 'over1' ? 'Last digit ≤ 1 (0 or 1)' : 'Last digit ≥ 8 (8 or 9)';
+    // The entry digits the template really trades are what the row offers: the XML's gate is a list
+    // of "last digit = d" compares, so the row must name the same digits it will load.
+    const triggerDigits = template.entryDigits<span class="branch-0 cbranch-no" title="branch not covered" > ?? [];</span>
+    const triggerLabel = triggerDigits.length
+        ? `Last digit ${triggerDigits.join(', ')}`
+<span class="branch-0 cbranch-no" title="branch not covered" >        : draft.strategy === 'over1'</span>
+<span class="cstat-no" title="statement not covered" >          ? 'Last digit ≤ 1 (0 or 1)'</span>
+          : 'Last digit ≥ 8 (8 or 9)';
+    const armed = triggerDigits.length
+        ? draft.latestDigit !== null &amp;&amp; triggerDigits.includes(draft.latestDigit)
+<span class="branch-0 cbranch-no" title="branch not covered" >        : draft.armed;</span>
     const failed = draft.conditions.filter(condition =&gt; !condition.passed);
 &nbsp;
     const reason = draft.ready
-        ? draft.armed
+        ? armed
             ? `Setup holds and the latest tick sits on ${draft.latestDigit} — entry armed.`
-            : `Setup holds; waiting for a tick on ${draft.strategy === 'over1' ? '0 or 1' <span class="branch-0 cbranch-no" title="branch not covered" >: '8 or 9'}</span> to arm the entry.`
+            : `Setup holds; waiting for a tick on ${
+                  triggerDigits.length ? triggerDigits.join(', ') <span class="branch-0 cbranch-no" title="branch not covered" >: draft.strategy === 'over1' ? '0 or 1' : '8 or 9'</span>
+              } to arm the entry.`
         : `No ${template.strategyLabel} setup: ${failed.map(condition =&gt; condition.label.toLowerCase()).join('; ')}.`;
 &nbsp;
     return {
@@ -715,7 +775,7 @@ function toSetup(draft: SetupDraft): FreeBotSetup | null {
         triggerDigit,
         triggerLabel,
         ready: draft.ready,
-        armed: draft.armed,
+        armed,
         conditions: draft.conditions,
         reason: `${reason} (${passed}/${draft.conditions.length} conditions passed)`,
         evidence: draft.evidence,
@@ -763,7 +823,7 @@ export function matchFreeBotSetup(digits: number[]): FreeBotSetup | null {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-26T06:02:13.170Z
+                at 2026-10-31T14:42:06.354Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
