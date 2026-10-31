@@ -382,10 +382,13 @@
 
     &__table {
         height: calc(100vh - 57rem);
+        min-height: 10rem;
         overflow: auto;
 
-        @include mobile-screen {
-            height: calc(100vh - 55rem);
+        @include mobile-or-tablet-screen {
+            height: auto;
+            max-height: 45vh;
+            min-height: 10rem;
         }
     }
 

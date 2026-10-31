@@ -60,6 +60,15 @@ interface SetupDraft {
     armed: boolean;
 }
 
+/**
+ * The digits the matching template really enters on, read from the library so the scan and the XML
+ * can never disagree about what "armed" means.
+ */
+function entryDigitsFor(strategy: 'over1' | 'under8'): number[] {
+    const template = freeBotById(strategy === 'over1' ? 'over1_entry_every_time' : 'under8_entry_every_time');
+    return template?.entryDigits ?? (strategy === 'over1' ? [0, 1] : [8, 9]);
+}
+
 function peakDigitsOf(frequencies: { digit: number; count: number }[]): number[] {
     const max = Math.max(...frequencies.map(item => item.count));
     if (max <= 0) return [];
@@ -109,7 +118,7 @@ function buildOver1(digits: number[], frequencies: { digit: number; count: numbe
         peakDigits: peaks,
         latestDigit,
         ready: zeroSuppressed && oneSuppressed && peakHighOdd,
-        armed: latestDigit !== null && latestDigit <= 1,
+        armed: latestDigit !== null && entryDigitsFor('over1').includes(latestDigit),
     };
 }
 
@@ -152,7 +161,7 @@ function buildUnder8(digits: number[], frequencies: { digit: number; count: numb
         peakDigits: peaks,
         latestDigit,
         ready: eightSuppressed && nineSuppressed && peakLowEven,
-        armed: latestDigit !== null && latestDigit >= 8,
+        armed: latestDigit !== null && entryDigitsFor('under8').includes(latestDigit),
     };
 }
 
@@ -169,14 +178,25 @@ function toSetup(draft: SetupDraft): FreeBotSetup | null {
     if (contractType !== 'DIGITOVER' && contractType !== 'DIGITUNDER') return null;
     if (prediction === null || triggerDigit === null) return null;
 
-    const triggerLabel =
-        draft.strategy === 'over1' ? 'Last digit ≤ 1 (0 or 1)' : 'Last digit ≥ 8 (8 or 9)';
+    // The entry digits the template really trades are what the row offers: the XML's gate is a list
+    // of "last digit = d" compares, so the row must name the same digits it will load.
+    const triggerDigits = template.entryDigits ?? [];
+    const triggerLabel = triggerDigits.length
+        ? `Last digit ${triggerDigits.join(', ')}`
+        : draft.strategy === 'over1'
+          ? 'Last digit ≤ 1 (0 or 1)'
+          : 'Last digit ≥ 8 (8 or 9)';
+    const armed = triggerDigits.length
+        ? draft.latestDigit !== null && triggerDigits.includes(draft.latestDigit)
+        : draft.armed;
     const failed = draft.conditions.filter(condition => !condition.passed);
 
     const reason = draft.ready
-        ? draft.armed
+        ? armed
             ? `Setup holds and the latest tick sits on ${draft.latestDigit} — entry armed.`
-            : `Setup holds; waiting for a tick on ${draft.strategy === 'over1' ? '0 or 1' : '8 or 9'} to arm the entry.`
+            : `Setup holds; waiting for a tick on ${
+                  triggerDigits.length ? triggerDigits.join(', ') : draft.strategy === 'over1' ? '0 or 1' : '8 or 9'
+              } to arm the entry.`
         : `No ${template.strategyLabel} setup: ${failed.map(condition => condition.label.toLowerCase()).join('; ')}.`;
 
     return {
@@ -188,7 +208,7 @@ function toSetup(draft: SetupDraft): FreeBotSetup | null {
         triggerDigit,
         triggerLabel,
         ready: draft.ready,
-        armed: draft.armed,
+        armed,
         conditions: draft.conditions,
         reason: `${reason} (${passed}/${draft.conditions.length} conditions passed)`,
         evidence: draft.evidence,
