@@ -28,8 +28,14 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
     const { isMobile } = useDevice();
 
     const { is_contract_completed, profit } = summary_card;
-    const { contract_stage, is_stop_button_visible, is_stop_button_disabled, onRunButtonClick, onStopBotClick } =
-        run_panel;
+    const {
+        contract_stage,
+        is_stop_button_visible,
+        is_stop_button_disabled,
+        is_observation_mode,
+        onRunButtonClick,
+        onStopBotClick,
+    } = run_panel;
     const [shouldDisable, setShouldDisable] = React.useState(false);
     const is_unavailable_for_payment_agent = false;
 
@@ -225,7 +231,10 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
             >
                 {show_overlay && <ContractResultOverlay profit={profit} />}
                 <span className='animation__text'>
-                    <ContractStageText contract_stage={contract_stage} />
+                    <ContractStageText
+                        contract_stage={contract_stage}
+                        is_observation_mode={is_observation_mode}
+                    />
                 </span>
                 <div className='animation__progress'>
                     <div className='animation__progress-line'>

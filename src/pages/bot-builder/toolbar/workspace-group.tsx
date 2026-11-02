@@ -8,6 +8,8 @@ import {
     LabelPairedArrowsRotateMdRegularIcon,
     LabelPairedChartLineMdRegularIcon,
     LabelPairedChartTradingviewMdRegularIcon,
+    LabelPairedEyeMdFillIcon,
+    LabelPairedEyeMdRegularIcon,
     LabelPairedFloppyDiskMdRegularIcon,
     LabelPairedFolderOpenMdRegularIcon,
     LabelPairedMagnifyingGlassMinusMdRegularIcon,
@@ -23,8 +25,9 @@ import DigitBlocksHelp from './digit-blocks-help';
 import ToolbarIcon from './toolbar-icon';
 
 const WorkspaceGroup = observer(() => {
-    const { dashboard, toolbar, load_modal, save_modal } = useStore();
+    const { dashboard, toolbar, load_modal, save_modal, run_panel } = useStore();
     const { setPreviewOnPopup, setChartModalVisibility, setTradingViewModalVisibility } = dashboard;
+    const { is_observation_mode, setObservationMode } = run_panel;
     const { has_redo_stack, has_undo_stack, onResetClick, onSortClick, onUndoClick, onZoomInOutClick } = toolbar;
     const { toggleSaveModal } = save_modal;
     const { toggleLoadModal } = load_modal;
@@ -88,6 +91,33 @@ const WorkspaceGroup = observer(() => {
                             onClick={onSortClick}
                         >
                             <LabelPairedObjectsAlignLeftMdRegularIcon />
+                        </span>
+                    }
+                />
+                <div className='vertical-divider' />
+                <ToolbarIcon
+                    popover_message={
+                        is_observation_mode
+                            ? localize('Observation mode is on: the blocks run and journal their signals, no contract is purchased')
+                            : localize('Observation mode: run the blocks and journal their signals without buying any contract')
+                    }
+                    icon={
+                        <span
+                            className={classNames('toolbar__icon', {
+                                'toolbar__icon--observation': is_observation_mode,
+                            })}
+                            id='db-toolbar__observation-button'
+                            data-testid='dt_toolbar_observation_button'
+                            role='switch'
+                            aria-checked={is_observation_mode}
+                            aria-label={localize('Observation mode')}
+                            onClick={() => setObservationMode(!is_observation_mode)}
+                        >
+                            {is_observation_mode ? (
+                                <LabelPairedEyeMdFillIcon />
+                            ) : (
+                                <LabelPairedEyeMdRegularIcon />
+                            )}
                         </span>
                     }
                 />

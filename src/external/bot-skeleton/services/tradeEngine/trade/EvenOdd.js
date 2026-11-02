@@ -13,6 +13,7 @@
  */
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { isObservationMode, journalObservation } from '../../observation-mode';
 import { canTradeContract, readWorkspaceTradeDefinition } from '../utils/contract-families';
 import {
     EO_CONTRACT_TYPES,
@@ -354,6 +355,16 @@ export default Engine =>
             }
 
             const key = this.eoCurrentSignalKey();
+
+            // Observation mode: the signal is recorded and journalled, but nothing is bought.
+            if (isObservationMode()) {
+                this.even_odd_state = rememberSignal(this.getEvenOddState(), key);
+                journalObservation(
+                    `Even/Odd observation: ${contract_type} signal — ${describeWindow(snapshot)} — no contract was purchased.`
+                );
+                return false;
+            }
+
             notify(
                 `Even/Odd: requesting ${contract_type} — ${describeWindow(snapshot)} · signal ${snapshot.signal}`
             );
@@ -417,6 +428,15 @@ export default Engine =>
             });
             if (signalUsed(this.getEvenOddState(), key)) {
                 notify(`Even/Odd: the ${signal.direction} signal already opened an entry.`, 'warn');
+                return false;
+            }
+
+            // Observation mode: the reversal is journalled as the signal it is, with no entry.
+            if (isObservationMode()) {
+                this.even_odd_state = rememberSignal(this.getEvenOddState(), key);
+                journalObservation(
+                    `Even/Odd observation: last ${size} digit(s) ${shown} point at ${signal.direction.toUpperCase()} — no contract was purchased.`
+                );
                 return false;
             }
 

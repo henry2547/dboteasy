@@ -1128,6 +1128,33 @@ loaded Free Bots template's own `takeProfit` / `stopLoss` (`botLoaderStore.bot`,
   the rule and the card are covered by `src/utils/__tests__/session-limits.test.ts` and
   `src/components/session-limit-alert/__tests__/session-limit-alert.spec.tsx`.
 
+## Observation mode (Bot Builder)
+A run switch that uses the trade engine for observation: the blocks on the canvas run against the
+real tick stream, but the engine buys nothing. It is a single runtime flag, so every strategy block
+(digit gates, Even/Odd signals, `eoJournalReverse`, a plain Purchase) keeps its own logic and the
+only thing that changes is the purchase path.
+- `services/observation-mode.js` holds the flag (`isObservationMode`, `setObservationMode`,
+  `loadObservationMode`) and `journalObservation(message)`, a journal line without the
+  notification sound. The choice is persisted under `dbot_observation_mode`.
+- `trade/Purchase.js` returns before any proposal or `buy` request and journals the entry it was
+  asked for. The engine state stays in `BEFORE_PURCHASE`, so the generated loop keeps observing the
+  next tick instead of waiting on a contract that will never settle — do not make it dispatch
+  `purchaseSuccessful` or a synthetic contract, or the run panel would show a trade that never
+  happened.
+- `trade/EvenOdd.js` journals an Even/Odd or reversed-digit signal instead of buying it, and still
+  marks the signal used (`rememberSignal`) so one signal never journals twice.
+- `trade/index.js` `start()` writes one journal line per run, so the absence of contracts is
+  explained in the Journal tab.
+- `RunPanelStore.is_observation_mode` mirrors the flag for the UI; `setObservationMode` toggles it
+  (mid-run too — the engine reads the runtime flag on each entry). The eye button in the Bot
+  Builder toolbar (`#db-toolbar__observation-button`, `workspace-group.tsx`) is the switch, and
+  `ContractStageText` reads the store so a running observation shows "Observing — no trades".
+- Verify: `docker compose -f docker-compose.base44.yml exec web npx jest
+  src/external/bot-skeleton/services/tradeEngine/utils/__tests__/observation-mode.test.js
+  --coverage=false` (flag, Purchase guard, Even/Odd and reversal guards). In the Bot Builder the
+  eye button flips `aria-checked` and `localStorage.dbot_observation_mode`; a live observation run
+  is login-gated, so its journal output is verified by hand.
+
 ## Demo account reset (header)
 The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next
 to the balance only while a Demo account is active. It sends Deriv's own `topup_virtual` on the

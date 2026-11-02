@@ -1,5 +1,6 @@
 import { LogTypes } from '../../../constants/messages';
 import { api_base } from '../../api/api-base';
+import { isObservationMode, journalObservation } from '../../observation-mode';
 import { contractStatus, info, log, notify } from '../utils/broadcast';
 import { doUntilDone, getUUID, recoverFromError, tradeOptionToBuy } from '../utils/helpers';
 import { purchaseSuccessful } from './state/actions';
@@ -20,6 +21,16 @@ export default Engine =>
         purchase(contract_type, options = {}) {
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {
+                return Promise.resolve();
+            }
+
+            // Observation mode runs the same strategy and buys nothing: the entry the blocks asked
+            // for is journalled instead, and the program keeps observing the next tick.
+            if (isObservationMode()) {
+                const stake = this.tradeOptions?.amount;
+                journalObservation(
+                    `Observation: ${contract_type} entry${stake ? ` at stake ${stake}` : ''} — no contract was purchased.`
+                );
                 return Promise.resolve();
             }
 

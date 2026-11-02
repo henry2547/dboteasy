@@ -6,6 +6,11 @@ import { generateOAuthURL, isSafari, mobileOSDetect, standalone_routes } from '@
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
+import {
+    journalObservation,
+    loadObservationMode,
+    setObservationMode as applyObservationMode,
+} from '@/external/bot-skeleton/services/observation-mode';
 import { botLoaderStore } from '@/pages/free-bots/bot-loader-store';
 import { resolveSessionLimitHit, TSessionLimitKind } from '@/utils/session-limits';
 import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
@@ -42,6 +47,7 @@ export default class RunPanelStore {
             dialog_options: observable,
             has_open_contract: observable,
             is_running: observable,
+            is_observation_mode: observable,
             is_statistics_info_modal_open: observable,
             is_drawer_open: observable,
             is_dialog_open: observable,
@@ -59,6 +65,7 @@ export default class RunPanelStore {
             setContractStage: action,
             setHasOpenContract: action,
             setIsRunning: action,
+            setObservationMode: action,
             onRunButtonClick: action,
             is_contract_buying_in_progress: observable,
             SetpurchaseInProgress: action,
@@ -111,6 +118,11 @@ export default class RunPanelStore {
     dialog_options = {};
     has_open_contract = false;
     is_running = false;
+    /**
+     * Observation mode: the bot runs the blocks on the canvas but the engine buys nothing, so a
+     * strategy can be watched on its real ticks without risking an account. Persisted between visits.
+     */
+    is_observation_mode = loadObservationMode();
     is_statistics_info_modal_open = false;
     is_drawer_open = true;
     is_dialog_open = false;
@@ -144,6 +156,15 @@ export default class RunPanelStore {
     get is_stop_button_visible() {
         return this.is_running || this.has_open_contract;
     }
+
+    setObservationMode = (enabled: boolean) => {
+        this.is_observation_mode = applyObservationMode(enabled);
+        journalObservation(
+            this.is_observation_mode
+                ? 'Observation mode on: the blocks run, no contract is purchased.'
+                : 'Observation mode off: runs can buy contracts again.'
+        );
+    };
 
     get is_stop_button_disabled() {
         if (this.is_contract_buying_in_progress) {
