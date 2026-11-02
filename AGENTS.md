@@ -1101,8 +1101,32 @@ their own look outside the drawer:
 - the tabs are a segmented control (grey track, white active pill, no active line),
 - the six session figures are three-column chips with uppercase 1rem labels,
 - transaction rows/header and journal lines are denser, with the journal time kept secondary.
+- the six-figure block spans the drawer: `width: calc(100% - 2.4rem)` beside its side margins, and
+  `width: 100%` in the mobile block that drops those margins. Do not set it back to `width: auto` —
+  as a flex item it then shrank to the chip row (~304px) and left a blank strip on the right, which is
+  the gap users see on a phone.
+
 Content heights on mobile still come from `--drawer-content-height-mobile`; if the tab strip or stat
 chips grow, adjust that variable in `src/app/app.scss`, not the individual panel classes.
+
+## Take-profit / stop-loss alert (trade window)
+When a run stops, `RunPanelStore.checkSessionLimit()` compares the profit **that run** added
+(`transactions.statistics.total_profit` minus the baseline captured in `onRunButtonClick`) with the
+loaded Free Bots template's own `takeProfit` / `stopLoss` (`botLoaderStore.bot`, carried from
+`templates.ts` through `beginLoad`). The rule is the pure `resolveSessionLimitHit` in
+`src/utils/session-limits.ts`: a limit of 0 is "not set", and a limit reached is reported as
+`take_profit` / `stop_loss` with its amount.
+- It is called from `onBotStopEvent` only when the stop is final — a recoverable error that restarts
+  the trade loop sets `bot_continues` and is skipped.
+- `components/session-limit-alert/` renders it as a centred card (shared `Modal`, `is_vertical_centered`,
+  no header): icon, "Take profit reached" / "Stop loss reached", the run profit and the limit, then
+  **Okay** — which closes the card, opens the trade window on Transactions and switches to the Bot
+  Builder tab (`showSessionLimitTrades`) — and a quieter **Run again**, which dismisses the alert and
+  calls the normal `onRunButtonClick()`. It is mounted in `main.tsx` next to the global `Dialog`.
+- Only a loaded Free Bots template carries thresholds, so an AI-built or hand-built canvas raises no
+  alert. The live path needs a logged-in Demo run that actually reaches +take profit / −stop loss;
+  the rule and the card are covered by `src/utils/__tests__/session-limits.test.ts` and
+  `src/components/session-limit-alert/__tests__/session-limit-alert.spec.tsx`.
 
 ## Demo account reset (header)
 The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next

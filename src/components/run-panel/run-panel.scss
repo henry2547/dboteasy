@@ -509,7 +509,9 @@
 
     /* Six session figures: three compact chips per row instead of the tall tile grid. */
     .run-panel__stat {
-        width: auto;
+        /* `auto` shrank to the chip row and left a blank strip on the right; span the drawer minus
+           the side margins instead (the mobile block below drops the margins and uses 100%). */
+        width: calc(100% - 2.4rem);
         margin: 0 1.2rem 0.8rem;
         padding: 0.2rem 0;
         border-radius: 1rem;
@@ -616,6 +618,7 @@
         }
 
         .run-panel__stat {
+            width: 100%;
             margin: 0;
             border-radius: 0;
 

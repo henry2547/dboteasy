@@ -5,6 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { useLocation, useNavigate } from 'react-router';
 import ErrorBoundary from '@/components/error-boundary/error-boundary';
 import ChunkLoader from '@/components/loader/chunk-loader';
+import SessionLimitAlert from '@/components/session-limit-alert/session-limit-alert';
 import { generateOAuthURL } from '@/components/shared';
 import DesktopWrapper from '@/components/shared_ui/desktop-wrapper';
 import Dialog from '@/components/shared_ui/dialog';
@@ -576,6 +577,7 @@ const AppWrapper = observer(() => {
                 <TradingViewModal />
             </DesktopWrapper>
             <MobileWrapper>{!is_open && <RunPanel />}</MobileWrapper>
+            <SessionLimitAlert />
             <Dialog
                 cancel_button_text={cancel_button_text || localize('Cancel')}
                 className='dc-dialog__wrapper--fixed'

@@ -27,6 +27,9 @@ export interface LoadedBot {
     sourceFile: string;
     strategyLabel: string;
     contractType: string;
+    /** Session take profit / stop loss the template's own after-purchase branch enforces. */
+    takeProfit: number;
+    stopLoss: number;
     /** Barrier digit for Over/Under, `null` for an Even/Odd template. */
     prediction: number | null;
     marketSource: 'scanner' | 'library';
@@ -102,6 +105,8 @@ class BotLoaderStore {
             sourceFile: request.template.sourceFile,
             strategyLabel: request.template.strategyLabel,
             contractType: request.template.contractType,
+            takeProfit: request.template.takeProfit,
+            stopLoss: request.template.stopLoss,
             prediction: request.template.prediction,
             marketSource: request.marketSource,
             market: request.market,

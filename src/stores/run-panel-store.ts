@@ -3,8 +3,11 @@ import { action, computed, makeObservable, observable, reaction, runInAction } f
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
 import { generateOAuthURL, isSafari, mobileOSDetect, standalone_routes } from '@/components/shared';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
+import { botLoaderStore } from '@/pages/free-bots/bot-loader-store';
+import { resolveSessionLimitHit, TSessionLimitKind } from '@/utils/session-limits';
 import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
 import { handleBackendError, isBackendError } from '@/utils/error-handler';
@@ -46,6 +49,8 @@ export default class RunPanelStore {
             run_id: observable,
             error_type: observable,
             show_bot_stop_message: observable,
+            session_limit_alert: observable,
+            session_profit_baseline: observable,
             is_stop_button_visible: computed,
             is_stop_button_disabled: computed,
             is_clear_stat_disabled: computed,
@@ -75,6 +80,9 @@ export default class RunPanelStore {
             registerReactions: action,
             onBotRunningEvent: action,
             onBotStopEvent: action,
+            checkSessionLimit: action,
+            dismissSessionLimitAlert: action,
+            showSessionLimitTrades: action,
             onBotReadyEvent: action,
             onBotTradeAgain: action,
             onContractStatusEvent: action,
@@ -108,6 +116,20 @@ export default class RunPanelStore {
     is_dialog_open = false;
     is_sell_requested = false;
     show_bot_stop_message = false;
+    /**
+     * The take profit / stop loss the current run really reached. The trade window renders it as a
+     * centred alert whose Okay button opens the trades of that bot, and whose secondary action can
+     * start the next run.
+     */
+    session_limit_alert: {
+        kind: TSessionLimitKind;
+        amount: number;
+        profit: number;
+        bot_name: string;
+        currency: string;
+    } | null = null;
+    /** Statistics profit when the run started, so a limit is measured against this run only. */
+    session_profit_baseline = 0;
     is_contract_buying_in_progress = false;
 
     run_id = '';
@@ -209,6 +231,8 @@ export default class RunPanelStore {
             ui.setPromptHandler(true);
             this.toggleDrawer(true);
             this.run_id = `run-${Date.now()}`;
+            this.session_profit_baseline = Number(this.root_store.transactions.statistics?.total_profit ?? 0);
+            this.session_limit_alert = null;
 
             summary_card.clear();
             this.setContractStage(contract_stages.STARTING);
@@ -305,6 +329,40 @@ export default class RunPanelStore {
 
     setActiveTabIndex = (index: number) => {
         this.active_index = index;
+    };
+
+    /**
+     * A stopped run is checked against the loaded bot's own take profit / stop loss. Only the
+     * profit this run added counts, so a second run never inherits the first run's result.
+     */
+    checkSessionLimit = () => {
+        const loaded = botLoaderStore.bot;
+        if (!loaded) return;
+
+        const total = Number(this.root_store.transactions.statistics?.total_profit ?? 0);
+        const profit = Math.round((total - this.session_profit_baseline) * 100) / 100;
+        const hit = resolveSessionLimitHit({ profit, takeProfit: loaded.takeProfit, stopLoss: loaded.stopLoss });
+        if (!hit) return;
+
+        this.session_limit_alert = {
+            kind: hit.kind,
+            amount: hit.amount,
+            profit,
+            bot_name: loaded.name,
+            currency: this.core.client.currency ?? '',
+        };
+    };
+
+    dismissSessionLimitAlert = () => {
+        this.session_limit_alert = null;
+    };
+
+    /** The alert's Okay: close it and open the trades of the bot that just stopped. */
+    showSessionLimitTrades = () => {
+        this.session_limit_alert = null;
+        this.setActiveTabIndex(1);
+        this.toggleDrawer(true);
+        this.root_store.dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
     };
 
     onCloseDialog = () => {
@@ -528,6 +586,8 @@ export default class RunPanelStore {
     onBotStopEvent = () => {
         const { summary_card } = this.root_store;
         const { ui } = this.core;
+        // A recoverable error restarts the trade loop, so that stop is not the end of the run.
+        let bot_continues = false;
         const indicateBotStopped = () => {
             this.error_type = undefined;
             this.setContractStage(contract_stages.NOT_RUNNING);
@@ -542,6 +602,7 @@ export default class RunPanelStore {
             const is_bot_recoverable = shouldRestartOnError || timeMachineEnabled;
 
             if (is_bot_recoverable) {
+                bot_continues = true;
                 this.error_type = undefined;
                 this.setContractStage(contract_stages.PURCHASE_SENT);
             } else {
@@ -562,6 +623,8 @@ export default class RunPanelStore {
             ui.setAccountSwitcherDisabledMessage();
             this.unregisterBotListeners();
         }
+
+        if (!bot_continues) this.checkSessionLimit();
 
         this.setHasOpenContract(false);
 
