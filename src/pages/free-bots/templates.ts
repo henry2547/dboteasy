@@ -46,6 +46,8 @@ import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
 import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
+import over1ColdRunRecoveryXml from '@/xml/over1_cold_run_recovery.xml';
+import under8ColdRunRecoveryXml from '@/xml/under8_cold_run_recovery.xml';
 import observeOver1Xml from '@/xml/observe_over1.xml';
 import observeUnder8Xml from '@/xml/observe_under8.xml';
 import observeOver2Xml from '@/xml/observe_over2.xml';
@@ -64,6 +66,8 @@ export type FreeBotId =
     | 'even_odd_window'
     | 'over1_under6_recovery'
     | 'over1_parity_recovery'
+    | 'over1_cold_run_recovery'
+    | 'under8_cold_run_recovery'
     | 'observe_over1'
     | 'observe_under8'
     | 'observe_over2'
@@ -421,6 +425,70 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Digits: Trade Over 1 / Under 8, recover on Even/Odd · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · OR · AND',
     },
     {
+        id: 'over1_cold_run_recovery',
+        name: 'Over 1 — Cold 0/1 Run Recovery',
+        sourceFile: 'Built from the "Cold-run entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
+        asset: 'over1_cold_run_recovery.xml',
+        strategy: 'over1',
+        strategyLabel: 'Digit Over → Even / Odd',
+        contractType: 'both',
+        primaryContractType: 'DIGITOVER',
+        tradeType: 'evenodd',
+        // One block holds both legs: the cold-run Over 1 entry, then the Even/Odd reversal after a loss.
+        parityRecovery: { primary: 'over_1', barrier: 1, parity: 'both' },
+        prediction: null,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Last 3 digits all 0 or 1 (0,0 · 0,1 · 1,1 · 1,0 then the confirmation digit) · digits 0 and 1 both under 10.2% of the last 100 ticks · neither 0 nor 1 carries the red (coldest) bar · risk guard, no open contract, trade cap',
+        buyCondition:
+            'Over 1 is bought only when the whole cold-run setup holds on the newest ticks: the last two digits were a pair from 0 and 1 — 0,0 · 0,1 · 1,1 · 1,0 — and the newest tick confirmed the run by ending in 0 or 1 (a single digit of 3 reads all three), digits 0 and 1 both hold less than 10.2% of the last 100 ticks, and neither of them carries the red (coldest) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Over 1: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
+        afterPurchase:
+            'Win → stake back to 10 and the cold-run Over 1 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
+        restartCondition:
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay cold in a run, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
+        blocksUsed:
+            'Digits: Cold-run entry: Over 1 / Under 8, Even/Odd recovery · Low / high digits in a row · Digit has no red bar · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+    },
+    {
+        id: 'under8_cold_run_recovery',
+        name: 'Under 8 — Cold 8/9 Run Recovery',
+        sourceFile: 'Built from the "Cold-run entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
+        asset: 'under8_cold_run_recovery.xml',
+        strategy: 'under8',
+        strategyLabel: 'Digit Under → Even / Odd',
+        contractType: 'both',
+        primaryContractType: 'DIGITUNDER',
+        tradeType: 'evenodd',
+        // One block holds both legs: the cold-run Under 8 entry, then the Even/Odd reversal after a loss.
+        parityRecovery: { primary: 'under_8', barrier: 8, parity: 'both' },
+        prediction: null,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 1.5,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Last 3 digits all 8 or 9 (8,8 · 8,9 · 9,9 · 9,8 then the confirmation digit) · digits 8 and 9 both under 10.2% of the last 100 ticks · neither 8 nor 9 carries the red (coldest) bar · risk guard, no open contract, trade cap',
+        buyCondition:
+            'Under 8 is bought only when the whole cold-run setup holds on the newest ticks: the last two digits were a pair from 8 and 9 — 8,8 · 8,9 · 9,9 · 9,8 — and the newest tick confirmed the run by ending in 8 or 9, digits 8 and 9 both hold less than 10.2% of the last 100 ticks, and neither of them carries the red (coldest) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Under 8: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
+        afterPurchase:
+            'Win → stake back to 10 and the cold-run Under 8 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
+        restartCondition:
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay cold in a run, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
+        blocksUsed:
+            'Digits: Cold-run entry: Over 1 / Under 8, Even/Odd recovery · Low / high digits in a row · Digit has no red bar · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+    },
+    {
         id: 'observe_over1',
         name: 'Observe Over 1 — Signal Watch',
         sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
@@ -577,6 +645,8 @@ const FREE_BOT_XML: Record<string, string> = {
     even_odd_window: evenOddWindowXml,
     over1_under6_recovery: over1Under6RecoveryXml,
     over1_parity_recovery: parityRecoveryXml,
+    over1_cold_run_recovery: over1ColdRunRecoveryXml,
+    under8_cold_run_recovery: under8ColdRunRecoveryXml,
     observe_over1: observeOver1Xml,
     observe_under8: observeUnder8Xml,
     observe_over2: observeOver2Xml,

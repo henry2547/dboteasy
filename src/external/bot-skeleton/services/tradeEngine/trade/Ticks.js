@@ -11,6 +11,8 @@ import {
     areDigitsBelowShare,
     digitBarState,
     digitGap,
+    digitsInSetRun,
+    hasNoRedBar,
     highDigitRun,
     lastDigitsOfSample,
     longestDigitRun,
@@ -285,6 +287,33 @@ export default Engine =>
                 this.getLastDigitList().then(digits => {
                     const size = Math.max(1, Number(sample) || 100);
                     resolve(digitBarState(digits, digit, size) === 'neutral');
+                })
+            );
+        }
+
+        /**
+         * True when the newest `count` ticks in a row all ended in a digit from `set` — the low pair
+         * `'0_1'` (0/1) or the high pair `'8_9'` (8/9). A digit outside the set stops the run, so a
+         * `count` of 3 means the last two digits stayed in the pair AND the next tick confirmed it.
+         */
+        areLastDigitsInSet(count, set) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const wanted = Math.max(1, Number(count) || 1);
+                    resolve(digitsInSetRun(digits, set) >= wanted);
+                })
+            );
+        }
+
+        /**
+         * True only when the digit genuinely does not carry the red (coldest) bar of the last
+         * `sample` ticks. No ticks to read means `unknown`, which answers false.
+         */
+        isDigitNotCold(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    resolve(hasNoRedBar(digits, digit, size));
                 })
             );
         }

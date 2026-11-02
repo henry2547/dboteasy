@@ -21,6 +21,8 @@ jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
 jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 jest.mock('@/xml/parity_recovery_bot.xml', () => '', { virtual: true });
+jest.mock('@/xml/over1_cold_run_recovery.xml', () => '', { virtual: true });
+jest.mock('@/xml/under8_cold_run_recovery.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml } from '../bot-xml';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from '../templates';
@@ -166,6 +168,29 @@ describe('Free Bots templates', () => {
             expect(report.settings.tradeType).toBe('evenodd');
             expect(report.checks.find(check => check.id === 'even-odd-window')?.passed).toBe(true);
         });
+    });
+
+    it.each([
+        ['over1_cold_run_recovery', 'over_1'],
+        ['under8_cold_run_recovery', 'under_8'],
+    ])('the %s bot runs the observed cold-run setup in one block', (id, primary) => {
+        const template = FREE_BOT_TEMPLATES.find(item => item.id === id)!;
+        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+
+        const block = doc.querySelector('block[type="before_purchase"] block[type="digits_cold_run_recovery"]');
+        expect(block).not.toBeNull();
+        // The pair, its confirmation digit and the recovery are all fields of the one block.
+        expect(block!.querySelector('field[name="PRIMARY"]')?.textContent).toBe(primary);
+        expect(block!.querySelector('field[name="RUN"]')?.textContent).toBe('3');
+        expect(block!.querySelector('field[name="PERCENT"]')?.textContent).toBe('10.2');
+        expect(block!.querySelector('field[name="SAMPLE"]')?.textContent).toBe('100');
+        expect(block!.querySelector('field[name="PARITY"]')?.textContent).toBe('both');
+        expect(block!.querySelector('field[name="REVERSAL"]')?.textContent).toBe('2');
+        // A two-leg template carries no barrier in its trade options: both legs read theirs from
+        // the block, so the workspace must report none.
+        const report = inspectFreeBotXml(assetOf(template), template, isKnown);
+        expect(report.settings.prediction).toBeNull();
+        expect(report.settings.purchases).toEqual([]);
     });
 
     it('the parity-recovery bot lets a settled loss reach its Even/Odd leg', () => {

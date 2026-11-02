@@ -439,6 +439,7 @@ const PURCHASE_BLOCK_TYPES = [
     'eo_buy_odd',
     'eo_journal_reverse',
     'digits_parity_recovery',
+    'digits_cold_run_recovery',
 ];
 
 const getMissingBlocks = (workspace, required_block_types) => {

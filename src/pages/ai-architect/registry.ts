@@ -289,6 +289,28 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
     ),
     NUMBER_VALUE('digits_streak', 'Same-digit streak', 'digits', 'Ticks in a row with the same last digit.', { requires: ['ticks'] }),
     BOOLEAN_VALUE(
+        'digits_run_in_set',
+        'Last digits all 0 or 1 / 8 or 9',
+        'digits',
+        'True when the newest N ticks in a row all ended in a digit from the chosen losing pair — 0,0 · 0,1 · 1,1 · 1,0 for 0 or 1, and 8,8 · 8,9 · 9,9 · 9,8 for 8 or 9. A digit outside the pair stops the run.',
+        {
+            fields: [dropdown('SET', ['0_1', '8_9'], '0_1')],
+            inputs: [value('COUNT', ['Number'])],
+            requires: ['ticks'],
+        }
+    ),
+    BOOLEAN_VALUE(
+        'digits_no_red_bar',
+        'Digit has no red bar',
+        'digits',
+        'True when the digit is not the coldest one in the window — it carries no red bar. The digit may still carry the green (hottest) bar; an unreadable bar answers false.',
+        {
+            fields: [dropdown('DIGIT', DIGITS)],
+            inputs: [value('SAMPLE', ['Number'])],
+            requires: ['ticks'],
+        }
+    ),
+    BOOLEAN_VALUE(
         'digits_high_run',
         'Last digits above / below a digit',
         'digits',
@@ -318,6 +340,22 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         semantics:
             'Drives the engine market scan: discovers eligible markets, subscribes to the selected market, waits for its history and a genuine live tick, and only then evaluates the condition. While false it moves to the next market.',
         requires: ['active_symbols', 'ticks', 'market_scan'],
+    }),
+    cap({
+        type: 'digits_cold_run_recovery',
+        displayName: 'Cold-run entry: Over 1 / Under 8, Even/Odd recovery',
+        category: 'digits',
+        fields: [
+            dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1'),
+            number('RUN', 2, 100, 3),
+            number('PERCENT', 0.1, 100, 10.2),
+            number('SAMPLE', 1, 1000, 100),
+            dropdown('PARITY', ['both', 'even', 'odd'], 'both'),
+            number('REVERSAL', 2, 100, 2),
+        ],
+        semantics:
+            'Buys Over 1 (or Under 8) only while both losing digits sit under the percentage and neither carries the red bar, and the newest digits all ended in that losing pair. After a settled loss it buys the reversal of the newest digits of the market it is trading — all even → ODD, all odd → EVEN, a mixed run is no entry.',
+        requires: ['ticks', 'proposal', 'buy'],
     }),
     cap({
         type: 'digits_parity_recovery',

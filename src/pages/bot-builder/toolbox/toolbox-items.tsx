@@ -239,6 +239,23 @@ export const ToolboxItems = () =>
                     </Value>
                 </Block>
                 <Block type='digits_streak' />
+                {/* The cold-run pair reads: the losing pair in a row (0/1 or 8/9) and its "no red bar" guard. */}
+                <Block type='digits_run_in_set'>
+                    <Value name='COUNT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>3</Field>
+                        </Shadow>
+                    </Value>
+                    <Field name='SET'>0_1</Field>
+                </Block>
+                <Block type='digits_no_red_bar'>
+                    <Field name='DIGIT'>0</Field>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
                 <Block type='switch_active_market'>
                     <Field name='ORDER'>sequential</Field>
                     <Value name='MAX_SWITCHES'>
@@ -262,6 +279,16 @@ export const ToolboxItems = () =>
                     <Field name='PRIMARY'>over_1</Field>
                     <Field name='PARITY'>both</Field>
                     <Field name='RUN'>2</Field>
+                </Block>
+                {/* The observed cold-run setup: the losing pair stays under 10.2% with no red bar and the
+                    newest digits all sit in it, then a settled loss reverses on the same market. */}
+                <Block type='digits_cold_run_recovery'>
+                    <Field name='PRIMARY'>over_1</Field>
+                    <Field name='RUN'>3</Field>
+                    <Field name='PERCENT'>10.2</Field>
+                    <Field name='SAMPLE'>100</Field>
+                    <Field name='PARITY'>both</Field>
+                    <Field name='REVERSAL'>2</Field>
                 </Block>
                 {/* Even/Odd strategy: configure the window it reads, then the conditions above the
                     two entries. Every value is the engine call the block generates. */}

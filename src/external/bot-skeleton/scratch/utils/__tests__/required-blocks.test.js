@@ -51,6 +51,12 @@ describe('the mandatory-block gate', () => {
         expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(true);
     });
 
+    it('accepts a cold-run recovery canvas that buys both legs itself', () => {
+        window.Blockly.derivWorkspace = workspaceWith([...MANDATORY, 'digits_cold_run_recovery']);
+
+        expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(true);
+    });
+
     it('still requires a purchase from an ordinary canvas', () => {
         window.Blockly.derivWorkspace = workspaceWith([...MANDATORY]);
 

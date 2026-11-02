@@ -141,6 +141,37 @@ export const digitBarState = (digits, digit, sample) => {
 /** True only when the digit's bar is genuinely neutral: present, and neither hottest nor coldest. */
 export const isDigitBarNeutral = (digits, digit, sample) => digitBarState(digits, digit, sample) === 'neutral';
 
+/**
+ * True when the digit does not carry the red (coldest) bar. A bar that cannot be read — no ticks
+ * yet — is `unknown`, which answers false: an unreadable bar is never treated as "not cold".
+ */
+export const hasNoRedBar = (digits, digit, sample) => {
+    const state = digitBarState(digits, digit, sample);
+    return state === 'hottest' || state === 'neutral';
+};
+
+/** The two losing-digit pairs the Over 1 / Under 8 setups wait for: the low 0–1 and the high 8–9. */
+export const DIGIT_SETS = { '0_1': [0, 1], '8_9': [8, 9] };
+
+/**
+ * How many of the newest ticks in a row ended in a digit from `set` (`'0_1'` or `'8_9'`).
+ *
+ * The run is the tail of the real tick sequence, so any other digit in between stops it — 0, 0, 1
+ * reports 3, while 1, 5, 0 reports 1. An unknown set measures nothing and reports 0.
+ */
+export const digitsInSetRun = (digits, set) => {
+    const allowed = DIGIT_SETS[set];
+    if (!allowed) return 0;
+
+    const list = toDigitList(digits);
+    let run = 0;
+    for (let index = list.length - 1; index >= 0; index -= 1) {
+        if (!allowed.includes(list[index])) break;
+        run += 1;
+    }
+    return run;
+};
+
 /** A digit's share of the newest `sample` ticks, in percent. 0 when the window is empty. */
 export const digitShare = (digits, digit, sample) => {
     const window = lastDigitsOfSample(digits, sample);
