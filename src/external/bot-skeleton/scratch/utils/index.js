@@ -418,7 +418,13 @@ const getAllRequiredBlocks = (workspace, required_block_types) => {
 // The "Trade Over 1 / Under 8, recover on Even/Odd" block buys BOTH of its legs itself
 // (`Bot.purchase` for the Over/Under leg, `Bot.eoBuyEven` / `Bot.eoBuyOdd` after a loss), so a
 // two-market canvas built from it carries no `purchase` block at all and has to pass the gate too.
-const PURCHASE_BLOCK_TYPES = ['purchase', 'eo_buy_even', 'eo_buy_odd', 'digits_parity_recovery'];
+const PURCHASE_BLOCK_TYPES = [
+    'purchase',
+    'eo_buy_even',
+    'eo_buy_odd',
+    'eo_journal_reverse',
+    'digits_parity_recovery',
+];
 
 const getMissingBlocks = (workspace, required_block_types) => {
     const blocks = workspace.getAllBlocks();

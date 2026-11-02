@@ -7,19 +7,65 @@ import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
 import { isDemoAccount } from '@/utils/account-helpers';
-import { Localize } from '@deriv-com/translations';
+import { Localize, localize } from '@deriv-com/translations';
 import { TAccountSwitcher } from './common/types';
 import AccountInfoWrapper from './account-info-wrapper';
 import './account-switcher.scss';
 
 const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [is_resetting, setIsResetting] = useState(false);
+    const [reset_notice, setResetNotice] = useState('');
     const wrapperRef = useRef<HTMLDivElement>(null);
     const { accountList, activeLoginid } = useApiBase();
     const { client, run_panel } = useStore() ?? {};
 
     const is_bot_running = run_panel?.is_running || api_base.is_running;
     const isSingleAccount = !accountList || accountList.length <= 1;
+
+    useEffect(() => {
+        if (!reset_notice) return;
+        const timer = setTimeout(() => setResetNotice(''), 4000);
+        return () => clearTimeout(timer);
+    }, [reset_notice]);
+
+    /**
+     * Resets the demo balance to Deriv's own virtual-account top-up, which brings a USD demo account
+     * back to 10,000 USD. It goes through the authorised socket (`topup_virtual`) and the balance
+     * subscription then refreshes the figure in the header.
+     */
+    const handleResetDemo = useCallback(
+        async (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            if (is_resetting || is_bot_running) return;
+
+            const api = api_base.api as unknown as
+                | { send: (request: unknown) => Promise<{ error?: { message?: string } } | undefined> }
+                | null;
+            if (!api) {
+                setResetNotice(localize('Reconnect to reset the demo balance.'));
+                return;
+            }
+
+            setIsResetting(true);
+            setResetNotice('');
+            try {
+                const response = await api.send({ topup_virtual: 1 });
+                if (response?.error) {
+                    setResetNotice(response.error.message || localize('Could not reset the demo balance.'));
+                } else {
+                    setResetNotice(localize('Demo balance reset to 10,000 USD.'));
+                    // Refresh the header figure; the existing balance stream keeps it current after this.
+                    await api.send({ balance: 1 });
+                }
+            } catch {
+                setResetNotice(localize('Could not reset the demo balance.'));
+            } finally {
+                setIsResetting(false);
+            }
+        },
+        [is_resetting, is_bot_running]
+    );
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -134,7 +180,36 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
                                         `${balance} ${getCurrencyDisplayCode(currency)}`
                                     )}
                                 </p>
+                                {isVirtual && (
+                                    <button
+                                        type='button'
+                                        className={classNames('acc-info__reset-demo', {
+                                            'acc-info__reset-demo--busy': is_resetting,
+                                        })}
+                                        data-testid='dt_reset_demo'
+                                        onClick={handleResetDemo}
+                                        disabled={is_resetting || is_bot_running}
+                                        title={localize('Reset the demo balance to 10,000 USD')}
+                                        aria-label={localize('Reset demo balance to 10,000 USD')}
+                                    >
+                                        <svg width='12' height='12' viewBox='0 0 12 12' fill='none' aria-hidden='true'>
+                                            <path
+                                                d='M10 6a4 4 0 1 1-1.17-2.83M10 1.5V4H7.5'
+                                                stroke='currentColor'
+                                                strokeWidth='1.4'
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                            />
+                                        </svg>
+                                        <Localize i18n_default_text='Reset' />
+                                    </button>
+                                )}
                             </div>
+                        )}
+                        {reset_notice && (
+                            <span className='acc-info__reset-notice' role='status'>
+                                {reset_notice}
+                            </span>
                         )}
                     </div>
                 </div>

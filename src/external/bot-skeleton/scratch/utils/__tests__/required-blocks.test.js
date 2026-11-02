@@ -36,6 +36,12 @@ describe('the mandatory-block gate', () => {
         expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(true);
     });
 
+    it('accepts a canvas whose only entry is the journal & reverse block', () => {
+        window.Blockly.derivWorkspace = workspaceWith([...MANDATORY, 'eo_journal_reverse']);
+
+        expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(true);
+    });
+
     it('accepts the two-market parity-recovery canvas that buys both legs itself', () => {
         window.Blockly.derivWorkspace = workspaceWith([...MANDATORY, 'digits_parity_recovery']);
 

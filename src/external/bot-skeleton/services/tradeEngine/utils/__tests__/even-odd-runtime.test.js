@@ -151,3 +151,64 @@ describe('Even/Odd recovery leg after a loss', () => {
         expect(engine.eoParityReversal(2, 'both')).toBe('NO SIGNAL');
     });
 });
+
+describe('Even/Odd journal & reverse block', () => {
+    const { observer: globalObserver } = require('../../../../utils/observer');
+
+    const journalLines = () =>
+        globalObserver.emit.mock.calls
+            .filter(([event]) => event === 'ui.log.notify')
+            .map(([, payload]) => payload.message);
+
+    beforeEach(() => globalObserver.emit.mockClear());
+
+    it.each([
+        [[2, 4], 'DIGITODD'],
+        [[0, 6], 'DIGITODD'],
+        [[3, 5], 'DIGITEVEN'],
+        [[9, 1], 'DIGITEVEN'],
+    ])('journals the run %j and buys the reverse parity %s', async (digits, contract) => {
+        const engine = createEngine(digits);
+
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(true);
+        expect(engine.purchase).toHaveBeenCalledWith(contract);
+        expect(journalLines().some(line => line.includes(`last 2 digit(s) ${digits.join(', ')}`))).toBe(true);
+    });
+
+    it('journals a mixed pair and buys nothing', async () => {
+        const engine = createEngine([2, 3]);
+
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(false);
+        expect(engine.purchase).not.toHaveBeenCalled();
+        expect(journalLines().some(line => line.includes('mixed'))).toBe(true);
+    });
+
+    it('never enters the same digits twice', async () => {
+        const engine = createEngine([2, 4]);
+
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(true);
+        engine.contractId = null;
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(false);
+        expect(engine.purchase).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses while another contract is still open', async () => {
+        const engine = createEngine([2, 4]);
+        engine.contractId = 'still-open';
+
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(false);
+        expect(engine.purchase).not.toHaveBeenCalled();
+    });
+
+    it('does not mark an unconfirmed purchase as an entry', async () => {
+        const engine = createEngine([2, 4]);
+        engine.purchase.mockImplementation(async () => {});
+
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(false);
+        engine.contractId = null;
+        engine.purchase.mockImplementation(async () => {
+            engine.contractId = 'later-contract';
+        });
+        await expect(engine.eoJournalReverse(2)).resolves.toBe(true);
+    });
+});

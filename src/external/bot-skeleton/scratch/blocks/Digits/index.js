@@ -27,3 +27,5 @@ import './eo_buy_even';
 import './eo_buy_odd';
 import './eo_one_entry_per_signal';
 import './eo_wait_tick';
+// One reversal entry: journals the newest digits and buys the opposite parity in a single block.
+import './eo_journal_reverse';

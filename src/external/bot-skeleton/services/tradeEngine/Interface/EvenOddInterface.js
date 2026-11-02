@@ -30,6 +30,7 @@ export const getEvenOddAsyncInterface = tradeEngine => ({
     eoWaitTick: () => tradeEngine.eoWaitTick(),
     eoBuyEven: () => tradeEngine.eoBuyEven(),
     eoBuyOdd: () => tradeEngine.eoBuyOdd(),
+    eoJournalReverse: run => tradeEngine.eoJournalReverse(run),
 });
 
 export default getEvenOddInterface;

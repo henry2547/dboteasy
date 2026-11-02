@@ -488,7 +488,13 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
 
 ## Even/Odd strategy blocks
-- The twelve `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
+- The thirteen `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
+- `eo_journal_reverse` is the reversal entry in one block: `Bot.eoJournalReverse(run)` reads `eo_digits`
+  for the market already being traded, journals the digits and the parity they point at, then buys the
+  OPPOSITE parity through `purchase()`. A mixed run buys nothing, an already-used signal key never enters
+  twice, and an open contract or blocked risk limit refuses the entry with the reason in the journal. It is
+  in `PURCHASE_BLOCK_TYPES`, so a canvas whose only entry is this block still passes the mandatory-purchase
+  gate.
 - Engine entry regression coverage is in `utils/__tests__/even-odd-runtime.test.js`: the pure-rule tests alone cannot catch missing imports in `trade/EvenOdd.js`. Run with `--runInBand --coverage=false` to avoid rewriting tracked coverage output.
 - Browser generation can be checked in an isolated `Blockly.Workspace` without replacing the user's canvas or placing a trade. Live Demo purchases/settlements remain unverified.
 
@@ -1080,3 +1086,22 @@ marks it analysed and moves on to the next market (`market-scan-engine.test.js` 
 `purchase`, so a gate nested under AND/OR filters still validates. A template that adds one of these shapes
 without the matching field fails the loader with "Entry condition mismatch". The preset count (9) and the
 per-preset rules are pinned by `multi-market-xml.test.ts`.
+
+## Compact trade window (run panel)
+The trade window that opens in the Bot Builder / Deriv Chart run panel has three tabs — Summary,
+Transactions and Journal (`components/run-panel/run-panel.tsx`). Its compact skin is the last block
+of `run-panel.scss`, scoped to `.run-panel` so the Summary card, transaction list and journal keep
+their own look outside the drawer:
+- the tabs are a segmented control (grey track, white active pill, no active line),
+- the six session figures are three-column chips with uppercase 1rem labels,
+- transaction rows/header and journal lines are denser, with the journal time kept secondary.
+Content heights on mobile still come from `--drawer-content-height-mobile`; if the tab strip or stat
+chips grow, adjust that variable in `src/app/app.scss`, not the individual panel classes.
+
+## Demo account reset (header)
+The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next
+to the balance only while a Demo account is active. It sends Deriv's own `topup_virtual` on the
+authorised socket, which restores a USD demo account to 10,000 USD (the API takes no amount), then
+re-subscribes to `balance` so the header figure refreshes. It is hidden/disabled while a bot runs and
+has no effect for a Real account. Covered by `__tests__/account-switcher.spec.tsx`; the live reset
+needs a signed-in Demo session, so it is verified by hand.

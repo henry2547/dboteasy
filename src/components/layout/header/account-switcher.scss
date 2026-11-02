@@ -1,6 +1,12 @@
 @use 'components/shared/styles/constants' as *;
 @use 'components/shared/styles/mixins' as *;
 
+@keyframes acc-reset-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /** @define acc-info */
 .acc-info {
     align-items: center;
@@ -170,6 +176,49 @@
         }
     }
 
+    /* Resets a demo account through Deriv's own top-up, back to 10,000 USD. */
+    &__reset-demo {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-inline-start: 0.6rem;
+        padding: 0.2rem 0.55rem;
+        border: 1px solid var(--border-disabled);
+        border-radius: 0.6rem;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        cursor: pointer;
+        transition:
+            background-color 0.15s ease,
+            border-color 0.15s ease;
+
+        &:hover:not(:disabled) {
+            background: var(--state-hover);
+            border-color: var(--text-less-prominent);
+        }
+
+        &:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        &--busy svg {
+            animation: acc-reset-spin 0.8s linear infinite;
+        }
+    }
+
+    &__reset-notice {
+        display: block;
+        margin-top: 0.15rem;
+        font-size: 0.95rem;
+        line-height: 1.2;
+        color: var(--text-less-prominent);
+    }
+
     &__id {
         pointer-events: none;
         display: flex;
@@ -234,6 +283,17 @@
             &--no-currency {
                 white-space: nowrap;
             }
+        }
+
+        &__reset-demo {
+            gap: 0.2rem;
+            margin-inline-start: 0.4rem;
+            padding: 0.18rem 0.45rem;
+            font-size: 0.95rem;
+        }
+
+        &__reset-notice {
+            font-size: 0.9rem;
         }
     }
 
