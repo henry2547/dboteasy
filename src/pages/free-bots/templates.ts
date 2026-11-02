@@ -34,11 +34,8 @@
  * with a frequency guard on the digits the contract loses to ("Over 1: digit 0 and
  * 1 under 10%, no green or red bar on 0 or 1"), which the asset builds from
  * `digits_frequency` compares against the fair 10.3% share of the last 100 ticks.
- * The multi-market presets carry the same idea through `maxFrequencyDigits` /
- * `minFrequencyDigits`.
  */
 
-import { multiMarketById } from './multi-market';
 import evenOddWindowXml from '@/xml/even_odd_window.xml';
 import over1EntryEveryTimeXml from '@/xml/over1_entry_every_time.xml';
 import over1TwoLowDigitsXml from '@/xml/over1_two_low_digits.xml';
@@ -48,17 +45,8 @@ import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
 import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
 import over1ColdRunRecoveryXml from '@/xml/over1_cold_run_recovery.xml';
 import under8ColdRunRecoveryXml from '@/xml/under8_cold_run_recovery.xml';
-import observeOver1Xml from '@/xml/observe_over1.xml';
-import observeUnder8Xml from '@/xml/observe_under8.xml';
-import observeOver2Xml from '@/xml/observe_over2.xml';
-import observeUnder7Xml from '@/xml/observe_under7.xml';
-import observeEvenOddXml from '@/xml/observe_even_odd.xml';
-
-/** Generated multi-market templates carry a configuration-derived id. */
-export type MultiMarketBotId = `multi_market_${string}`;
 
 export type FreeBotId =
-    | MultiMarketBotId
     | 'under8_entry_every_time'
     | 'over1_entry_every_time'
     | 'over1_two_low_digits'
@@ -67,12 +55,7 @@ export type FreeBotId =
     | 'over1_under6_recovery'
     | 'over1_parity_recovery'
     | 'over1_cold_run_recovery'
-    | 'under8_cold_run_recovery'
-    | 'observe_over1'
-    | 'observe_under8'
-    | 'observe_over2'
-    | 'observe_under7'
-    | 'observe_even_odd';
+    | 'under8_cold_run_recovery';
 
 export type FreeBotStrategy =
     | 'over1'
@@ -426,15 +409,15 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'over1_cold_run_recovery',
-        name: 'Over 1 — Cold 0/1 Run Recovery',
-        sourceFile: 'Built from the "Cold-run entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
+        name: 'Over 1 — Confirmed 0/1 Pair',
+        sourceFile: 'Built from the "Pair entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
         asset: 'over1_cold_run_recovery.xml',
         strategy: 'over1',
         strategyLabel: 'Digit Over → Even / Odd',
         contractType: 'both',
         primaryContractType: 'DIGITOVER',
         tradeType: 'evenodd',
-        // One block holds both legs: the cold-run Over 1 entry, then the Even/Odd reversal after a loss.
+        // One block holds both legs: the confirmed-pair Over 1 entry, then the Even/Odd reversal after a loss.
         parityRecovery: { primary: 'over_1', barrier: 1, parity: 'both' },
         prediction: null,
         durationTicks: 1,
@@ -446,27 +429,27 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last 3 digits all 0 or 1 (0,0 · 0,1 · 1,1 · 1,0 then the confirmation digit) · digits 0 and 1 both under 10.2% of the last 100 ticks · neither 0 nor 1 carries the red (coldest) bar · risk guard, no open contract, trade cap',
+            'Last 2 digits were a 0,0 · 0,1 · 1,1 · 1,0 pair, then a later tick ended in 0 or 1 — other digits may pass before that confirmation · digits 0 and 1 both under 10.2% of the last 100 ticks · neither 0 nor 1 carries the red (coldest) bar · risk guard, no open contract, trade cap',
         buyCondition:
-            'Over 1 is bought only when the whole cold-run setup holds on the newest ticks: the last two digits were a pair from 0 and 1 — 0,0 · 0,1 · 1,1 · 1,0 — and the newest tick confirmed the run by ending in 0 or 1 (a single digit of 3 reads all three), digits 0 and 1 both hold less than 10.2% of the last 100 ticks, and neither of them carries the red (coldest) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Over 1: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
+            'Over 1 is bought only when the whole observed setup holds: the last two digits were a pair from 0 and 1 — 0,0 · 0,1 · 1,1 · 1,0 — and a later tick confirmed it by ending in 0 or 1. Other digits may pass between the pair and its confirmation (0,1 then 5, 4, 1 is confirmed), but a 0 or 1 inside that gap uses the pattern up, so the bot waits for the next pair. Digits 0 and 1 both hold less than 10.2% of the last 100 ticks, and neither of them carries the red (coldest) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Over 1: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
         afterPurchase:
-            'Win → stake back to 10 and the cold-run Over 1 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
+            'Win → stake back to 10 and the confirmed-pair Over 1 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay cold in a run, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
         blocksUsed:
-            'Digits: Cold-run entry: Over 1 / Under 8, Even/Odd recovery · Low / high digits in a row · Digit has no red bar · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+            'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Digit has no red bar · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
     },
     {
         id: 'under8_cold_run_recovery',
-        name: 'Under 8 — Cold 8/9 Run Recovery',
-        sourceFile: 'Built from the "Cold-run entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
+        name: 'Under 8 — Confirmed 8/9 Pair',
+        sourceFile: 'Built from the "Pair entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
         asset: 'under8_cold_run_recovery.xml',
         strategy: 'under8',
         strategyLabel: 'Digit Under → Even / Odd',
         contractType: 'both',
         primaryContractType: 'DIGITUNDER',
         tradeType: 'evenodd',
-        // One block holds both legs: the cold-run Under 8 entry, then the Even/Odd reversal after a loss.
+        // One block holds both legs: the confirmed-pair Under 8 entry, then the Even/Odd reversal after a loss.
         parityRecovery: { primary: 'under_8', barrier: 8, parity: 'both' },
         prediction: null,
         durationTicks: 1,
@@ -478,163 +461,16 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last 3 digits all 8 or 9 (8,8 · 8,9 · 9,9 · 9,8 then the confirmation digit) · digits 8 and 9 both under 10.2% of the last 100 ticks · neither 8 nor 9 carries the red (coldest) bar · risk guard, no open contract, trade cap',
+            'Last 2 digits were an 8,8 · 8,9 · 9,9 · 9,8 pair, then a later tick ended in 8 or 9 — other digits may pass before that confirmation · digits 8 and 9 both under 10.2% of the last 100 ticks · neither 8 nor 9 carries the red (coldest) bar · risk guard, no open contract, trade cap',
         buyCondition:
-            'Under 8 is bought only when the whole cold-run setup holds on the newest ticks: the last two digits were a pair from 8 and 9 — 8,8 · 8,9 · 9,9 · 9,8 — and the newest tick confirmed the run by ending in 8 or 9, digits 8 and 9 both hold less than 10.2% of the last 100 ticks, and neither of them carries the red (coldest) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Under 8: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
+            'Under 8 is bought only when the whole observed setup holds: the last two digits were a pair from 8 and 9 — 8,8 · 8,9 · 9,9 · 9,8 — and a later tick confirmed it by ending in 8 or 9. Other digits may pass between the pair and its confirmation (8,9 then 5, 4, 9 is confirmed), but an 8 or 9 inside that gap uses the pattern up, so the bot waits for the next pair. Digits 8 and 9 both hold less than 10.2% of the last 100 ticks, and neither of them carries the red (coldest) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Under 8: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
         afterPurchase:
-            'Win → stake back to 10 and the cold-run Under 8 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
+            'Win → stake back to 10 and the confirmed-pair Under 8 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay cold in a run, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
         blocksUsed:
-            'Digits: Cold-run entry: Over 1 / Under 8, Even/Odd recovery · Low / high digits in a row · Digit has no red bar · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+            'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Digit has no red bar · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
     },
-    {
-        id: 'observe_over1',
-        name: 'Observe Over 1 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
-        asset: 'observe_over1.xml',
-        observationOnly: true,
-        strategy: 'over1',
-        strategyLabel: 'Digit Over · observation only',
-        contractType: 'DIGITOVER',
-        prediction: 1,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 0,
-        stopLoss: 0,
-        multiplier: 1,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule:
-            'Pattern watch · two identical digits, then the confirmation tick · digits 0 and 1 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Over 1 observation for the next tick and journals the signal, the outcome and the wait',
-        buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 1 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 0 and 1 both sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Over 1 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
-        afterPurchase:
-            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
-        restartCondition:
-            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
-        blocksUsed:
-            'Digit & frequency: Digit Frequency Below (0, 1) · Read Latest Final Digit · Set Barrier · Configure Over Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Over · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
-    },
-    {
-        id: 'observe_under8',
-        name: 'Observe Under 8 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
-        asset: 'observe_under8.xml',
-        observationOnly: true,
-        strategy: 'under8',
-        strategyLabel: 'Digit Under · observation only',
-        contractType: 'DIGITUNDER',
-        prediction: 8,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 0,
-        stopLoss: 0,
-        multiplier: 1,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule:
-            'Pattern watch · two identical digits, then the confirmation tick · digits 8 and 9 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Under 8 observation for the next tick and journals the signal, the outcome and the wait',
-        buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 8 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 8 and 9 both sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Under 8 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
-        afterPurchase:
-            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
-        restartCondition:
-            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
-        blocksUsed:
-            'Digit & frequency: Digit Frequency Below (8, 9) · Read Latest Final Digit · Set Barrier · Configure Under Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Under · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
-    },
-    {
-        id: 'observe_over2',
-        name: 'Observe Over 2 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
-        asset: 'observe_over2.xml',
-        observationOnly: true,
-        strategy: 'over2',
-        strategyLabel: 'Digit Over · observation only',
-        contractType: 'DIGITOVER',
-        prediction: 2,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 0,
-        stopLoss: 0,
-        multiplier: 1,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule:
-            'Pattern watch · two identical digits, then the confirmation tick · digits 0, 1 and 2 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Over 2 observation for the next tick and journals the signal, the outcome and the wait',
-        buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 2 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 0, 1 and 2 all sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Over 2 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
-        afterPurchase:
-            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
-        restartCondition:
-            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
-        blocksUsed:
-            'Digit & frequency: Digit Frequency Below (0, 1, 2) · Read Latest Final Digit · Set Barrier · Configure Over Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Over · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
-    },
-    {
-        id: 'observe_under7',
-        name: 'Observe Under 7 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
-        asset: 'observe_under7.xml',
-        observationOnly: true,
-        strategy: 'under7',
-        strategyLabel: 'Digit Under · observation only',
-        contractType: 'DIGITUNDER',
-        prediction: 7,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 0,
-        stopLoss: 0,
-        multiplier: 1,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule:
-            'Pattern watch · two identical digits, then the confirmation tick · digits 7, 8 and 9 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Under 7 observation for the next tick and journals the signal, the outcome and the wait',
-        buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 7 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 7, 8 and 9 all sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Under 7 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
-        afterPurchase:
-            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
-        restartCondition:
-            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
-        blocksUsed:
-            'Digit & frequency: Digit Frequency Below (7, 8, 9) · Read Latest Final Digit · Set Barrier · Configure Under Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Under · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
-    },
-    {
-        id: 'observe_even_odd',
-        name: 'Observe Even/Odd — Last 2 Digits',
-        sourceFile: 'Built from the Blocks-menu observer blocks: parity patterns, entries and monitoring',
-        asset: 'observe_even_odd.xml',
-        observationOnly: true,
-        strategy: 'even',
-        strategyLabel: 'Digit Even / Odd · observation only',
-        contractType: 'both',
-        tradeType: 'evenodd',
-        prediction: null,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 0,
-        stopLoss: 0,
-        multiplier: 1,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule:
-            'Even/Odd reversal of the last 2 digits · both even → observe ODD · both odd → observe EVEN · a mixed pair is no entry · the observer journals every signal, the observed outcome and the wait',
-        buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block, no Buy EVEN / Buy ODD block and no "Trade again" block. The observer program sets a 100-tick analysis window and watches the parity pattern: two even digits must be confirmed by an odd tick, two odd digits by an even tick. When that confirmation arrives, the session has observed 100 genuine ticks and the newest parity transition runs in the same direction, "When All Entry Conditions Pass" arms an observation of the next tick for ODD (after an even run) or EVEN (after an odd run) and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a mixed pair is visibly a wait, not a signal.',
-        afterPurchase:
-            'Nothing is settled — no contract is ever bought; each armed parity observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
-        restartCondition:
-            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next parity run is judged fresh; the bot runs until you press Stop.',
-        blocksUsed:
-            'Digit & frequency: Read Latest Final Digit · Analyse Last N Ticks · Pattern detection & parity: Parity Pattern · Check Confirmation Occurred After Pair · Check Parity Transition · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick Parity · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
-    },
-
 ];
 
 const FREE_BOT_XML: Record<string, string> = {
@@ -647,16 +483,9 @@ const FREE_BOT_XML: Record<string, string> = {
     over1_parity_recovery: parityRecoveryXml,
     over1_cold_run_recovery: over1ColdRunRecoveryXml,
     under8_cold_run_recovery: under8ColdRunRecoveryXml,
-    observe_over1: observeOver1Xml,
-    observe_under8: observeUnder8Xml,
-    observe_over2: observeOver2Xml,
-    observe_under7: observeUnder7Xml,
-    observe_even_odd: observeEvenOddXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {
-    const generated = multiMarketById(id);
-    if (generated) return generated;
     return FREE_BOT_TEMPLATES.find(template => template.id === id) ?? null;
 }
 

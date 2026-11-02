@@ -16,6 +16,7 @@ import {
     highDigitRun,
     lastDigitsOfSample,
     longestDigitRun,
+    pairConfirmation,
     parityShare,
     repeatShare,
     transitionCount,
@@ -302,6 +303,17 @@ export default Engine =>
                     const wanted = Math.max(1, Number(count) || 1);
                     resolve(digitsInSetRun(digits, set) >= wanted);
                 })
+            );
+        }
+
+        /**
+         * True when the newest tick confirms a losing pair: the last two digits were 0,0 / 0,1 /
+         * 1,1 / 1,0 (`'0_1'`) or 8,8 / 8,9 / 9,9 / 9,8 (`'8_9'`) and the newest tick ended in that
+         * same pair. Other digits may pass between the pair and its confirmation.
+         */
+        isPairConfirmed(set) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => resolve(pairConfirmation(digits, set)))
             );
         }
 

@@ -341,20 +341,41 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
             'Drives the engine market scan: discovers eligible markets, subscribes to the selected market, waits for its history and a genuine live tick, and only then evaluates the condition. While false it moves to the next market.',
         requires: ['active_symbols', 'ticks', 'market_scan'],
     }),
+    BOOLEAN_VALUE(
+        'digits_cold_pair_entry',
+        'Cold pair setup ready',
+        'digits',
+        'The Over 1 / Under 8 entry in one condition: the last 2 digits were a pair from the losing digits (0/1 or 8/9) and a later tick confirmed it — other digits may pass in between — both losing digits are under the percentage and neither carries the red (coldest) bar.',
+        {
+            fields: [dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1')],
+            inputs: [value('PERCENT', ['Number']), value('SAMPLE', ['Number'])],
+            requires: ['ticks'],
+        }
+    ),
+    BOOLEAN_VALUE(
+        'digits_pair_confirmation',
+        'Pair, then a confirmation digit',
+        'digits',
+        'True when the last two digits were a pair from the chosen losing digits — 0,0 · 0,1 · 1,1 · 1,0 for 0 or 1, 8,8 · 8,9 · 9,9 · 9,8 for 8 or 9 — and a later tick confirmed it. Other digits may pass between the pair and its confirmation.',
+        {
+            fields: [dropdown('SET', ['0_1', '8_9'], '0_1')],
+            inputs: [],
+            requires: ['ticks'],
+        }
+    ),
     cap({
         type: 'digits_cold_run_recovery',
-        displayName: 'Cold-run entry: Over 1 / Under 8, Even/Odd recovery',
+        displayName: 'Pair entry: Over 1 / Under 8, Even/Odd recovery',
         category: 'digits',
         fields: [
             dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1'),
-            number('RUN', 2, 100, 3),
             number('PERCENT', 0.1, 100, 10.2),
             number('SAMPLE', 1, 1000, 100),
             dropdown('PARITY', ['both', 'even', 'odd'], 'both'),
             number('REVERSAL', 2, 100, 2),
         ],
         semantics:
-            'Buys Over 1 (or Under 8) only while both losing digits sit under the percentage and neither carries the red bar, and the newest digits all ended in that losing pair. After a settled loss it buys the reversal of the newest digits of the market it is trading — all even → ODD, all odd → EVEN, a mixed run is no entry.',
+            'Buys Over 1 (or Under 8) only while both losing digits sit under the percentage and neither carries the red bar, and the last two digits were a pair from that losing pair with a later tick confirming it — other digits may pass in between. After a settled loss it buys the reversal of the newest digits of the market it is trading — all even → ODD, all odd → EVEN, a mixed run is no entry.',
         requires: ['ticks', 'proposal', 'buy'],
     }),
     cap({

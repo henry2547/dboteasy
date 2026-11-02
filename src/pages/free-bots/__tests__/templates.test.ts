@@ -179,9 +179,8 @@ describe('Free Bots templates', () => {
 
         const block = doc.querySelector('block[type="before_purchase"] block[type="digits_cold_run_recovery"]');
         expect(block).not.toBeNull();
-        // The pair, its confirmation digit and the recovery are all fields of the one block.
+        // The confirmed pair, its share and the recovery are all fields of the one block.
         expect(block!.querySelector('field[name="PRIMARY"]')?.textContent).toBe(primary);
-        expect(block!.querySelector('field[name="RUN"]')?.textContent).toBe('3');
         expect(block!.querySelector('field[name="PERCENT"]')?.textContent).toBe('10.2');
         expect(block!.querySelector('field[name="SAMPLE"]')?.textContent).toBe('100');
         expect(block!.querySelector('field[name="PARITY"]')?.textContent).toBe('both');
@@ -474,32 +473,6 @@ describe('Free Bots templates', () => {
         // file." and every after-purchase block stays unrendered. Anything the settlement has to
         // journal therefore goes BEFORE `trade_again` in the same statement.
         trade_again.forEach(block => expect(block.querySelector('next')).toBeNull());
-        }
-    );
-
-    it('ships an observation bot for Over 1, Under 8, Over 2, Under 7 and Even/Odd', () => {
-        const observation = FREE_BOT_TEMPLATES.filter(template => template.observationOnly);
-
-        expect(observation.map(template => template.id)).toEqual([
-            'observe_over1',
-            'observe_under8',
-            'observe_over2',
-            'observe_under7',
-            'observe_even_odd',
-        ]);
-    });
-
-    it.each(FREE_BOT_TEMPLATES.filter(template => template.observationOnly))(
-        '$name journals its signal and holds no purchase path',
-        template => {
-            const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
-
-            // Nothing on the canvas can reach the engine's buy path, so the bot can never trade —
-            // with or without Observation mode.
-            ['purchase', 'eo_buy_even', 'eo_buy_odd', 'eo_journal_reverse', 'digits_parity_recovery', 'trade_again'].forEach(
-                type => expect(doc.querySelector(`block[type="${type}"]`)).toBeNull()
-            );
-            expect(doc.querySelector('block[type="before_purchase"] block[type="notify"]')).not.toBeNull();
         }
     );
 

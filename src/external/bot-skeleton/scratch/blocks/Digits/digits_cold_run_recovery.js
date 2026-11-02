@@ -16,14 +16,14 @@ const MIN_PERCENT = 0.1;
 const MAX_PERCENT = 100;
 
 /**
- * "Cold-run entry: Over 1 / Under 8 first, Even/Odd after a loss" — the whole observed setup in one
+ * "Pair entry: Over 1 / Under 8 first, Even/Odd after a loss" — the whole observed setup in one
  * block.
  *
  * The first leg buys the bot's own Over/Under contract only while BOTH losing digits sit under the
  * percentage you set (10.2% by default, the fair share being 10%) AND neither of them carries the
- * red (coldest) bar, AND the newest RUN digits all ended in that losing pair — 0,0 · 0,1 · 1,1 · 1,0
- * for Over 1, 8,8 · 8,9 · 9,9 · 9,8 for Under 8. With RUN 3 the last two digits are the pair and the
- * newest tick is the confirmation digit.
+ * red (coldest) bar, AND the last two digits were a pair from that losing pair — 0,0 · 0,1 · 1,1 ·
+ * 1,0 for Over 1, 8,8 · 8,9 · 9,9 · 9,8 for Under 8 — AND a later tick confirmed it by ending in
+ * the pair. Other digits may pass between the pair and its confirmation.
  *
  * Only after a settled loss does the second leg run: it reads the newest REVERSAL digits of the
  * market the bot is already trading (`Bot.eoParityReversal`) and buys the parity those digits
@@ -40,9 +40,8 @@ window.Blockly.Blocks.digits_cold_run_recovery = {
     },
     definition() {
         return {
-            message0: localize('Trade {{ primary }} when the last {{ run }} digits stay cold', {
+            message0: localize('Trade {{ primary }} when the last 2 digits pair, then a confirmation digit', {
                 primary: '%1',
-                run: '%2',
             }),
             args0: [
                 {
@@ -53,16 +52,8 @@ window.Blockly.Blocks.digits_cold_run_recovery = {
                         [localize('Under 8'), 'under_8'],
                     ],
                 },
-                {
-                    type: 'field_number',
-                    name: 'RUN',
-                    value: 3,
-                    min: MIN_RUN,
-                    max: MAX_RUN,
-                    precision: 0,
-                },
             ],
-            message1: localize('under {{ percent }} % of the last {{ sample }} ticks, no red bar', {
+            message1: localize('while both stay under {{ percent }} % of the last {{ sample }} ticks, no red bar', {
                 percent: '%1',
                 sample: '%2',
             }),
@@ -115,19 +106,19 @@ window.Blockly.Blocks.digits_cold_run_recovery = {
             colourSecondary: window.Blockly.Colours.Base.colourSecondary,
             colourTertiary: window.Blockly.Colours.Base.colourTertiary,
             tooltip: localize(
-                'Buys Over 1 (or Under 8) only while both losing digits are under the percentage you set and neither carries the red bar, and the newest digits all ended in that losing pair — 0/1 for Over 1, 8/9 for Under 8. After a settled loss it buys the parity the newest digits predict to break, on the market it is already trading: all even → ODD, all odd → EVEN. A mixed run is no entry, so the block waits for one instead of trading blind.'
+                'Buys Over 1 (or Under 8) only while both losing digits are under the percentage you set and neither carries the red bar, and the last two digits were a pair from that losing pair — 0/1 for Over 1, 8/9 for Under 8 — with a later tick confirming it. Other digits may pass between the pair and its confirmation. After a settled loss it buys the parity the newest digits predict to break, on the market it is already trading: all even → ODD, all odd → EVEN. A mixed run is no entry, so the block waits for one instead of trading blind.'
             ),
             category: window.Blockly.Categories.Digits,
         };
     },
     meta() {
         return {
-            display_name: localize('Cold-run entry: Over 1 / Under 8, Even/Odd recovery'),
+            display_name: localize('Pair entry: Over 1 / Under 8, Even/Odd recovery'),
             description: localize(
-                'One two-leg entry: Over 1 (or Under 8) while the losing pair stays cold and the newest digits all sit in it, then — after a loss — the even/odd reversal of the newest digits on the same market.'
+                'One two-leg entry: Over 1 (or Under 8) while the losing pair stays cold and its pair is confirmed on a later tick (other digits may pass in between), then — after a loss — the even/odd reversal of the newest digits on the same market.'
             ),
             key_words: localize(
-                'over 1 under 8 cold run pair even odd recovery loss reversal no red bar frequency digit'
+                'over 1 under 8 cold pair confirmation even odd recovery loss reversal no red bar frequency digit'
             ),
         };
     },
@@ -139,21 +130,12 @@ window.Blockly.Blocks.digits_cold_run_recovery = {
 window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_run_recovery = block => {
     const primary = PRIMARY_LEGS[block.getFieldValue('PRIMARY')] ?? PRIMARY_LEGS.over_1;
     const parity = block.getFieldValue('PARITY');
-    const run = Number(block.getFieldValue('RUN'));
     const reversal = Number(block.getFieldValue('REVERSAL'));
     const percent = Number(block.getFieldValue('PERCENT'));
     const sample = Number(block.getFieldValue('SAMPLE'));
 
     const wholeNumber = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
 
-    if (!wholeNumber(run, MIN_RUN, MAX_RUN)) {
-        throw new Error(
-            localize('Digits in the cold run must be a whole number between {{ min }} and {{ max }}', {
-                min: MIN_RUN,
-                max: MAX_RUN,
-            })
-        );
-    }
     if (!wholeNumber(reversal, MIN_RUN, MAX_RUN)) {
         throw new Error(
             localize('Digits to reverse must be a whole number between {{ min }} and {{ max }}', {
@@ -188,10 +170,10 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_run_recovery 
                 } else {
                     Bot.sessionJournal('Recovery waiting · the last digits are mixed', 'info');
                 }
-            } else if (Bot.areLastDigitsInSet(${run}, '${primary.set}') && Bot.areDigitSharesBelow([${first}, ${second}], ${percent}, ${sample}) && Bot.isDigitNotCold(${first}, ${sample}) && Bot.isDigitNotCold(${second}, ${sample}) && Bot.riskCanTrade()) {
+            } else if (Bot.isPairConfirmed('${primary.set}') && Bot.areDigitSharesBelow([${first}, ${second}], ${percent}, ${sample}) && Bot.isDigitNotCold(${first}, ${sample}) && Bot.isDigitNotCold(${second}, ${sample}) && Bot.riskCanTrade()) {
                 Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });
             } else {
-                Bot.sessionJournal('Cold-run gate waiting · last digit ' + Bot.getLastDigit(), 'info');
+                Bot.sessionJournal('Pair gate waiting · last digit ' + Bot.getLastDigit(), 'info');
             }
         }
     `;
