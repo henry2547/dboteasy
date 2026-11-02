@@ -451,3 +451,190 @@
         }
     }
 }
+
+/**
+ * Compact trade window (Summary / Transactions / Journal).
+ *
+ * Everything here is scoped to `.run-panel`, so the Summary card, the transaction list and the
+ * journal keep their own look everywhere else (drawer, modals, transaction details). The tabs become
+ * a segmented control, the six session figures become compact chips, and the rows of both lists get a
+ * denser rhythm with one clear hierarchy per line.
+ */
+@mixin run-panel-muted-caps {
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-less-prominent);
+}
+
+.run-panel {
+    .dc-tabs {
+        margin: 0.8rem 1.2rem 0;
+
+        &__list {
+            gap: 0.3rem;
+            padding: 0.3rem;
+            border-bottom: none;
+            border-radius: 0.9rem;
+            line-height: normal;
+            background: var(--general-section-2);
+        }
+
+        &__item {
+            padding: 0.8rem 0.4rem;
+            border-radius: 0.7rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-less-prominent);
+            transition:
+                background-color 0.15s ease,
+                color 0.15s ease;
+        }
+
+        &__active {
+            color: var(--text-general);
+            background: var(--general-main-1);
+            box-shadow: 0 1px 2px var(--shadow-menu);
+        }
+
+        &__active-line {
+            display: none;
+        }
+    }
+
+    .run-panel-tab__content--summary-tab {
+        padding: 0.8rem 1.2rem;
+    }
+
+    /* Six session figures: three compact chips per row instead of the tall tile grid. */
+    .run-panel__stat {
+        /* `auto` shrank to the chip row and left a blank strip on the right; span the drawer minus
+           the side margins instead (the mobile block below drops the margins and uses 100%). */
+        width: calc(100% - 2.4rem);
+        margin: 0 1.2rem 0.8rem;
+        padding: 0.2rem 0;
+        border-radius: 1rem;
+
+        &--info {
+            width: auto;
+            padding: 0.4rem 0 0;
+            margin-inline-start: 1.2rem;
+            align-self: flex-start;
+            font-size: 1.1rem;
+        }
+
+        &--tiles {
+            grid-template: 4.8rem 4.8rem / repeat(3, 1fr);
+        }
+    }
+
+    .run-panel__tile {
+        height: auto;
+
+        &-title {
+            min-height: 0;
+            margin-bottom: 0.2rem;
+
+            @include run-panel-muted-caps;
+        }
+
+        &-content {
+            height: auto;
+            margin-bottom: 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+    }
+
+    /* Transactions: compact header, tighter rows, the same three columns. */
+    .transactions__header {
+        height: 3.2rem;
+        padding: 0 1.2rem;
+
+        @include run-panel-muted-caps;
+    }
+
+    .transactions__item-wrapper {
+        height: 4.6rem;
+        padding: 0 1.2rem;
+
+        &:hover {
+            background-color: var(--state-hover);
+        }
+    }
+
+    .transactions__item {
+        font-size: 1.1rem;
+        grid-row-gap: 1px;
+        line-height: 1.4;
+    }
+
+    .transactions .download__container {
+        padding: 0.6rem 1.2rem;
+
+        &__view-detail-button {
+            height: 2.8rem;
+        }
+    }
+
+    /* Journal: compact toolbar and denser lines, with the time kept secondary. */
+    .journal-tools__container {
+        padding: 0.6rem 1.2rem;
+    }
+
+    .journal__item {
+        padding: 0.8rem 1.2rem;
+    }
+
+    .journal__item-list {
+        height: calc(100% - 4.4rem);
+    }
+
+    .journal__text {
+        font-size: 1.15rem;
+        line-height: 1.45;
+
+        &-datetime {
+            margin-top: 2px;
+            font-size: 1rem;
+        }
+    }
+
+    .journal-empty {
+        &__message {
+            margin-bottom: 1rem;
+        }
+
+        &__list {
+            font-size: 1.1rem;
+        }
+    }
+
+    @include mobile-or-tablet-screen {
+        .dc-tabs {
+            margin: 0.6rem 0.8rem 0;
+        }
+
+        .run-panel__stat {
+            width: 100%;
+            margin: 0;
+            border-radius: 0;
+
+            &--tiles {
+                grid-template: 4.4rem 4.4rem / repeat(3, 1fr);
+            }
+        }
+
+        .run-panel__tile {
+            &-title {
+                font-size: 0.95rem;
+            }
+
+            &-content {
+                font-size: 1.2rem;
+            }
+        }
+    }
+}

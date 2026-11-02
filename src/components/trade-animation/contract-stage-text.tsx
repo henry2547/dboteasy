@@ -4,20 +4,28 @@ import { Localize } from '@deriv-com/translations';
 
 type TContractStageText = {
     contract_stage: number | undefined;
+    /** Observation runs never buy, so the stage can never move past "running". */
+    is_observation_mode?: boolean;
 };
 
 export const text_contract_stages = Object.freeze({
     NOT_RUNNING: 'Bot is not running',
     STARTING: 'Bot is starting',
     RUNNING: 'Bot running',
+    OBSERVING: 'Observing — no trades',
     PURCHASE_SENT: 'Buying contract',
     PURCHASE_RECEIVED: 'Contract bought',
     IS_STOPPING: 'Bot is stopping',
     CONTRACT_CLOSED: 'Contract closed',
 });
 
-const ContractStageText: React.FC<TContractStageText> = ({ contract_stage }) => {
+const ContractStageText: React.FC<TContractStageText> = ({ contract_stage, is_observation_mode }) => {
     const stage = contract_stage !== undefined ? contract_stage : contract_stages.NOT_RUNNING;
+
+    // A run that never buys stays on its starting/running stage; say why instead of leaving it there.
+    if (is_observation_mode && (stage === contract_stages.STARTING || stage === contract_stages.RUNNING)) {
+        return <Localize i18n_default_text={text_contract_stages.OBSERVING} />;
+    }
 
     switch (stage) {
         case contract_stages.STARTING:

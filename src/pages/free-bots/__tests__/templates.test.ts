@@ -118,7 +118,11 @@ describe('Free Bots templates', () => {
         expect(report.settings.contractType).toBe(template.contractType);
         expect(report.variables.some(name => name.startsWith('freebot:'))).toBe(true);
 
-        if (template.parityRecovery) {
+        if (template.observationOnly) {
+            // Observation bots carry the barrier of the contract they watch, and none for Even/Odd.
+            expect(report.settings.prediction).toBe(template.prediction === null ? null : String(template.prediction));
+            expect(report.checks.find(check => check.id === 'observation-only')?.passed).toBe(true);
+        } else if (template.parityRecovery) {
             // Parity recovery: both legs read their barrier from the block, so the trade options
             // carry no prediction at all.
             expect(report.settings.prediction).toBeNull();
@@ -432,7 +436,9 @@ describe('Free Bots templates', () => {
         });
     });
 
-    it.each(FREE_BOT_TEMPLATES)('$name keeps "Trade again" as the last block of its stack', template => {
+    it.each(FREE_BOT_TEMPLATES.filter(template => !template.observationOnly))(
+        '$name keeps "Trade again" as the last block of its stack',
+        template => {
         const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
         const trade_again = Array.from(doc.querySelectorAll('block[type="trade_again"]'));
 
@@ -443,7 +449,34 @@ describe('Free Bots templates', () => {
         // file." and every after-purchase block stays unrendered. Anything the settlement has to
         // journal therefore goes BEFORE `trade_again` in the same statement.
         trade_again.forEach(block => expect(block.querySelector('next')).toBeNull());
+        }
+    );
+
+    it('ships an observation bot for Over 1, Under 8, Over 2, Under 7 and Even/Odd', () => {
+        const observation = FREE_BOT_TEMPLATES.filter(template => template.observationOnly);
+
+        expect(observation.map(template => template.id)).toEqual([
+            'observe_over1',
+            'observe_under8',
+            'observe_over2',
+            'observe_under7',
+            'observe_even_odd',
+        ]);
     });
+
+    it.each(FREE_BOT_TEMPLATES.filter(template => template.observationOnly))(
+        '$name journals its signal and holds no purchase path',
+        template => {
+            const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+
+            // Nothing on the canvas can reach the engine's buy path, so the bot can never trade —
+            // with or without Observation mode.
+            ['purchase', 'eo_buy_even', 'eo_buy_odd', 'eo_journal_reverse', 'digits_parity_recovery', 'trade_again'].forEach(
+                type => expect(doc.querySelector(`block[type="${type}"]`)).toBeNull()
+            );
+            expect(doc.querySelector('block[type="before_purchase"] block[type="notify"]')).not.toBeNull();
+        }
+    );
 
     it.each(FREE_BOT_TEMPLATES)('$name declares every branch its IF blocks use', template => {
         const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');

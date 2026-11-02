@@ -13,11 +13,13 @@
  */
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { isObservationMode, journalObservation } from '../../observation-mode';
 import { canTradeContract, readWorkspaceTradeDefinition } from '../utils/contract-families';
 import {
     EO_CONTRACT_TYPES,
     EO_MAX_RUN,
     EO_NO_SIGNAL,
+    EO_ODD,
     EO_RULE_REVERSAL,
     configureEvenOdd,
     createEvenOddState,
@@ -27,6 +29,7 @@ import {
     invalidateEvenOdd,
     normalizeParity,
     rememberSignal,
+    resolveReversalRun,
     resolveReversalSignal,
     signalKey,
     signalUsed,
@@ -352,6 +355,16 @@ export default Engine =>
             }
 
             const key = this.eoCurrentSignalKey();
+
+            // Observation mode: the signal is recorded and journalled, but nothing is bought.
+            if (isObservationMode()) {
+                this.even_odd_state = rememberSignal(this.getEvenOddState(), key);
+                journalObservation(
+                    `Even/Odd observation: ${contract_type} signal — ${describeWindow(snapshot)} — no contract was purchased.`
+                );
+                return false;
+            }
+
             notify(
                 `Even/Odd: requesting ${contract_type} — ${describeWindow(snapshot)} · signal ${snapshot.signal}`
             );
@@ -377,5 +390,68 @@ export default Engine =>
 
         eoBuyOdd() {
             return this.eoBuy('odd');
+        }
+
+        /**
+         * "Journal the last digits & buy the reverse" — one block, one entry.
+         *
+         * The newest RUN digits of the market the bot is already trading are journalled with the
+         * parity they point at, then that OPPOSITE parity is bought through the engine's own purchase
+         * path: the digits are read from `this.eo_digits`, fed by the engine's genuine tick stream
+         * (`recordReversalDigit`). A mixed run is no entry, and a run that already opened an entry is
+         * never entered twice — the block reports why and buys nothing.
+         */
+        async eoJournalReverse(run = 2) {
+            const size = resolveReversalRun(run);
+            const digits = (this.eo_digits ?? []).slice(-size);
+            const signal = resolveReversalSignal(digits, { run: size, direction: 'both' });
+            const shown = digits.length ? digits.join(', ') : 'nothing collected yet';
+
+            notify(`Even/Odd: last ${size} digit(s) ${shown} — ${signal.reason}.`);
+
+            if (signal.direction === EO_NO_SIGNAL) return false;
+            if (this.contractId) {
+                notify(`Even/Odd: ${signal.direction} entry skipped — contract ${this.contractId} is still open.`, 'warn');
+                return false;
+            }
+            if (typeof this.riskCanTrade === 'function' && !this.riskCanTrade()) {
+                notify('Even/Odd: entry blocked — the session risk limits allow no trade.', 'warn');
+                return false;
+            }
+
+            const key = signalKey({
+                symbol: this.symbol || this.eo_digits_symbol,
+                window: size,
+                threshold: 0,
+                direction: 'both',
+                epoch: this.eo_digits_epoch,
+            });
+            if (signalUsed(this.getEvenOddState(), key)) {
+                notify(`Even/Odd: the ${signal.direction} signal already opened an entry.`, 'warn');
+                return false;
+            }
+
+            // Observation mode: the reversal is journalled as the signal it is, with no entry.
+            if (isObservationMode()) {
+                this.even_odd_state = rememberSignal(this.getEvenOddState(), key);
+                journalObservation(
+                    `Even/Odd observation: last ${size} digit(s) ${shown} point at ${signal.direction.toUpperCase()} — no contract was purchased.`
+                );
+                return false;
+            }
+
+            const contract_type = EO_CONTRACT_TYPES[signal.direction === EO_ODD ? 'odd' : 'even'];
+            const previous_contract = this.contractId;
+            await this.purchase(contract_type);
+
+            const confirmed = Boolean(this.contractId) && this.contractId !== previous_contract;
+            if (!confirmed) {
+                notify(`Even/Odd: the ${contract_type} purchase was not confirmed by Deriv.`, 'error');
+                return false;
+            }
+
+            this.even_odd_state = rememberSignal(this.getEvenOddState(), key);
+            notify(`Even/Odd: ${contract_type} purchased — contract ${this.contractId}.`);
+            return true;
         }
     };

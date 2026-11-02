@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AccountSwitcher from '../account-switcher';
 
 const mockCheckAndRegenerateWebSocket = jest.fn();
@@ -32,6 +32,7 @@ jest.mock('@/external/bot-skeleton/services/api/api-base', () => ({
 
 jest.mock('@deriv-com/translations', () => ({
     Localize: ({ i18n_default_text }: { i18n_default_text: string }) => <span>{i18n_default_text}</span>,
+    localize: (text: string) => text,
 }));
 
 jest.mock('@/components/shared', () => ({
@@ -90,6 +91,31 @@ describe('AccountSwitcher', () => {
         render(<AccountSwitcher activeAccount={mockActiveAccount} />);
         expect(screen.getByText('Real account')).toBeInTheDocument();
         expect(screen.getByTestId('dt_balance')).toHaveTextContent('100.00 USD');
+    });
+
+    it('offers no demo reset on a real account', () => {
+        render(<AccountSwitcher activeAccount={mockActiveAccount} />);
+        expect(screen.queryByTestId('dt_reset_demo')).not.toBeInTheDocument();
+    });
+
+    it('resets the demo balance through the account top-up', async () => {
+        const { api_base } = require('@/external/bot-skeleton/services/api/api-base');
+        const send = jest.fn().mockResolvedValue({});
+        api_base.api = { send };
+
+        try {
+            render(
+                <AccountSwitcher
+                    activeAccount={{ ...mockActiveAccount, loginid: 'VRTC456', isVirtual: true, balance: '5.00' }}
+                />
+            );
+            fireEvent.click(screen.getByTestId('dt_reset_demo'));
+
+            await waitFor(() => expect(send).toHaveBeenCalledWith({ topup_virtual: 1 }));
+            await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('10,000 USD'));
+        } finally {
+            delete api_base.api;
+        }
     });
 
     it('opens dropdown on click when multiple accounts exist', () => {

@@ -306,6 +306,11 @@ export function useFreeBotLoader() {
                     return;
                 }
 
+                // An observation-only template holds no purchase path, so the run is an observation
+                // by construction. Turning the switch on here keeps the run panel (and the journal)
+                // describing the run the bot was loaded for.
+                if (template.observationOnly) runPanel?.setObservationMode(true);
+
                 const latestAccount = readAccount(store);
                 botLoaderStore.completeLoad(facts, latestAccount.accountMode, latestAccount.loginid);
                 dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
@@ -370,6 +375,25 @@ export function useFreeBotLoader() {
                 : 'Not signed in — log in with Deriv (Demo is recommended for first runs).',
         });
         if (!accountOk) errors.push('Log in with your Deriv account before running a bot.');
+
+        // An observation-only bot carries no Purchase block, so Observation mode is what satisfies
+        // the Builder's mandatory-purchase gate. Starting without it would just be refused.
+        if (template.observationOnly) {
+            const observing = !!store?.run_panel?.is_observation_mode;
+            checks.push({
+                id: 'observation-mode',
+                label: 'Observation mode is on',
+                passed: observing,
+                detail: observing
+                    ? 'Observation mode — this bot journals its signals and buys nothing.'
+                    : 'Observation mode is off. This bot holds no Purchase block; load it again or turn Observation mode on.',
+            });
+            if (!observing) {
+                errors.push(
+                    'Observation mode is off. This bot can only observe — load it again or turn Observation mode on in the Bot Builder.'
+                );
+            }
+        }
 
         const accountChanged = !!bot.loginid && !!account.loginid && bot.loginid !== account.loginid;
         checks.push({

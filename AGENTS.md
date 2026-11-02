@@ -19,6 +19,12 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
   the live dev server and Rsbuild then dies mid-request with
   `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/0~range-parser.js` (a lazily imported chunk that had vanished from
   disk) — which is exactly why the installer is a separate one-shot service, started before `web`.
+- **Serialised, and `web` waits for a finished install.** `install` takes an `flock` on
+  `node_modules/.base44-install.lock`, so two `docker compose up` runs can never rewrite the shared volume at the
+  same time (a waiter re-reads the hash and exits without installing). It deletes
+  `node_modules/.base44-lock-hash` before `npm ci` and writes it back only when the install finishes; `web`'s
+  start command blocks until that marker matches `package-lock.json`, so a dev server that comes up mid-install
+  waits instead of serving a half-written `node_modules`.
 - **Never run `npm ci` / `npm install` inside the running `web` container** — it rewrites `node_modules` under the
   live dev server and kills it. Run tooling with `exec` and no install step, e.g.
   `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots`. If `web` is ever restarted
@@ -87,7 +93,25 @@ working while the bot-side symbol list is empty.
   file alone is not enough.
 - The same image is the boot splash via `src/components/splash-screen/`, rendered wherever the app
   shows its startup loader (`src/app/app-content.jsx` `is_loading` branch and `src/app/app-root.tsx`).
-- `scripts/generate-brand-css.js` regenerates `_themes.scss` from `brand.config.json` on dev/build.
+- `scripts/generate-brand-css.js` regenerates `_themes.scss` from `brand.config.json` on dev/build
+  (it only rewrites the brand-colour block, never the theme-token blocks).
+
+## Theme and design language (one palette on every page)
+The whole app uses ONE theme, driven by the `theme--light` / `theme--dark` class on `<body>` that the
+hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.is_dark_mode_on` →
+`MainBody`). Dark is the app default when the user has never toggled.
+- Tokens live in `src/components/shared/styles/_themes.scss`: the two theme blocks at the end now carry
+  the modern console palette (`--general-main-1: #0b1017`, `--general-section-*` navy surfaces,
+  `--text-general: #e6edf6`, borders, states) plus the page-neutral `--dash-*` surface/ink/tint tokens.
+  Pages must consume those tokens — do not hardcode surface or text colours in a page stylesheet.
+- `src/pages/digits/digits-dashboard.scss` used to re-map the theme tokens on `.digits` to a dark-only
+  palette, which pinned the Digits and Statistics tabs to dark and made the hamburger theme switch do
+  nothing there. That block is gone: those pages now follow the same global theme as every other tab.
+- `index.html` applies the stored theme in a tiny inline script before first paint (default dark), so
+  the first frame never flashes the wrong palette. `UiStore.getInitialDarkMode()` uses the same rule.
+- Verify: open the hamburger and flip **Dark theme** on the Digits, Statistics, Free Bots and Dashboard
+  tabs — `<body>` gains/loses `theme--dark`, and each page's background, cards, borders and text change
+  together. `docker compose exec web npx tsc --noEmit` remains clean.
 
 ## Layout notes
 - `.main` in `src/pages/main/main.scss` is a fixed-height, `overflow: hidden` flex box, so a tab page
@@ -488,7 +512,13 @@ stay inert placeholders. `index.js` exposes the whole thing as the `observerRunt
   login-gated, so the trade itself is verified by hand; the engine logic is covered by the tests.
 
 ## Even/Odd strategy blocks
-- The twelve `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
+- The thirteen `eo_*` blocks are registered in `Digits/index.js` and the existing Digits toolbox category. Usage and targeted checks: `docs/even-odd-blocks.md`.
+- `eo_journal_reverse` is the reversal entry in one block: `Bot.eoJournalReverse(run)` reads `eo_digits`
+  for the market already being traded, journals the digits and the parity they point at, then buys the
+  OPPOSITE parity through `purchase()`. A mixed run buys nothing, an already-used signal key never enters
+  twice, and an open contract or blocked risk limit refuses the entry with the reason in the journal. It is
+  in `PURCHASE_BLOCK_TYPES`, so a canvas whose only entry is this block still passes the mandatory-purchase
+  gate.
 - Engine entry regression coverage is in `utils/__tests__/even-odd-runtime.test.js`: the pure-rule tests alone cannot catch missing imports in `trade/EvenOdd.js`. Run with `--runInBand --coverage=false` to avoid rewriting tracked coverage output.
 - Browser generation can be checked in an isolated `Blockly.Workspace` without replacing the user's canvas or placing a trade. Live Demo purchases/settlements remain unverified.
 
@@ -1080,3 +1110,114 @@ marks it analysed and moves on to the next market (`market-scan-engine.test.js` 
 `purchase`, so a gate nested under AND/OR filters still validates. A template that adds one of these shapes
 without the matching field fails the loader with "Entry condition mismatch". The preset count (9) and the
 per-preset rules are pinned by `multi-market-xml.test.ts`.
+
+## Compact trade window (run panel)
+The trade window that opens in the Bot Builder / Deriv Chart run panel has three tabs — Summary,
+Transactions and Journal (`components/run-panel/run-panel.tsx`). Its compact skin is the last block
+of `run-panel.scss`, scoped to `.run-panel` so the Summary card, transaction list and journal keep
+their own look outside the drawer:
+- the tabs are a segmented control (grey track, white active pill, no active line),
+- the six session figures are three-column chips with uppercase 1rem labels,
+- transaction rows/header and journal lines are denser, with the journal time kept secondary.
+- the six-figure block spans the drawer: `width: calc(100% - 2.4rem)` beside its side margins, and
+  `width: 100%` in the mobile block that drops those margins. Do not set it back to `width: auto` —
+  as a flex item it then shrank to the chip row (~304px) and left a blank strip on the right, which is
+  the gap users see on a phone.
+
+Content heights on mobile still come from `--drawer-content-height-mobile`; if the tab strip or stat
+chips grow, adjust that variable in `src/app/app.scss`, not the individual panel classes.
+
+## Take-profit / stop-loss alert (trade window)
+When a run stops, `RunPanelStore.checkSessionLimit()` compares the profit **that run** added
+(`transactions.statistics.total_profit` minus the baseline captured in `onRunButtonClick`) with the
+Free Bots template's own `takeProfit` / `stopLoss`, captured into `session_limits` when the run
+started (from `botLoaderStore.bot`, carried from `templates.ts` through `beginLoad`). Capturing it
+on the run matters: the loaded-bot banner's **Close** clears `botLoaderStore` even while a bot is
+running, and the stopped run must still raise the alert for the limits it actually ran with. The
+rule is the pure `resolveSessionLimitHit` in
+`src/utils/session-limits.ts`: a limit of 0 is "not set", and a limit reached is reported as
+`take_profit` / `stop_loss` with its amount.
+- It is called from `onBotStopEvent` only when the stop is final — a recoverable error that restarts
+  the trade loop sets `bot_continues` and is skipped.
+- `components/session-limit-alert/` renders it as a centred card (shared `Modal`, `is_vertical_centered`,
+  no header): icon, "Take profit reached" / "Stop loss reached", the run profit and the limit, then
+  **Okay** — which closes the card, opens the trade window on Transactions and switches to the Bot
+  Builder tab (`showSessionLimitTrades`) — and a quieter **Run again**, which dismisses the alert and
+  calls the normal `onRunButtonClick()`. It is mounted in `main.tsx` next to the global `Dialog`.
+- Only a loaded Free Bots template carries thresholds, so an AI-built or hand-built canvas raises no
+  alert. The live path needs a logged-in Demo run that actually reaches +take profit / −stop loss;
+  the rule and the card are covered by `src/utils/__tests__/session-limits.test.ts` and
+  `src/components/session-limit-alert/__tests__/session-limit-alert.spec.tsx`.
+
+## Observation mode (Bot Builder)
+A run switch that uses the trade engine for observation: the blocks on the canvas run against the
+real tick stream, but the engine buys nothing. It is a single runtime flag, so every strategy block
+(digit gates, Even/Odd signals, `eoJournalReverse`, a plain Purchase) keeps its own logic and the
+only thing that changes is the purchase path.
+- `services/observation-mode.js` holds the flag (`isObservationMode`, `setObservationMode`,
+  `loadObservationMode`) and `journalObservation(message)`, a journal line without the
+  notification sound. The choice is persisted under `dbot_observation_mode`.
+- `trade/Purchase.js` returns before any proposal or `buy` request and journals the entry it was
+  asked for. The engine state stays in `BEFORE_PURCHASE`, so the generated loop keeps observing the
+  next tick instead of waiting on a contract that will never settle — do not make it dispatch
+  `purchaseSuccessful` or a synthetic contract, or the run panel would show a trade that never
+  happened.
+- `trade/EvenOdd.js` journals an Even/Odd or reversed-digit signal instead of buying it, and still
+  marks the signal used (`rememberSignal`) so one signal never journals twice.
+- `trade/index.js` `start()` writes one journal line per run, so the absence of contracts is
+  explained in the Journal tab.
+- `RunPanelStore.is_observation_mode` mirrors the flag for the UI; `setObservationMode` toggles it
+  (mid-run too — the engine reads the runtime flag on each entry). The eye button in the Bot
+  Builder toolbar (`#db-toolbar__observation-button`, `workspace-group.tsx`) is the switch, and
+  `ContractStageText` reads the store so a running observation shows "Observing — no trades".
+- Verify: `docker compose -f docker-compose.base44.yml exec web npx jest
+  src/external/bot-skeleton/services/tradeEngine/utils/__tests__/observation-mode.test.js
+  --coverage=false` (flag, Purchase guard, Even/Odd and reversal guards). In the Bot Builder the
+  eye button flips `aria-checked` and `localStorage.dbot_observation_mode`; a live observation run
+  is login-gated, so its journal output is verified by hand.
+- **Observation-only Free Bots** (`observe_over1`, `observe_under8`, `observe_over2`,
+  `observe_under7`, `observe_even_odd`) are the five `src/xml/observe_*.xml` assets. They journal
+  every tick and hold **no** `purchase`, no `eo_buy_*`, no `digits_parity_recovery` and no
+  `trade_again`, so the canvas can never buy a contract — that is what "observation only" means
+  here, not merely the runtime flag. They are built from the **observer block library**, not the
+  legacy digit blocks, so the Blocks menu's observation, pattern-detection, entry and monitoring
+  blocks are what run:
+  - `obs_on_start` sizes the analysis window (`obs_analyse_window` 100), fixes the barrier
+    (`obs_set_barrier`), configures the Over/Under strategy and arms `obs_prevent_duplicate`.
+  - `obs_on_tick` runs `obs_detect_run` (two identical digits) then `obs_entry`, whose condition is
+    `obs_confirmation_after` AND `obs_require_sample` (100 genuine ticks) AND `obs_freq_below 10.3%`
+    on each losing digit. Its body journals the signal (`obs_note`), arms the next-tick observation
+    (`obs_evaluate_over` / `obs_evaluate_under`), sets a two-tick cooldown (`obs_cooldown_ticks`) and
+    resets the detector (`obs_reset_pattern`) so the next pair is judged fresh.
+  - The Even/Odd bot uses two `obs_parity_pattern` blocks (2 even → confirm odd → observe ODD; 2 odd
+    → confirm even → observe EVEN) and gates its two `obs_entry` blocks on `obs_confirmation_after`,
+    `obs_require_sample` and `obs_check_parity_transition` (Even→Odd / Odd→Even), then arms
+    `obs_parity_outcome` for the target parity. A mixed pair matches neither entry — no entry.
+  - `obs_on_window` journals `obs_research_rank` every analysis window. Each bot also keeps a
+    `before_purchase` → `text_join` → `notify` line that reads `obs_latest` and `obs_pattern_stage`,
+    so the Journal tab always shows the newest digit and the detector stage.
+  - Because such a canvas has no purchase path, `getMissingBlocks` (`scratch/utils/index.js`) skips
+    the mandatory `purchase` requirement **while Observation mode is on**; with the switch off the
+    gate is unchanged and Run is refused exactly as before. `required-blocks.test.js` pins both.
+  - `inspectFreeBotXml` returns early for `template.observationOnly` after the trade-type,
+    contract and duration checks: it requires no purchase path, at least one journal block fed by a
+    market read (a legacy digit/Even-Odd read or an observer observation block such as
+    `obs_detect_run`, `obs_parity_pattern`, `obs_confirmation_after` or `obs_evaluate_*`), and
+    resolving variables. The card shows Mode / Signal / Journal instead of stake, take-profit and
+    stop-loss rows.
+  - `useFreeBotLoader` turns Observation mode on when such a template loads and `validateBot` adds
+    an "Observation mode is on" check, so the run panel and the journal describe the run truthfully.
+  - Verify: `npx jest src/pages/free-bots src/external/bot-skeleton/services/observer` (the
+    templates load through the same inspection) and, in the Free Bots tab, load
+    "Observe Over 1 — Signal Watch": the Bot Builder opens with the `obs_*` observer program
+    (`obs_on_start`, `obs_on_tick`, `obs_entry`, `obs_detect_run`, `obs_freq_below`) plus the
+    `notify` journal line, zero purchase blocks, and the eye toggle on. A live run needs a logged-in
+    Demo account, so the journal output is verified by hand.
+
+## Demo account reset (header)
+The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next
+to the balance only while a Demo account is active. It sends Deriv's own `topup_virtual` on the
+authorised socket, which restores a USD demo account to 10,000 USD (the API takes no amount), then
+re-subscribes to `balance` so the header figure refreshes. It is hidden/disabled while a bot runs and
+has no effect for a Real account. Covered by `__tests__/account-switcher.spec.tsx`; the live reset
+needs a signed-in Demo session, so it is verified by hand.

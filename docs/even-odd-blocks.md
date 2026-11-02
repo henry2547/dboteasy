@@ -1,6 +1,6 @@
 # Even/Odd strategy blocks
 
-These twelve blocks live in the existing Bot Builder's **Digits** category, alongside **Use the best even/odd market**, which picks the market the strategy runs on. They do not add a tab or a separate trading interface.
+These blocks live in the existing Bot Builder's **Digits** category, alongside **Use the best even/odd market**, which picks the market the strategy runs on. They do not add a tab or a separate trading interface.
 
 ## Connecting a strategy
 
@@ -25,6 +25,7 @@ These twelve blocks live in the existing Bot Builder's **Digits** category, alon
 | `eo_buy_odd` | Requests `DIGITODD` through the existing purchase engine, only when the configured signal selects ODD. |
 | `eo_one_entry_per_signal` | Allows at most one confirmed entry for a particular tick/window/threshold/direction/market identifier; a new tick is a new signal. |
 | `eo_wait_tick` | Waits asynchronously for the next accepted tick, or returns false when stopped. |
+| `eo_journal_reverse` | The reversal entry in one block: journals the newest N digits (default 2) and buys the opposite parity — all even → `DIGITODD`, all odd → `DIGITEVEN`, a mixed run is no entry. It reads the market the bot is already trading, buys through the engine's own purchase path, and never enters the same digits twice. |
 
 The threshold-reading blocks do not override the configured buy signal: a Buy block still checks the configured threshold and direction. When both parities qualify, the higher share wins; an exact tie selects EVEN. Percentages describe past ticks, not a guarantee about the next digit.
 
@@ -62,4 +63,4 @@ npx jest src/external/bot-skeleton/services/tradeEngine/utils/__tests__/even-odd
 npm run type-check
 ```
 
-The runtime tests use a mocked purchase method: they verify routing, signal/risk/disconnection guards, duplicate prevention, unconfirmed purchases and tick waits, without placing orders. Browser verification confirms the existing builder opens and all twelve blocks generate their engine calls in an isolated workspace. A real Demo-account proposal → purchase → settlement has not been verified; test that separately with an authorised Demo account before considering real funds. The pre-existing `Failed to load image` console error is unrelated to these blocks.
+The runtime tests use a mocked purchase method: they verify routing, signal/risk/disconnection guards, duplicate prevention, unconfirmed purchases and tick waits, without placing orders. Browser verification confirms the existing builder opens and all thirteen blocks generate their engine calls in an isolated workspace. A real Demo-account proposal → purchase → settlement has not been verified; test that separately with an authorised Demo account before considering real funds. The pre-existing `Failed to load image` console error is unrelated to these blocks.

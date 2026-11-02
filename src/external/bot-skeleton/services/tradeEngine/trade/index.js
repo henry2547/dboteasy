@@ -4,6 +4,7 @@ import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import { createError } from '../../../utils/error';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { isObservationMode, journalObservation } from '../../observation-mode';
 import { checkBlocksForProposalRequest, doUntilDone } from '../utils/helpers';
 import { expectInitArg } from '../utils/sanitize';
 import { proposalsReady, start } from './state/actions';
@@ -128,6 +129,17 @@ export default class TradeEngine extends EvenOdd(
         this.tradeOptions = { ...validated_trade_options, symbol: this.options.symbol };
         this.store.dispatch(start());
         this.checkLimits(validated_trade_options);
+
+        // Said once per run (start() runs once per trade loop), so the journal explains why no
+        // contract ever appears.
+        if (isObservationMode()) {
+            if (!this.observation_announced) {
+                this.observation_announced = true;
+                journalObservation('Observation mode: the blocks on the canvas run, and no contract is purchased.');
+            }
+        } else {
+            this.observation_announced = false;
+        }
 
         this.makeDirectPurchaseDecision();
     }

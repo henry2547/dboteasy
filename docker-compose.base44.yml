@@ -16,11 +16,19 @@ services:
       - sh
       - -ec
       - |
+        # One installer at a time. Two `npm ci` runs racing in the shared volume rewrite it under
+        # the live dev server, which then dies mid-request with ERR_MODULE_NOT_FOUND. flock
+        # serialises them; the waiter re-reads the hash below and exits without reinstalling.
+        exec 9>node_modules/.base44-install.lock
+        flock 9
         lock_hash=$$(md5sum package-lock.json | cut -d' ' -f1)
         if [ -f node_modules/.package-lock.json ] && [ "$$(cat node_modules/.base44-lock-hash 2>/dev/null)" = "$$lock_hash" ]; then
             echo "node_modules already matches package-lock.json — nothing to install"
             exit 0
         fi
+        # Drop the finished marker first: `web` waits for it, so a dev server that restarts
+        # mid-install never serves a half-written node_modules.
+        rm -f node_modules/.base44-lock-hash
         npm ci --no-audit --no-fund
         printf '%s\n' "$$lock_hash" > node_modules/.base44-lock-hash
     restart: "no"
@@ -35,7 +43,16 @@ services:
       - "3000:4003"
     environment:
       - BASE44_PREVIEW_MODE
-    command: ["sh", "-ec", "exec npm run dev -- --host 0.0.0.0"]
+    command:
+      - sh
+      - -ec
+      - |
+        lock_hash=$$(md5sum package-lock.json | cut -d' ' -f1)
+        while [ "$$(cat node_modules/.base44-lock-hash 2>/dev/null)" != "$$lock_hash" ]; do
+            echo "waiting for the installer to finish node_modules"
+            sleep 2
+        done
+        exec npm run dev -- --host 0.0.0.0
     depends_on:
       install:
         condition: service_completed_successfully

@@ -298,6 +298,11 @@ export const ToolboxItems = () =>
                 <Block type='eo_buy_even' />
                 <Block type='eo_buy_odd' />
                 <Block type='eo_one_entry_per_signal' />
+                {/* One block for the reversal entry: it journals the newest digits and buys the
+                    opposite parity through the engine's own purchase path. */}
+                <Block type='eo_journal_reverse'>
+                    <Field name='RUN'>2</Field>
+                </Block>
                 <Block type='eo_wait_tick' />
             </Category>
             {/* Market intelligence: discovery, readiness, ranking and cooldowns. Every block reads
