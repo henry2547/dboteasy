@@ -30,6 +30,14 @@ jest.mock('@/external/bot-skeleton/services/api/api-base', () => ({
     api_base: { is_running: false },
 }));
 
+jest.mock('@/external/deriv-core', () => ({
+    getAuthInfo: jest.fn(() => ({ access_token: 'test-token' })),
+}));
+
+jest.mock('@/services/derivws-accounts.service', () => ({
+    DerivWSAccountsService: { resetDemoBalance: jest.fn(() => Promise.resolve()) },
+}));
+
 jest.mock('@deriv-com/translations', () => ({
     Localize: ({ i18n_default_text }: { i18n_default_text: string }) => <span>{i18n_default_text}</span>,
     localize: (text: string) => text,
@@ -98,9 +106,12 @@ describe('AccountSwitcher', () => {
         expect(screen.queryByTestId('dt_reset_demo')).not.toBeInTheDocument();
     });
 
-    it('resets the demo balance through the account top-up', async () => {
+    it('resets the demo balance through the REST reset, then re-reads the balance', async () => {
+        const { useApiBase } = require('@/hooks/useApiBase');
+        useApiBase.mockReturnValue({ accountList: mockAccountList, activeLoginid: 'VRTC456' });
         const { api_base } = require('@/external/bot-skeleton/services/api/api-base');
-        const send = jest.fn().mockResolvedValue({});
+        const { DerivWSAccountsService } = require('@/services/derivws-accounts.service');
+        const send = jest.fn();
         api_base.api = { send };
 
         try {
@@ -111,11 +122,30 @@ describe('AccountSwitcher', () => {
             );
             fireEvent.click(screen.getByTestId('dt_reset_demo'));
 
-            await waitFor(() => expect(send).toHaveBeenCalledWith({ topup_virtual: 1 }));
+            await waitFor(() =>
+                expect(DerivWSAccountsService.resetDemoBalance).toHaveBeenCalledWith('test-token', 'VRTC456')
+            );
+            await waitFor(() => expect(send).toHaveBeenCalledWith({ balance: 1 }));
             await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('10,000 USD'));
         } finally {
             delete api_base.api;
         }
+    });
+
+    it('shows the API error when the demo reset is refused', async () => {
+        const { useApiBase } = require('@/hooks/useApiBase');
+        useApiBase.mockReturnValue({ accountList: mockAccountList, activeLoginid: 'VRTC456' });
+        const { DerivWSAccountsService } = require('@/services/derivws-accounts.service');
+        DerivWSAccountsService.resetDemoBalance.mockResolvedValueOnce(
+            Promise.reject(new Error('Only demo accounts can have their balance reset'))
+        );
+
+        render(<AccountSwitcher activeAccount={{ ...mockActiveAccount, loginid: 'VRTC456', isVirtual: true }} />);
+        fireEvent.click(screen.getByTestId('dt_reset_demo'));
+
+        await waitFor(() =>
+            expect(screen.getByRole('status')).toHaveTextContent('Only demo accounts can have their balance reset')
+        );
     });
 
     it('opens dropdown on click when multiple accounts exist', () => {

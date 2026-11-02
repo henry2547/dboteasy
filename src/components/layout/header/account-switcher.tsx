@@ -3,9 +3,11 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { addComma, getCurrencyDisplayCode, getDecimalPlaces } from '@/components/shared';
 import Text from '@/components/shared_ui/text';
+import { getAuthInfo } from '@/external/deriv-core';
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
+import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 import { isDemoAccount } from '@/utils/account-helpers';
 import { Localize, localize } from '@deriv-com/translations';
 import { TAccountSwitcher } from './common/types';
@@ -30,19 +32,17 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
     }, [reset_notice]);
 
     /**
-     * Resets the demo balance to Deriv's own virtual-account top-up, which brings a USD demo account
-     * back to 10,000 USD. It goes through the authorised socket (`topup_virtual`) and the balance
-     * subscription then refreshes the figure in the header.
+     * Resets the demo balance to Deriv's default 10,000 USD through the Options API's own REST
+     * reset (`POST …/accounts/{id}/reset-demo-balance`). The authorised socket then re-reads the
+     * balance, so the header figure and the stream behind it show the new amount.
      */
     const handleResetDemo = useCallback(
         async (event: React.MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation();
             if (is_resetting || is_bot_running) return;
 
-            const api = api_base.api as unknown as
-                | { send: (request: unknown) => Promise<{ error?: { message?: string } } | undefined> }
-                | null;
-            if (!api) {
+            const accessToken = getAuthInfo()?.access_token;
+            if (!accessToken || !activeLoginid) {
                 setResetNotice(localize('Reconnect to reset the demo balance.'));
                 return;
             }
@@ -50,21 +50,17 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
             setIsResetting(true);
             setResetNotice('');
             try {
-                const response = await api.send({ topup_virtual: 1 });
-                if (response?.error) {
-                    setResetNotice(response.error.message || localize('Could not reset the demo balance.'));
-                } else {
-                    setResetNotice(localize('Demo balance reset to 10,000 USD.'));
-                    // Refresh the header figure; the existing balance stream keeps it current after this.
-                    await api.send({ balance: 1 });
-                }
-            } catch {
-                setResetNotice(localize('Could not reset the demo balance.'));
+                await DerivWSAccountsService.resetDemoBalance(accessToken, activeLoginid);
+                setResetNotice(localize('Demo balance reset to 10,000 USD.'));
+                // Refresh the header figure; the existing balance stream keeps it current after this.
+                api_base.api?.send({ balance: 1 });
+            } catch (error) {
+                setResetNotice((error as Error)?.message || localize('Could not reset the demo balance.'));
             } finally {
                 setIsResetting(false);
             }
         },
-        [is_resetting, is_bot_running]
+        [activeLoginid, is_resetting, is_bot_running]
     );
 
     useEffect(() => {

@@ -1207,6 +1207,14 @@ only thing that changes is the purchase path.
     stop-loss rows.
   - `useFreeBotLoader` turns Observation mode on when such a template loads and `validateBot` adds
     an "Observation mode is on" check, so the run panel and the journal describe the run truthfully.
+  - **The run must not disable the observer program.** `DBot.disableStrayBlocks()` (a
+    before-run function) disables every top block that is neither a main block nor an independent
+    block; the `obs_on_start` / `obs_on_tick` / `obs_on_window` hats and any free-standing observer
+    statement are exactly that, and `observer-program.js` skips disabled blocks — so starting an
+    observation bot removed its whole program and the journal went silent. The sweep now uses
+    `isStrayTopBlock` (`scratch/utils/index.js`), which keeps every `obs_*` root enabled.
+    `scratch/utils/__tests__/stray-blocks.test.js` pins it (observer roots and main/independent
+    blocks stay, an unconnected `notify` is still disabled).
   - Verify: `npx jest src/pages/free-bots src/external/bot-skeleton/services/observer` (the
     templates load through the same inspection) and, in the Free Bots tab, load
     "Observe Over 1 — Signal Watch": the Bot Builder opens with the `obs_*` observer program
@@ -1216,8 +1224,15 @@ only thing that changes is the purchase path.
 
 ## Demo account reset (header)
 The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next
-to the balance only while a Demo account is active. It sends Deriv's own `topup_virtual` on the
-authorised socket, which restores a USD demo account to 10,000 USD (the API takes no amount), then
-re-subscribes to `balance` so the header figure refreshes. It is hidden/disabled while a bot runs and
-has no effect for a Real account. Covered by `__tests__/account-switcher.spec.tsx`; the live reset
-needs a signed-in Demo session, so it is verified by hand.
+to the balance only while a Demo account is active. It calls `DerivWSAccountsService.resetDemoBalance`
+(`POST {derivws}/options/accounts/{id}/reset-demo-balance` with the OAuth bearer token and
+`Deriv-App-ID`), which restores the demo account to Deriv's default 10,000 USD, then asks the
+authorised socket for `balance` so the header figure and the balance stream show the new amount.
+- **Not `topup_virtual`.** The app connects to the Options API at `api.derivws.com/trading/v1/…`,
+  which does not serve the legacy `topup_virtual` socket request — that is why the first version of
+  the button silently did nothing. The REST reset above is the endpoint that API documents.
+- Failure messages come from the API's `{ errors: [{ message }] }` body, falling back to the HTTP
+  status. The button is hidden/disabled while a bot runs and has no effect for a Real account.
+- Covered by `__tests__/account-switcher.spec.tsx` (success, API error) and
+  `src/services/__tests__/derivws-accounts-reset.test.ts` (endpoint, method, headers, error text);
+  the live reset needs a signed-in Demo session, so it is verified by hand.
