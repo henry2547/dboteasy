@@ -1112,8 +1112,11 @@ chips grow, adjust that variable in `src/app/app.scss`, not the individual panel
 ## Take-profit / stop-loss alert (trade window)
 When a run stops, `RunPanelStore.checkSessionLimit()` compares the profit **that run** added
 (`transactions.statistics.total_profit` minus the baseline captured in `onRunButtonClick`) with the
-loaded Free Bots template's own `takeProfit` / `stopLoss` (`botLoaderStore.bot`, carried from
-`templates.ts` through `beginLoad`). The rule is the pure `resolveSessionLimitHit` in
+Free Bots template's own `takeProfit` / `stopLoss`, captured into `session_limits` when the run
+started (from `botLoaderStore.bot`, carried from `templates.ts` through `beginLoad`). Capturing it
+on the run matters: the loaded-bot banner's **Close** clears `botLoaderStore` even while a bot is
+running, and the stopped run must still raise the alert for the limits it actually ran with. The
+rule is the pure `resolveSessionLimitHit` in
 `src/utils/session-limits.ts`: a limit of 0 is "not set", and a limit reached is reported as
 `take_profit` / `stop_loss` with its amount.
 - It is called from `onBotStopEvent` only when the stop is final — a recoverable error that restarts

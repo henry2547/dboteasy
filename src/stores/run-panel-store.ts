@@ -142,6 +142,11 @@ export default class RunPanelStore {
     } | null = null;
     /** Statistics profit when the run started, so a limit is measured against this run only. */
     session_profit_baseline = 0;
+    /**
+     * Take profit / stop loss captured when the run started. Holding them on the run means closing
+     * the loaded-bot banner mid-run cannot lose the alert the stopped run should still show.
+     */
+    session_limits: { takeProfit: number; stopLoss: number; bot_name: string } | null = null;
     is_contract_buying_in_progress = false;
 
     run_id = '';
@@ -254,6 +259,14 @@ export default class RunPanelStore {
             this.run_id = `run-${Date.now()}`;
             this.session_profit_baseline = Number(this.root_store.transactions.statistics?.total_profit ?? 0);
             this.session_limit_alert = null;
+            const loaded_bot = botLoaderStore.bot;
+            this.session_limits = loaded_bot
+                ? {
+                      takeProfit: loaded_bot.takeProfit,
+                      stopLoss: loaded_bot.stopLoss,
+                      bot_name: loaded_bot.name,
+                  }
+                : null;
 
             summary_card.clear();
             this.setContractStage(contract_stages.STARTING);
@@ -337,6 +350,7 @@ export default class RunPanelStore {
         journal.clear();
         summary_card.clear();
         transactions.clear();
+        this.session_limits = null;
         this.setContractStage(contract_stages.NOT_RUNNING);
     };
 
@@ -357,19 +371,23 @@ export default class RunPanelStore {
      * profit this run added counts, so a second run never inherits the first run's result.
      */
     checkSessionLimit = () => {
-        const loaded = botLoaderStore.bot;
-        if (!loaded) return;
+        const limits = this.session_limits;
+        if (!limits) return;
 
         const total = Number(this.root_store.transactions.statistics?.total_profit ?? 0);
         const profit = Math.round((total - this.session_profit_baseline) * 100) / 100;
-        const hit = resolveSessionLimitHit({ profit, takeProfit: loaded.takeProfit, stopLoss: loaded.stopLoss });
+        const hit = resolveSessionLimitHit({
+            profit,
+            takeProfit: limits.takeProfit,
+            stopLoss: limits.stopLoss,
+        });
         if (!hit) return;
 
         this.session_limit_alert = {
             kind: hit.kind,
             amount: hit.amount,
             profit,
-            bot_name: loaded.name,
+            bot_name: limits.bot_name,
             currency: this.core.client.currency ?? '',
         };
     };
