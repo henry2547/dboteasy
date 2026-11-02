@@ -11,7 +11,7 @@ import main_xml from './xml/main.xml';
 import { forgetAccumulatorsProposalRequest } from './accumulators-proposal-handler';
 import { loadBlockly } from './blockly';
 import DBotStore from './dbot-store';
-import { isAllRequiredBlocksEnabled, updateDisabledBlocks, validateErrorOnBlockDelete } from './utils';
+import { isAllRequiredBlocksEnabled, isStrayTopBlock, updateDisabledBlocks, validateErrorOnBlockDelete } from './utils';
 
 class DBot {
     constructor() {
@@ -465,7 +465,10 @@ class DBot {
     disableStrayBlocks() {
         const top_blocks = this.workspace.getTopBlocks();
         top_blocks.forEach(block => {
-            if (!block.isMainBlock() && !block.isIndependentBlock()) {
+            // The observer program is not reached from the trade definition: its event hats and
+            // free-standing statements stand on their own. Disabling one took it out of the
+            // running program, so an observation bot stopped observing the moment it started.
+            if (isStrayTopBlock(block)) {
                 this.disableBlocksRecursively(block);
             }
         });

@@ -120,6 +120,20 @@ export const updateWorkspaceName = () => {
 
 export const isMainBlock = block_type => config().mainBlocks.indexOf(block_type) >= 0;
 
+/**
+ * An observer block root — a "When …" hat or a free-standing observer statement — runs from the
+ * tick stream, not from the trade definition, so it is never a stray block.
+ */
+export const isObserverProgramRoot = block => String(block?.type ?? '').startsWith('obs_');
+
+/**
+ * A top block the run's stray-block sweep disables: not a trade-definition block, not an
+ * independent block and not part of the observer program. Disabling an observer block removed it
+ * from the running program (`observer-program.js` skips disabled blocks).
+ */
+export const isStrayTopBlock = block =>
+    !isObserverProgramRoot(block) && !block.isMainBlock() && !block.isIndependentBlock();
+
 export const oppositesToDropdownOptions = opposite_name => {
     return opposite_name.map(contract_type => {
         // i.e. [['CALL', localize('Rise')]] becomes [[localize('Rise'), 'CALL']];

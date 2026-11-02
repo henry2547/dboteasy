@@ -113,6 +113,52 @@ export class DerivWSAccountsService {
     }
 
     /**
+     * Authenticated REST headers for the options endpoints. The Deriv-App-ID header
+     * identifies the application and is what the vendored deriv-core reference sends
+     * on every authenticated call.
+     */
+    private static authHeaders(accessToken: string): Record<string, string> {
+        const headers: Record<string, string> = {
+            Authorization: `Bearer ${accessToken}`,
+        };
+        const appId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+        if (appId) headers['Deriv-App-ID'] = appId;
+        return headers;
+    }
+
+    /**
+     * Resets a demo account's balance to Deriv's default (10,000 USD).
+     *
+     * This is the Options API's own REST reset (`POST …/accounts/{id}/reset-demo-balance`).
+     * The legacy `topup_virtual` socket request is not served by this API, which is why the
+     * header's Reset button appeared to do nothing.
+     */
+    static async resetDemoBalance(accessToken: string, accountId: string): Promise<void> {
+        const baseURL = this.getDerivWSBaseURL();
+        const optionsDir = brandConfig.platform.derivws.directories.options;
+        const endpoint = `${baseURL}${optionsDir}accounts/${accountId}/reset-demo-balance`;
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: this.authHeaders(accessToken),
+        });
+
+        if (!response.ok) {
+            // Error bodies follow the API's `{ errors: [{ message }] }` shape; a failure
+            // with an unreadable body still has to say what went wrong.
+            let message = `Could not reset the demo balance (${response.status}).`;
+            try {
+                const body = await response.json();
+                const apiMessage = body?.errors?.[0]?.message;
+                if (apiMessage) message = apiMessage;
+            } catch {
+                // Keep the status-based message.
+            }
+            throw new Error(message);
+        }
+    }
+
+    /**
      * Fetches accounts list from derivatives/accounts endpoint with singleton pattern
      * Prevents duplicate API calls by caching the promise
      * @param accessToken Bearer token from OAuth authentication
