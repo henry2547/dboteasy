@@ -10,6 +10,8 @@ import {
     digitBarState,
     digitGap,
     digitShare,
+    digitsInSetRun,
+    hasNoRedBar,
     highDigitRun,
     hotColdDigit,
     isDigitBarNeutral,
@@ -154,6 +156,41 @@ describe('digit bar state', () => {
         expect(isDigitBarNeutral(digits, 7, 2)).toBe(true);
         expect(isDigitBarNeutral(digits, 5, 2)).toBe(true);
         expect(isDigitBarNeutral([1, 1, 2, 2, 3, 3], 3, 2)).toBe(false);
+    });
+});
+
+describe('low / high pair run', () => {
+    it('counts the newest digits that all sit in the 0/1 pair', () => {
+        expect(digitsInSetRun([1, 0, 0, 1], '0_1')).toBe(4);
+        expect(digitsInSetRun([0, 0, 1, 5], '0_1')).toBe(0);
+        expect(digitsInSetRun([7, 1, 0], '0_1')).toBe(2);
+    });
+
+    it('counts the newest digits that all sit in the 8/9 pair', () => {
+        expect(digitsInSetRun([7, 8, 9, 8], '8_9')).toBe(3);
+        expect(digitsInSetRun([9, 9, 8], '8_9')).toBe(3);
+        expect(digitsInSetRun([9, 8, 7], '8_9')).toBe(0);
+    });
+
+    it('measures nothing for an unknown set or an empty window', () => {
+        expect(digitsInSetRun([0, 1], 'nonsense')).toBe(0);
+        expect(digitsInSetRun([], '0_1')).toBe(0);
+    });
+});
+
+describe('no red bar', () => {
+    // 5 appeared three times, 7 twice; 1 is the coldest digit and 5 the hottest.
+    const digits = [5, 7, 5, 0, 7, 5, 2, 9];
+
+    it('passes for the hottest and the neutral digit, never the coldest', () => {
+        expect(hasNoRedBar(digits, 5, 100)).toBe(true);
+        expect(hasNoRedBar(digits, 7, 100)).toBe(true);
+        expect(hasNoRedBar(digits, 1, 100)).toBe(false);
+    });
+
+    it('fails closed when the bar cannot be read', () => {
+        expect(hasNoRedBar([], 5, 100)).toBe(false);
+        expect(hasNoRedBar(digits, 'x', 100)).toBe(false);
     });
 });
 

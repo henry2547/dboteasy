@@ -7,12 +7,18 @@ import './digits_frequency';
 import './digits_hot_cold';
 import './digits_bar_neutral';
 import './digits_streak';
+// The cold-run pair reads: the losing pair in a row (0/1 or 8/9) and its red-bar guard.
+import './digits_run_in_set';
+import './digits_no_red_bar';
 import './switch_active_market';
 // The parity-aware scan: it measures every eligible market's own latest ticks and keeps the best one
 // for an Even/Odd entry, instead of stopping at the first market whose condition happens to pass.
 import './switch_best_parity_market';
 // The two-leg entry: Over 1 / Under 8 first, then the best even/odd entry after a loss.
 import './digits_parity_recovery';
+// The observed cold-run setup: the losing pair stays under a share with no red bar, then a settled
+// loss reverses on the same market.
+import './digits_cold_run_recovery';
 // The Even/Odd strategy blocks: one rolling window, the conditions read from it and the two entries.
 // They generate `Bot.eo*` calls, so this import is what makes them exist for the palette at all.
 import './eo_configure';

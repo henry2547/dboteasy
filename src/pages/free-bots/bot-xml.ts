@@ -209,10 +209,13 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
         return null;
     };
 
-    // The parity-recovery block buys both legs itself, so there is no `purchase` block to gate.
-    const parityRecoveryBlock = beforePurchase.querySelector('block[type="digits_parity_recovery"]');
-    if (parityRecoveryBlock) {
-        const primary = fieldValue(parityRecoveryBlock, 'PRIMARY');
+    // The parity-recovery and cold-run recovery blocks buy both legs themselves, so there is no
+    // `purchase` block to gate.
+    const recoveryBlock =
+        beforePurchase.querySelector('block[type="digits_parity_recovery"]') ??
+        beforePurchase.querySelector('block[type="digits_cold_run_recovery"]');
+    if (recoveryBlock) {
+        const primary = fieldValue(recoveryBlock, 'PRIMARY');
         const leg =
             primary === 'under_8'
                 ? { contract: 'DIGITUNDER', prediction: 8 }
@@ -229,7 +232,7 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
                 primary: primary ?? '',
                 contract: leg.contract,
                 prediction: leg.prediction,
-                parity: fieldValue(parityRecoveryBlock, 'PARITY') ?? 'both',
+                parity: fieldValue(recoveryBlock, 'PARITY') ?? 'both',
             },
         };
     }
@@ -551,7 +554,14 @@ export function inspectFreeBotXml(
     // block on the canvas reaches the engine's purchase path, and that every tick is written to
     // the journal. The trade-specific checks (stake, entry, after-purchase) do not apply.
     if (template.observationOnly) {
-        const buying_types = ['purchase', 'eo_buy_even', 'eo_buy_odd', 'eo_journal_reverse', 'digits_parity_recovery'];
+        const buying_types = [
+            'purchase',
+            'eo_buy_even',
+            'eo_buy_odd',
+            'eo_journal_reverse',
+            'digits_parity_recovery',
+            'digits_cold_run_recovery',
+        ];
         const found_buys = buying_types.filter(type => doc.querySelector(`block[type="${type}"]`));
         const trade_again = blocksOfType(doc, 'trade_again').length;
         const journals = doc.querySelectorAll('block[type="notify"], block[type="report_journal"]').length;

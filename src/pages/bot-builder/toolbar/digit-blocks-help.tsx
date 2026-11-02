@@ -10,6 +10,34 @@ type TDigitBlocksHelp = {
 
 const NEW_BLOCKS = [
     {
+        name: localize('Cold-run entry: Over 1 / Under 8, Even/Odd recovery'),
+        summary: localize('The whole observed setup in one block: the losing pair stays cold, then a loss reverses on Even/Odd.'),
+        steps: [
+            localize('Drag “Trade Over 1 when the last … digits stay cold …” from Blocks menu → Digits onto the canvas.'),
+            localize('Pick the leg — Over 1 waits on digits 0 and 1, Under 8 on 8 and 9 — and leave the run at 3: the last two digits were 0,0 · 0,1 · 1,1 · 1,0 (or 8,8 · 8,9 · 9,9 · 9,8) and the newest tick confirmed the run.'),
+            localize('Set the cold share to 10.2% of the last 100 ticks. Both losing digits must sit under it and neither may carry the red (coldest) bar.'),
+            localize('After a settled loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — and buys nothing on a mixed pair.'),
+        ],
+    },
+    {
+        name: localize('Low / high digits in a row'),
+        summary: localize('Several ticks in a row that all ended in the low pair (0 or 1) or the high pair (8 or 9).'),
+        steps: [
+            localize('Drag “Last … digits all 0 or 1” from Blocks menu → Digits onto the canvas.'),
+            localize('Set 3 ticks for the pair-plus-confirmation rule, and pick the pair: 0 or 1 for Over 1, 8 or 9 for Under 8.'),
+            localize('Every one of those ticks must qualify: 0, 0, 1 passes while 1, 5, 0 fails because the 5 breaks the run.'),
+        ],
+    },
+    {
+        name: localize('Digit has no red bar'),
+        summary: localize('A digit that is not the coldest one in the window, so it carries no red bar.'),
+        steps: [
+            localize('Drag “Digit … has no red bar, last … ticks” onto the canvas.'),
+            localize('Pick the digit and the window — 0 and 1 with 100 ticks for Over 1, 8 and 9 for Under 8 — and join the two reads with AND.'),
+            localize('It reads the same red (coldest) bar the Digits page draws. The digit may still carry the green (hottest) bar, and with no ticks loaded it answers false.'),
+        ],
+    },
+    {
         name: localize('High digits in a row'),
         summary: localize('Several ticks in a row that all ended at or above the digit you pick.'),
         steps: [
@@ -43,7 +71,7 @@ const NEW_BLOCKS = [
 
 const HOW_TO_ADD = [
     localize('Open Bot Builder and expand the Blocks menu.'),
-    localize('Open Digits — the three newest blocks sit at the top, followed by the frequency readings they are built on.'),
+    localize('Open Digits — the newest blocks sit at the top, followed by the frequency readings they are built on.'),
     localize('Drag a block onto the canvas, or press the + on its card.'),
     localize('Connect it inside a condition, for example Purchase conditions → before purchase, then set its values and run your bot.'),
 ];
