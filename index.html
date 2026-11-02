@@ -38,6 +38,21 @@
     </head>
 
     <body class="body theme theme--light">
+        <script>
+            // Apply the saved theme before first paint (dark is the app default)
+            // so the page never flashes the wrong palette while React mounts.
+            (function () {
+                var stored = null;
+                try {
+                    stored = localStorage.getItem('theme');
+                } catch (e) {
+                    stored = null;
+                }
+                var isDark = stored !== 'light';
+                document.body.classList.toggle('theme--dark', isDark);
+                document.body.classList.toggle('theme--light', !isDark);
+            })();
+        </script>
         <!-- Google Tag Manager (noscript) -->
         <noscript
             ><iframe

@@ -93,7 +93,25 @@ working while the bot-side symbol list is empty.
   file alone is not enough.
 - The same image is the boot splash via `src/components/splash-screen/`, rendered wherever the app
   shows its startup loader (`src/app/app-content.jsx` `is_loading` branch and `src/app/app-root.tsx`).
-- `scripts/generate-brand-css.js` regenerates `_themes.scss` from `brand.config.json` on dev/build.
+- `scripts/generate-brand-css.js` regenerates `_themes.scss` from `brand.config.json` on dev/build
+  (it only rewrites the brand-colour block, never the theme-token blocks).
+
+## Theme and design language (one palette on every page)
+The whole app uses ONE theme, driven by the `theme--light` / `theme--dark` class on `<body>` that the
+hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.is_dark_mode_on` →
+`MainBody`). Dark is the app default when the user has never toggled.
+- Tokens live in `src/components/shared/styles/_themes.scss`: the two theme blocks at the end now carry
+  the modern console palette (`--general-main-1: #0b1017`, `--general-section-*` navy surfaces,
+  `--text-general: #e6edf6`, borders, states) plus the page-neutral `--dash-*` surface/ink/tint tokens.
+  Pages must consume those tokens — do not hardcode surface or text colours in a page stylesheet.
+- `src/pages/digits/digits-dashboard.scss` used to re-map the theme tokens on `.digits` to a dark-only
+  palette, which pinned the Digits and Statistics tabs to dark and made the hamburger theme switch do
+  nothing there. That block is gone: those pages now follow the same global theme as every other tab.
+- `index.html` applies the stored theme in a tiny inline script before first paint (default dark), so
+  the first frame never flashes the wrong palette. `UiStore.getInitialDarkMode()` uses the same rule.
+- Verify: open the hamburger and flip **Dark theme** on the Digits, Statistics, Free Bots and Dashboard
+  tabs — `<body>` gains/loses `theme--dark`, and each page's background, cards, borders and text change
+  together. `docker compose exec web npx tsc --noEmit` remains clean.
 
 ## Layout notes
 - `.main` in `src/pages/main/main.scss` is a fixed-height, `overflow: hidden` flex box, so a tab page

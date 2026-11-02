@@ -209,6 +209,27 @@
         // Header
         --header-background-mt5: #{constants.$color-blue-8};
         --header-background-others: #{constants.$color-green-7};
+
+        // Shared console surfaces (every page)
+        --dash-surface: #ffffff;
+        --dash-surface-2: #f8fafc;
+        --dash-border: #e2e8f0;
+        --dash-border-strong: #cbd5e1;
+        --dash-muted: #64748b;
+        --dash-accent: var(--brand-primary);
+        --dash-ok: var(--brand-success);
+        --dash-warn: var(--brand-warning);
+        --dash-danger: var(--brand-danger);
+        --dash-radius: 14px;
+        --dash-tint-1: rgb(15 23 42 / 4%);
+        --dash-tint-2: rgb(15 23 42 / 3%);
+        --dash-tint-3: rgb(15 23 42 / 6%);
+        --dash-tint-4: rgb(15 23 42 / 2%);
+        --dash-tint-5: rgb(15 23 42 / 5%);
+        --dash-inset: rgb(15 23 42 / 5%);
+        --dash-ok-ink: #047857;
+        --dash-warn-ink: #b45309;
+        --dash-danger-ink: #b91c1c;
     }
 
     .theme--dark {
@@ -350,5 +371,49 @@
         // Header
         --header-background-mt5: #{constants.$color-blue-8};
         --header-background-others: #{constants.$color-green-7};
+
+        // Modern console palette — the app-wide dark theme
+        --general-main-1: #0b1017;
+        --general-main-2: #0f1724;
+        --general-main-3: #22303f;
+        --general-section-1: #121b26;
+        --general-section-2: #16202c;
+        --general-section-3: #1b2634;
+        --general-section-4: #1b2634;
+        --general-section-5: #16202c;
+        --general-section-6: #121b26;
+        --general-disabled: #1b2634;
+        --general-hover: #1b2634;
+        --general-active: #22303f;
+        --text-prominent: #f8fafc;
+        --text-general: #e6edf6;
+        --text-less-prominent: #8ea0b6;
+        --text-primary: #cbd5e1;
+        --text-disabled: #4b5c70;
+        --border-normal: #22303f;
+        --border-divider: #1d2836;
+        --state-normal: #0b1017;
+        --state-hover: #1b2634;
+        --state-active: #22303f;
+        --sidebar-tab: #8ea0b6;
+        --dash-surface: #101927;
+        --dash-surface-2: #141f2f;
+        --dash-border: #1f2c3b;
+        --dash-border-strong: #2a3a4d;
+        --dash-muted: #8ea0b6;
+        --dash-accent: var(--brand-primary);
+        --dash-ok: var(--brand-success);
+        --dash-warn: var(--brand-warning);
+        --dash-danger: var(--brand-danger);
+        --dash-radius: 14px;
+        --dash-tint-1: rgb(255 255 255 / 4%);
+        --dash-tint-2: rgb(255 255 255 / 3%);
+        --dash-tint-3: rgb(255 255 255 / 6%);
+        --dash-tint-4: rgb(255 255 255 / 2%);
+        --dash-tint-5: rgb(255 255 255 / 5%);
+        --dash-inset: rgb(0 0 0 / 18%);
+        --dash-ok-ink: #8ee0b3;
+        --dash-warn-ink: #f2d08a;
+        --dash-danger-ink: #ffb3ad;
     }
 }

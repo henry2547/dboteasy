@@ -1,45 +1,21 @@
-/* Digits dashboard — modern dark trading-console styling for the lab page.
+/* Digits dashboard — modern trading-console styling for the lab page.
  *
- * Everything here is scoped to `.digits` (and, for the new dashboard blocks,
- * the `.dash-*` classes inside it). It re-maps the app's own theme tokens to a
- * dark console palette *inside this page only*, so every existing panel adopts
- * the theme without touching the shared theme files or the rest of the app. */
+ * Everything here is scoped to `.digits` (and the `.dash-*` classes inside it).
+ * The palette tokens (surfaces, borders, inks) live in the shared theme file so
+ * this page follows the app-wide light/dark theme like every other tab. */
 
 .digits {
-    /* Page palette (scoped) — a dark console surface set. */
-    --general-main-1: #0b1017;
-    --general-section-1: #121b26;
-    --general-section-2: #16202c;
-    --general-section-3: #1b2634;
-    --general-main-3: #22303f;
-    --border-divider: #1d2836;
-    --text-general: #e6edf6;
-    --text-less-prominent: #8ea0b6;
-    --brand-primary: #3d7dff;
-    --brand-secondary: #7c5cff;
-    --brand-success: #2fbf71;
-    --brand-warning: #e3b341;
-    --status-success: #2fbf71;
-    --status-danger: #e5534b;
-    --text-profit-success: #34c77b;
-    --text-loss-danger: #f2685e;
-    --text-warning: #e3b341;
-
-    /* Dashboard-only tokens. */
-    --dash-surface: #101927;
-    --dash-surface-2: #141f2f;
-    --dash-border: #1f2c3b;
-    --dash-border-strong: #2a3a4d;
-    --dash-muted: #8ea0b6;
-    --dash-accent: #3d7dff;
-    --dash-ok: #2fbf71;
-    --dash-warn: #e3b341;
-    --dash-danger: #e5534b;
-    --dash-radius: 14px;
-
     background:
-        radial-gradient(1200px 600px at 15% -10%, rgb(61 125 255 / 10%), transparent 60%),
-        radial-gradient(900px 500px at 95% 0%, rgb(124 92 255 / 8%), transparent 55%),
+        radial-gradient(
+            1200px 600px at 15% -10%,
+            color-mix(in srgb, var(--brand-primary) 10%, transparent),
+            transparent 60%
+        ),
+        radial-gradient(
+            900px 500px at 95% 0%,
+            color-mix(in srgb, var(--brand-tertiary) 8%, transparent),
+            transparent 55%
+        ),
         var(--general-main-1);
     color: var(--text-general);
 }
@@ -63,7 +39,7 @@
 }
 
 .digits-status {
-    background: rgb(255 255 255 / 4%);
+    background: var(--dash-tint-1);
     border-color: var(--dash-border-strong);
 }
 
@@ -176,7 +152,7 @@
     font-weight: 600;
     white-space: nowrap;
     color: var(--text-general);
-    background: rgb(255 255 255 / 3%);
+    background: var(--dash-tint-2);
 
     &--ok,
     &--qualified {
@@ -229,7 +205,7 @@
     padding: 0.75rem 1.3rem;
     border: 1px solid var(--dash-border-strong);
     border-radius: 10px;
-    background: rgb(255 255 255 / 4%);
+    background: var(--dash-tint-1);
     color: var(--text-general);
     font-size: 1.2rem;
     font-weight: 600;
@@ -238,7 +214,7 @@
 
     &:hover:not(:disabled) {
         border-color: var(--dash-accent);
-        color: #fff;
+        color: var(--dash-accent);
     }
 
     &:disabled {
@@ -298,7 +274,7 @@
         overflow: hidden;
         height: 8px;
         border-radius: 999px;
-        background: rgb(255 255 255 / 6%);
+        background: var(--dash-tint-3);
 
         &--indeterminate .dash-progress__bar {
             width: 35%;
@@ -385,19 +361,19 @@
     &--error {
         border-color: rgb(229 83 75 / 50%);
         background: rgb(229 83 75 / 8%);
-        color: #ffb3ad;
+        color: var(--dash-danger-ink);
     }
 
     &--warn {
         border-color: rgb(227 179 65 / 45%);
         background: rgb(227 179 65 / 8%);
-        color: #f2d08a;
+        color: var(--dash-warn-ink);
     }
 
     &--ok {
         border-color: rgb(47 191 113 / 45%);
         background: rgb(47 191 113 / 8%);
-        color: #8ee0b3;
+        color: var(--dash-ok-ink);
     }
 }
 
@@ -417,7 +393,7 @@
         padding: 1.6rem;
         border: 1px dashed var(--dash-border-strong);
         border-radius: var(--dash-radius);
-        background: rgb(255 255 255 / 2%);
+        background: var(--dash-tint-4);
     }
 
     &__title {
@@ -528,7 +504,7 @@
         padding: 1.1rem 1.2rem;
 
         &:hover {
-            background: rgb(255 255 255 / 2%);
+            background: var(--dash-tint-4);
         }
 
         @media (min-width: 1000px) {
@@ -619,7 +595,7 @@
     gap: 1.2rem;
     padding: 1.2rem;
     border-top: 1px dashed var(--dash-border-strong);
-    background: rgb(0 0 0 / 18%);
+    background: var(--dash-inset);
 
     &__facts {
         display: grid;
@@ -670,7 +646,7 @@
         width: 100%;
         height: 6rem;
         border-radius: 6px;
-        background: rgb(255 255 255 / 5%);
+        background: var(--dash-tint-5);
         overflow: hidden;
     }
 
@@ -765,7 +741,7 @@
     &__error {
         margin: 0;
         font-size: 1.1rem;
-        color: #ffb3ad;
+        color: var(--dash-danger-ink);
     }
 
     &__actions {
@@ -823,8 +799,8 @@
 
         &--active {
             border-color: var(--dash-accent);
-            background: rgb(61 125 255 / 18%);
-            color: #fff;
+            background: color-mix(in srgb, var(--dash-accent) 18%, transparent);
+            color: var(--dash-accent);
         }
 
         &:focus-visible {
