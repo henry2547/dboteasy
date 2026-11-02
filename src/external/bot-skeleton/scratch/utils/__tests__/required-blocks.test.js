@@ -11,6 +11,7 @@ jest.mock('@/components/bot-notification/bot-notification-utils', () => ({ notif
 jest.mock('@/components/shared', () => ({ getCurrencyDisplayCode: value => value }));
 
 import { isAllRequiredBlocksEnabled } from '../index';
+import { setObservationMode } from '../../../services/observation-mode';
 
 const blockOf = type => ({ type, disabled: false, childBlocks_: [] });
 
@@ -21,10 +22,12 @@ const workspaceWith = types => {
 
 beforeEach(() => {
     window.Blockly = { derivWorkspace: workspaceWith([]) };
+    setObservationMode(false);
 });
 
 afterEach(() => {
     delete window.Blockly;
+    setObservationMode(false);
 });
 
 const MANDATORY = ['trade_definition_tradeoptions', 'trade_definition', 'before_purchase'];
@@ -58,5 +61,20 @@ describe('the mandatory-block gate', () => {
         window.Blockly.derivWorkspace = workspaceWith([...MANDATORY, 'purchase']);
 
         expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(true);
+    });
+
+    // Observation mode buys nothing, so a canvas that only journals its signal is a complete
+    // strategy — the Free Bots observation templates hold no purchase path at all.
+    it('accepts a journalling-only canvas while Observation mode is on', () => {
+        setObservationMode(true);
+        window.Blockly.derivWorkspace = workspaceWith([...MANDATORY, 'notify', 'digits_over_under']);
+
+        expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(true);
+    });
+
+    it('still requires a purchase from a journalling-only canvas with Observation mode off', () => {
+        window.Blockly.derivWorkspace = workspaceWith([...MANDATORY, 'notify', 'digits_over_under']);
+
+        expect(isAllRequiredBlocksEnabled(window.Blockly.derivWorkspace)).toBe(false);
     });
 });

@@ -8,6 +8,7 @@ import { error_message_map } from '../../utils/error-config';
 import { saveWorkspaceToRecent } from '../../utils/local-storage';
 import { observer as globalObserver } from '../../utils/observer';
 import { removeLimitedBlocks } from '../../utils/workspace';
+import { isObservationMode } from '../../services/observation-mode';
 import BlockConversion from '../backward-compatibility';
 import DBotStore from '../dbot-store';
 import { saveAs } from '../shared';
@@ -429,6 +430,10 @@ const PURCHASE_BLOCK_TYPES = [
 const getMissingBlocks = (workspace, required_block_types) => {
     const blocks = workspace.getAllBlocks();
     return required_block_types.filter(blockType => {
+        // In observation mode nothing is bought, so a canvas that journals its signal and holds no
+        // purchase path at all is a complete strategy. With the switch off the gate is unchanged,
+        // and such a canvas is refused exactly as before.
+        if (blockType === 'purchase' && isObservationMode()) return false;
         if (blockType === 'purchase' && blocks.some(block => PURCHASE_BLOCK_TYPES.includes(block.type))) return false;
         return !blocks.some(block => block.type === blockType);
     });

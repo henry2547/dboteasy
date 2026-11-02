@@ -46,6 +46,11 @@ import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
 import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
 import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
 import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
+import observeOver1Xml from '@/xml/observe_over1.xml';
+import observeUnder8Xml from '@/xml/observe_under8.xml';
+import observeOver2Xml from '@/xml/observe_over2.xml';
+import observeUnder7Xml from '@/xml/observe_under7.xml';
+import observeEvenOddXml from '@/xml/observe_even_odd.xml';
 
 /** Generated multi-market templates carry a configuration-derived id. */
 export type MultiMarketBotId = `multi_market_${string}`;
@@ -58,7 +63,12 @@ export type FreeBotId =
     | 'under8_two_high_digits'
     | 'even_odd_window'
     | 'over1_under6_recovery'
-    | 'over1_parity_recovery';
+    | 'over1_parity_recovery'
+    | 'observe_over1'
+    | 'observe_under8'
+    | 'observe_over2'
+    | 'observe_under7'
+    | 'observe_even_odd';
 
 export type FreeBotStrategy =
     | 'over1'
@@ -118,6 +128,12 @@ export type FreeBotParity = 'even' | 'odd' | 'both';
 export interface FreeBotTemplate {
     id: FreeBotId;
     name: string;
+    /**
+     * Observation-only template: the workspace journals its signal every tick and holds no
+     * `purchase` and no `trade_again`, so it can never buy a contract. Such a canvas runs
+     * because Observation mode satisfies the Builder's mandatory-Purchase gate.
+     */
+    observationOnly?: boolean;
     /** Uploaded XML the template was taken from (or the template it was derived from). */
     sourceFile: string;
     /** Asset under `src/xml/` that is loaded into the Bot Builder. */
@@ -404,6 +420,147 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         blocksUsed:
             'Digits: Trade Over 1 / Under 8, recover on Even/Odd · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · OR · AND',
     },
+    {
+        id: 'observe_over1',
+        name: 'Observe Over 1 — Signal Watch',
+        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        asset: 'observe_over1.xml',
+        observationOnly: true,
+        strategy: 'over1',
+        strategyLabel: 'Digit Over · observation only',
+        contractType: 'DIGITOVER',
+        prediction: 1,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 0,
+        stopLoss: 0,
+        multiplier: 1,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Last digit is over 1 · digits 0 and 1 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+        buyCondition:
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is over 1") and the frequency of the two digits the contract loses to; when both digits 0 and 1 stay under 10.3% of the last 100 ticks the journal gets "Signal · Over 1 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
+        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+        restartCondition:
+            'The bot never stops on its own: each new tick re-reads the digit and the two frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+        blocksUsed:
+            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+    },
+    {
+        id: 'observe_under8',
+        name: 'Observe Under 8 — Signal Watch',
+        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        asset: 'observe_under8.xml',
+        observationOnly: true,
+        strategy: 'under8',
+        strategyLabel: 'Digit Under · observation only',
+        contractType: 'DIGITUNDER',
+        prediction: 8,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 0,
+        stopLoss: 0,
+        multiplier: 1,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Last digit is under 8 · digits 8 and 9 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+        buyCondition:
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is under 8") and the frequency of the two digits the contract loses to; when digits 8 and 9 both stay under 10.3% of the last 100 ticks the journal gets "Signal · Under 8 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
+        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+        restartCondition:
+            'The bot never stops on its own: each new tick re-reads the digit and the two frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+        blocksUsed:
+            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+    },
+    {
+        id: 'observe_over2',
+        name: 'Observe Over 2 — Signal Watch',
+        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        asset: 'observe_over2.xml',
+        observationOnly: true,
+        strategy: 'over2',
+        strategyLabel: 'Digit Over · observation only',
+        contractType: 'DIGITOVER',
+        prediction: 2,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 0,
+        stopLoss: 0,
+        multiplier: 1,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Last digit is over 2 · digits 0, 1 and 2 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+        buyCondition:
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is over 2") and the frequency of digits 0, 1 and 2; when all three stay under 10.3% of the last 100 ticks the journal gets "Signal · Over 2 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
+        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+        restartCondition:
+            'The bot never stops on its own: each new tick re-reads the digit and the three frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+        blocksUsed:
+            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+    },
+    {
+        id: 'observe_under7',
+        name: 'Observe Under 7 — Signal Watch',
+        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        asset: 'observe_under7.xml',
+        observationOnly: true,
+        strategy: 'under7',
+        strategyLabel: 'Digit Under · observation only',
+        contractType: 'DIGITUNDER',
+        prediction: 7,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 0,
+        stopLoss: 0,
+        multiplier: 1,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Last digit is under 7 · digits 7, 8 and 9 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+        buyCondition:
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is under 7") and the frequency of digits 7, 8 and 9; when all three stay under 10.3% of the last 100 ticks the journal gets "Signal · Under 7 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
+        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+        restartCondition:
+            'The bot never stops on its own: each new tick re-reads the digit and the three frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+        blocksUsed:
+            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+    },
+    {
+        id: 'observe_even_odd',
+        name: 'Observe Even/Odd — Last 2 Digits',
+        sourceFile: 'Built from the Blocks-menu Even/Odd and journal blocks',
+        asset: 'observe_even_odd.xml',
+        observationOnly: true,
+        strategy: 'even',
+        strategyLabel: 'Digit Even / Odd · observation only',
+        contractType: 'both',
+        tradeType: 'evenodd',
+        prediction: null,
+        durationTicks: 1,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 0,
+        stopLoss: 0,
+        multiplier: 1,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'Even/Odd reversal of the last 2 digits · both even → ODD · both odd → EVEN · a mixed pair is no signal · every tick journals the signal or the wait',
+        buyCondition:
+            'Nothing is bought, ever: this bot holds no Purchase block, no Buy EVEN / Buy ODD block and no "Trade again" block, so the canvas cannot send an order. It configures the Even/Odd rule as the reversal of the last 2 digits and reads the selected signal direction each tick: EVEN or ODD is written to the journal as "Even/Odd signal · … — observation only, no contract bought", and a mixed pair as "Even/Odd observation · no reversal signal · …".',
+        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+        restartCondition:
+            'The bot never stops on its own: each new tick re-reads the signal direction and writes it to the Journal tab, until you press Stop.',
+        blocksUsed:
+            'Digits: Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Compare · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+    },
 
 ];
 
@@ -415,6 +572,11 @@ const FREE_BOT_XML: Record<string, string> = {
     even_odd_window: evenOddWindowXml,
     over1_under6_recovery: over1Under6RecoveryXml,
     over1_parity_recovery: parityRecoveryXml,
+    observe_over1: observeOver1Xml,
+    observe_under8: observeUnder8Xml,
+    observe_over2: observeOver2Xml,
+    observe_under7: observeUnder7Xml,
+    observe_even_odd: observeEvenOddXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {

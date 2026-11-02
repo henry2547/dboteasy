@@ -547,6 +547,77 @@ export function inspectFreeBotXml(
     });
     if (!durationOk) errors.push(`Expected a duration of ${template.durationTicks} tick(s).`);
 
+    // An observation-only template journals its signal and can never buy: the check is that no
+    // block on the canvas reaches the engine's purchase path, and that every tick is written to
+    // the journal. The trade-specific checks (stake, entry, after-purchase) do not apply.
+    if (template.observationOnly) {
+        const buying_types = ['purchase', 'eo_buy_even', 'eo_buy_odd', 'eo_journal_reverse', 'digits_parity_recovery'];
+        const found_buys = buying_types.filter(type => doc.querySelector(`block[type="${type}"]`));
+        const trade_again = blocksOfType(doc, 'trade_again').length;
+        const journals = doc.querySelectorAll('block[type="notify"], block[type="report_journal"]').length;
+        const signal_reads = ['digits_over_under', 'digits_frequency', 'eo_signal_direction'].filter(type =>
+            doc.querySelector(`block[type="${type}"]`)
+        );
+
+        const never_buys = found_buys.length === 0 && trade_again === 0;
+        checks.push({
+            id: 'observation-only',
+            label: 'Observation only — can never buy',
+            passed: never_buys,
+            detail: never_buys
+                ? 'No Purchase, buy or "Trade again" block is on the canvas.'
+                : `The canvas reaches the purchase path: ${[...found_buys, ...(trade_again ? ['trade_again'] : [])].join(', ')}.`,
+        });
+        if (!never_buys) {
+            errors.push(
+                `An observation-only template must hold no purchase path, but the XML contains: ${[
+                    ...found_buys,
+                    ...(trade_again ? ['trade_again'] : []),
+                ].join(', ')}.`
+            );
+        }
+
+        const journals_signal = journals > 0 && signal_reads.length > 0;
+        checks.push({
+            id: 'observation-journal',
+            label: 'Journals the observed signal',
+            passed: journals_signal,
+            detail: journals_signal
+                ? `${journals} journal block(s) fed by ${signal_reads.join(', ')}.`
+                : 'The template reads no digit and/or writes no journal line.',
+        });
+        if (!journals_signal) {
+            errors.push('The observation template must read a Blocks-menu digit signal and write it to the journal.');
+        }
+
+        const observation_declared = declaredVariables(doc);
+        const observation_missing = Array.from(usedVariableIds(doc)).filter(id => !observation_declared.ids.has(id));
+        checks.push({
+            id: 'variables',
+            label: 'Variable references resolve',
+            passed: observation_missing.length === 0,
+            detail: observation_missing.length
+                ? `${observation_missing.length} reference(s) point at variables the file does not declare.`
+                : `${observation_declared.names.length} declared variable(s), all references resolve.`,
+        });
+        if (observation_missing.length) {
+            errors.push(`Undeclared variable reference(s): ${observation_missing.join(', ')}.`);
+        }
+
+        return {
+            ok: errors.length === 0,
+            errors,
+            warnings,
+            checks,
+            blockCount: blockElements.length - replacedShadows,
+            blockTypes,
+            unsupportedTypes,
+            variables: observation_declared.names,
+            missingVariables: observation_missing,
+            settings,
+        };
+    }
+
     const stakeOk = settings.stake !== null && Number(settings.stake) === template.stake;
     checks.push({
         id: 'stake',

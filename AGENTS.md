@@ -1154,6 +1154,27 @@ only thing that changes is the purchase path.
   --coverage=false` (flag, Purchase guard, Even/Odd and reversal guards). In the Bot Builder the
   eye button flips `aria-checked` and `localStorage.dbot_observation_mode`; a live observation run
   is login-gated, so its journal output is verified by hand.
+- **Observation-only Free Bots** (`observe_over1`, `observe_under8`, `observe_over2`,
+  `observe_under7`, `observe_even_odd`) are the five `src/xml/observe_*.xml` assets. They journal
+  every tick and hold **no** `purchase`, no `eo_buy_*`, no `digits_parity_recovery` and no
+  `trade_again`, so the canvas can never buy a contract — that is what "observation only" means
+  here, not merely the runtime flag. Each Over/Under bot reads the Digits gate
+  (`digits_over_under` "last digit is over/under N") ANDed with `digits_frequency < 10.3%` on the
+  digits the contract loses to; the Even/Odd bot reads `eo_signal_direction` with
+  `eo_configure RULE=reversal RUN=2`. Both write their line through `text_join` → `notify` into
+  `freebot:notice`.
+  - Because such a canvas has no purchase path, `getMissingBlocks` (`scratch/utils/index.js`) skips
+    the mandatory `purchase` requirement **while Observation mode is on**; with the switch off the
+    gate is unchanged and Run is refused exactly as before. `required-blocks.test.js` pins both.
+  - `inspectFreeBotXml` returns early for `template.observationOnly` after the trade-type,
+    contract and duration checks: it requires no purchase path, at least one journal block fed by a
+    digit read, and resolving variables. The card shows Mode / Signal / Journal instead of
+    stake, take-profit and stop-loss rows.
+  - `useFreeBotLoader` turns Observation mode on when such a template loads and `validateBot` adds
+    an "Observation mode is on" check, so the run panel and the journal describe the run truthfully.
+  - Verify: `npx jest src/pages/free-bots` (the templates load through the same inspection) and, in
+    the Free Bots tab, load "Observe Over 1 — Signal Watch": the Bot Builder opens with
+    `digits_over_under` + `notify` on the canvas, zero purchase blocks, and the eye toggle on.
 
 ## Demo account reset (header)
 The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next

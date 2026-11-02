@@ -1,0 +1,268 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true">
+  <variables>
+    <variable type="" id="freebot-notice" islocal="false" iscloud="false">freebot:notice</variable>
+    <variable type="" id="freebot-stake" islocal="false" iscloud="false">freebot:stake</variable>
+    <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
+  </variables>
+  <block type="trade_definition" id="obs-u7-definition" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="obs-u7-market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ25V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="obs-u7-tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">overunder</field>
+            <next>
+              <block type="trade_definition_contracttype" id="obs-u7-contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">DIGITUNDER</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="obs-u7-candleinterval" deletable="false" movable="false">
+                  <field name="CANDLEINTERVAL_LIST">60</field>
+                  <next>
+                    <block type="trade_definition_restartbuysell" id="obs-u7-restartbuysell" deletable="false" movable="false">
+                      <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                      <next>
+                        <block type="trade_definition_restartonerror" id="obs-u7-restartonerror" deletable="false" movable="false">
+                          <field name="RESTARTONERROR">TRUE</field>
+                        </block>
+                      </next>
+                    </block>
+                  </next>
+                </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <statement name="INITIALIZATION">
+      <block type="controls_if" id="obs-u7-init">
+        <value name="IF0">
+          <block type="logic_negate" id="obs-u7-not-initialised">
+            <value name="BOOL">
+              <block type="variables_get" id="obs-u7-read-initialised">
+                <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="obs-u7-set-initialised">
+            <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
+            <value name="VALUE">
+              <block type="logic_boolean" id="obs-u7-initialised-true">
+                <field name="BOOL">TRUE</field>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="obs-u7-set-stake">
+                <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+                <value name="VALUE">
+                  <block type="math_number" id="obs-u7-base-stake">
+                    <field name="NUM">10</field>
+                  </block>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="obs-u7-tradeoptions">
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <field name="CURRENCY_LIST">USD</field>
+        <value name="DURATION">
+          <shadow type="math_number_positive" id="obs-u7-duration">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number_positive" id="obs-u7-initial-stake">
+            <field name="NUM">10</field>
+          </shadow>
+          <block type="variables_get" id="obs-u7-stake">
+            <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+          </block>
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive" id="obs-u7-prediction">
+            <field name="NUM">7</field>
+          </shadow>
+        </value>
+        <field name="AMOUNT_LIMITS"></field>
+      </block>
+    </statement>
+  </block>
+  <block type="before_purchase" id="obs-u7-before-purchase" x="0" y="740">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="obs-u7-observe"><mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_operation" id="obs-u7-gate-and">
+            <field name="OP">AND</field>
+            <value name="A">
+              <block type="digits_over_under" id="obs-u7-digit-gate">
+                <field name="SIDE">under</field>
+                <field name="DIGIT">7</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="logic_operation" id="obs-u7-cold-and-2">
+                    <field name="OP">AND</field>
+                    <value name="A">
+                      <block type="logic_operation" id="obs-u7-cold-and-1">
+                    <field name="OP">AND</field>
+                    <value name="A">
+                      <block type="logic_compare" id="obs-u7-cold-7">
+                    <field name="OP">LT</field>
+                    <value name="A">
+                      <block type="digits_frequency" id="obs-u7-freq-7">
+                        <field name="DIGIT">7</field>
+                        <value name="SAMPLE">
+                          <shadow type="math_number" id="obs-u7-freq-7-sample">
+                            <field name="NUM">100</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <shadow type="math_number" id="obs-u7-cold-7-max">
+                        <field name="NUM">10.3</field>
+                      </shadow>
+                    </value>
+                  </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_compare" id="obs-u7-cold-8">
+                    <field name="OP">LT</field>
+                    <value name="A">
+                      <block type="digits_frequency" id="obs-u7-freq-8">
+                        <field name="DIGIT">8</field>
+                        <value name="SAMPLE">
+                          <shadow type="math_number" id="obs-u7-freq-8-sample">
+                            <field name="NUM">100</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <shadow type="math_number" id="obs-u7-cold-8-max">
+                        <field name="NUM">10.3</field>
+                      </shadow>
+                    </value>
+                  </block>
+                    </value>
+                  </block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_compare" id="obs-u7-cold-9">
+                    <field name="OP">LT</field>
+                    <value name="A">
+                      <block type="digits_frequency" id="obs-u7-freq-9">
+                        <field name="DIGIT">9</field>
+                        <value name="SAMPLE">
+                          <shadow type="math_number" id="obs-u7-freq-9-sample">
+                            <field name="NUM">100</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <shadow type="math_number" id="obs-u7-cold-9-max">
+                        <field name="NUM">10.3</field>
+                      </shadow>
+                    </value>
+                  </block>
+                    </value>
+                  </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="text_join" id="obs-u7-signal">
+                      <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+                      <statement name="STACK">
+                        <block type="text_statement" id="obs-u7-signal-part-0">
+                          <value name="TEXT">
+                            <shadow type="text" id="obs-u7-signal-part-0-text">
+                              <field name="TEXT">Signal · Under 7 setup · last digit </field>
+                            </shadow>
+                          </value>
+                        
+                          <next><block type="text_statement" id="obs-u7-signal-part-1">
+                          <value name="TEXT">
+                            <shadow type="text" id="obs-u7-signal-part-1-text">
+                              <field name="TEXT">last_digit</field>
+                            </shadow>
+                          </value>
+                        
+                          <next><block type="text_statement" id="obs-u7-signal-part-2">
+                          <value name="TEXT">
+                            <shadow type="text" id="obs-u7-signal-part-2-text">
+                              <field name="TEXT"> — observation only, no contract bought</field>
+                            </shadow>
+                          </value>
+                        </block></next>
+                        </block></next>
+                        </block>
+                      </statement>
+                      <next>
+                        <block type="notify" id="obs-u7-signal-notify">
+                          <field name="NOTIFICATION_TYPE">info</field>
+                          <field name="NOTIFICATION_SOUND">silent</field>
+                          <value name="MESSAGE">
+                            <shadow type="text" id="obs-u7-signal-notify-text">
+                              <field name="TEXT">Signal</field>
+                            </shadow>
+                            <block type="variables_get" id="obs-u7-signal-notify-read">
+                              <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                            </block>
+                          </value>
+                        </block>
+                      </next>
+                    </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="text_join" id="obs-u7-waiting">
+                      <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+                      <statement name="STACK">
+                        <block type="text_statement" id="obs-u7-waiting-part-0">
+                          <value name="TEXT">
+                            <shadow type="text" id="obs-u7-waiting-part-0-text">
+                              <field name="TEXT">Observation · waiting · last digit </field>
+                            </shadow>
+                          </value>
+                        
+                          <next><block type="text_statement" id="obs-u7-waiting-part-1">
+                          <value name="TEXT">
+                            <shadow type="text" id="obs-u7-waiting-part-1-text">
+                              <field name="TEXT">last_digit</field>
+                            </shadow>
+                          </value>
+                        </block></next>
+                        </block>
+                      </statement>
+                      <next>
+                        <block type="notify" id="obs-u7-waiting-notify">
+                          <field name="NOTIFICATION_TYPE">info</field>
+                          <field name="NOTIFICATION_SOUND">silent</field>
+                          <value name="MESSAGE">
+                            <shadow type="text" id="obs-u7-waiting-notify-text">
+                              <field name="TEXT">Observation · waiting</field>
+                            </shadow>
+                            <block type="variables_get" id="obs-u7-waiting-notify-read">
+                              <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+                            </block>
+                          </value>
+                        </block>
+                      </next>
+                    </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>
