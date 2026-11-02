@@ -17,6 +17,7 @@ import {
     isDigitBarNeutral,
     lastDigitsOfSample,
     longestDigitRun,
+    pairConfirmation,
     parityShare,
     repeatShare,
     transitionCount,
@@ -156,6 +157,32 @@ describe('digit bar state', () => {
         expect(isDigitBarNeutral(digits, 7, 2)).toBe(true);
         expect(isDigitBarNeutral(digits, 5, 2)).toBe(true);
         expect(isDigitBarNeutral([1, 1, 2, 2, 3, 3], 3, 2)).toBe(false);
+    });
+});
+
+describe('pair confirmation', () => {
+    it('passes when a pair from the set is confirmed by a later tick', () => {
+        expect(pairConfirmation([0, 0, 1], '0_1')).toBe(true);
+        expect(pairConfirmation([0, 1], '0_1')).toBe(false);
+        expect(pairConfirmation([1, 1, 0], '0_1')).toBe(true);
+    });
+
+    it('lets other digits pass between the pair and its confirmation', () => {
+        expect(pairConfirmation([0, 1, 5, 4, 1], '0_1')).toBe(true);
+        expect(pairConfirmation([7, 8, 9, 3, 2, 8], '8_9')).toBe(true);
+    });
+
+    it('treats a set digit inside the gap as the confirmation that already fired', () => {
+        expect(pairConfirmation([0, 0, 5, 1, 0], '0_1')).toBe(false);
+        expect(pairConfirmation([0, 1, 0], '0_1')).toBe(true);
+    });
+
+    it('never confirms without a pair or without a confirmation tick', () => {
+        expect(pairConfirmation([0, 5, 1], '0_1')).toBe(false);
+        expect(pairConfirmation([3, 4, 5], '0_1')).toBe(false);
+        expect(pairConfirmation([0, 0], '0_1')).toBe(false);
+        expect(pairConfirmation([0, 0, 1], 'nonsense')).toBe(false);
+        expect(pairConfirmation([], '0_1')).toBe(false);
     });
 });
 

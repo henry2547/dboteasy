@@ -172,6 +172,29 @@ export const digitsInSetRun = (digits, set) => {
     return run;
 };
 
+/**
+ * True when the newest tick confirms a losing-pair setup: the last two digits were a pair from
+ * `set` and the newest tick ended in `set` too.
+ *
+ * Other digits may pass between the pair and its confirmation — 0, 1, 5, 4, 1 is a confirmed pair —
+ * but a digit from `set` inside that gap uses the pattern up, so the two most recent in-set ticks
+ * before the confirmation have to sit next to each other. 0, 1 alone (no confirmation yet) and
+ * 0, 0, 5, 1, 0 (the 1 already confirmed the pair) both answer false.
+ */
+export const pairConfirmation = (digits, set) => {
+    const allowed = DIGIT_SETS[set];
+    if (!allowed) return false;
+
+    const list = toDigitList(digits);
+    if (list.length < 3 || !allowed.includes(list[list.length - 1])) return false;
+
+    const in_set = [];
+    for (let index = list.length - 2; index >= 0 && in_set.length < 2; index -= 1) {
+        if (allowed.includes(list[index])) in_set.push(index);
+    }
+    return in_set.length === 2 && in_set[0] - in_set[1] === 1;
+};
+
 /** A digit's share of the newest `sample` ticks, in percent. 0 when the window is empty. */
 export const digitShare = (digits, digit, sample) => {
     const window = lastDigitsOfSample(digits, sample);

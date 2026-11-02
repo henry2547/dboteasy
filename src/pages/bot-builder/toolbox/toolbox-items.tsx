@@ -256,6 +256,24 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                {/* The observed pair setup: a pair from the losing digits, then a confirmation digit a
+                    few ticks later (other digits may pass in between). */}
+                <Block type='digits_pair_confirmation'>
+                    <Field name='SET'>0_1</Field>
+                </Block>
+                <Block type='digits_cold_pair_entry'>
+                    <Field name='PRIMARY'>over_1</Field>
+                    <Value name='PERCENT'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>10.2</Field>
+                        </Shadow>
+                    </Value>
+                    <Value name='SAMPLE'>
+                        <Shadow type='math_number'>
+                            <Field name='NUM'>100</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
                 <Block type='switch_active_market'>
                     <Field name='ORDER'>sequential</Field>
                     <Value name='MAX_SWITCHES'>
@@ -280,11 +298,11 @@ export const ToolboxItems = () =>
                     <Field name='PARITY'>both</Field>
                     <Field name='RUN'>2</Field>
                 </Block>
-                {/* The observed cold-run setup: the losing pair stays under 10.2% with no red bar and the
-                    newest digits all sit in it, then a settled loss reverses on the same market. */}
+                {/* The observed pair setup with the Even/Odd reversal after a loss: the pair stays
+                    under 10.2% with no red bar, is confirmed a few ticks later, then a settled loss
+                    reverses on the same market. */}
                 <Block type='digits_cold_run_recovery'>
                     <Field name='PRIMARY'>over_1</Field>
-                    <Field name='RUN'>3</Field>
                     <Field name='PERCENT'>10.2</Field>
                     <Field name='SAMPLE'>100</Field>
                     <Field name='PARITY'>both</Field>

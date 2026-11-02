@@ -179,9 +179,8 @@ describe('Free Bots templates', () => {
 
         const block = doc.querySelector('block[type="before_purchase"] block[type="digits_cold_run_recovery"]');
         expect(block).not.toBeNull();
-        // The pair, its confirmation digit and the recovery are all fields of the one block.
+        // The confirmed pair, its share and the recovery are all fields of the one block.
         expect(block!.querySelector('field[name="PRIMARY"]')?.textContent).toBe(primary);
-        expect(block!.querySelector('field[name="RUN"]')?.textContent).toBe('3');
         expect(block!.querySelector('field[name="PERCENT"]')?.textContent).toBe('10.2');
         expect(block!.querySelector('field[name="SAMPLE"]')?.textContent).toBe('100');
         expect(block!.querySelector('field[name="PARITY"]')?.textContent).toBe('both');

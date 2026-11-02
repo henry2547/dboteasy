@@ -95,7 +95,7 @@
                               <block type="risk_reset_session" id="freebot-o1cr-risk-reset">
                                 <next>
                                   <block type="learn_set_strategy" id="freebot-o1cr-learn-strategy">
-                                    <field name="NAME">Over 1 — Cold 0/1 Run Recovery</field>
+                                    <field name="NAME">Over 1 — Confirmed 0/1 Pair</field>
                                     <next>
                                       <block type="market_discover_eligible" id="freebot-o1cr-market-discover">
                                         <field name="CATEGORY">1-Second Volatility Indices</field>
@@ -184,7 +184,6 @@
         <statement name="DO0">
           <block type="digits_cold_run_recovery" id="freebot-o1cr-cold-run-recovery">
             <field name="PRIMARY">over_1</field>
-            <field name="RUN">3</field>
             <field name="PERCENT">10.2</field>
             <field name="SAMPLE">100</field>
             <field name="PARITY">both</field>

@@ -21,6 +21,7 @@ const getTicksInterface = tradeEngine => {
         getDigitRepeatShare: (...args) => tradeEngine.getDigitRepeatShare(...args),
         areLastDigitsHigh: (...args) => tradeEngine.areLastDigitsHigh(...args),
         areLastDigitsInSet: (...args) => tradeEngine.areLastDigitsInSet(...args),
+        isPairConfirmed: (...args) => tradeEngine.isPairConfirmed(...args),
         isDigitBarNeutral: (...args) => tradeEngine.isDigitBarNeutral(...args),
         isDigitNotCold: (...args) => tradeEngine.isDigitNotCold(...args),
         areDigitSharesBelow: (...args) => tradeEngine.areDigitSharesBelow(...args),

@@ -1,6 +1,6 @@
 /**
- * The cold-run entry block is the whole observed setup in one block: the Over 1 / Under 8 leg only
- * runs while the losing pair stays cold and the newest digits all sit in it, and a settled loss
+ * The pair entry block is the whole observed setup in one block: the Over 1 / Under 8 leg only runs
+ * while the losing pair stays cold and its pair is confirmed on a later tick, and a settled loss
  * switches to the Even/Odd reversal of the newest digits. These tests pin the generated call and the
  * decision the engine makes from it.
  */
@@ -21,15 +21,15 @@ const blockWith = fields => ({
     getFieldValue: name => fields[name],
 });
 
-const fields = { PRIMARY: 'over_1', RUN: 3, PERCENT: 10.2, SAMPLE: 100, PARITY: 'both', REVERSAL: 2 };
+const fields = { PRIMARY: 'over_1', PERCENT: 10.2, SAMPLE: 100, PARITY: 'both', REVERSAL: 2 };
 
 describe('cold-run recovery block generation', () => {
     const generate = loadGenerator();
 
-    it('reads the losing pair, its share and its red bar before buying Over 1', () => {
+    it('reads the confirmed losing pair, its share and its red bar before buying Over 1', () => {
         const code = generate(blockWith(fields));
 
-        expect(code).toContain("Bot.areLastDigitsInSet(3, '0_1')");
+        expect(code).toContain("Bot.isPairConfirmed('0_1')");
         expect(code).toContain('Bot.areDigitSharesBelow([0, 1], 10.2, 100)');
         expect(code).toContain('Bot.isDigitNotCold(0, 100)');
         expect(code).toContain('Bot.isDigitNotCold(1, 100)');
@@ -39,7 +39,7 @@ describe('cold-run recovery block generation', () => {
     it('waits on the 8/9 pair for the Under 8 leg', () => {
         const code = generate(blockWith({ ...fields, PRIMARY: 'under_8' }));
 
-        expect(code).toContain("Bot.areLastDigitsInSet(3, '8_9')");
+        expect(code).toContain("Bot.isPairConfirmed('8_9')");
         expect(code).toContain('Bot.areDigitSharesBelow([8, 9], 10.2, 100)');
         expect(code).toContain('Bot.isDigitNotCold(8, 100)');
         expect(code).toContain("Bot.purchase('DIGITUNDER', { barrier: 8 })");
@@ -61,8 +61,6 @@ describe('cold-run recovery block generation', () => {
     });
 
     it('refuses unusable numbers', () => {
-        expect(() => generate(blockWith({ ...fields, RUN: 1 }))).toThrow();
-        expect(() => generate(blockWith({ ...fields, RUN: 101 }))).toThrow();
         expect(() => generate(blockWith({ ...fields, REVERSAL: 1 }))).toThrow();
         expect(() => generate(blockWith({ ...fields, PERCENT: 0 }))).toThrow();
         expect(() => generate(blockWith({ ...fields, SAMPLE: 0 }))).toThrow();
@@ -77,7 +75,7 @@ describe('cold-run program decisions', () => {
         open = false,
         result = '',
         reversal = 'NO SIGNAL',
-        cold_run = true,
+        pair_confirmed = true,
         shares_ok = true,
         bars_ok = true,
         risk = true,
@@ -85,7 +83,7 @@ describe('cold-run program decisions', () => {
         sessionHasOpenContract: jest.fn(() => open),
         sessionLastResult: jest.fn(() => result),
         eoParityReversal: jest.fn(() => reversal),
-        areLastDigitsInSet: jest.fn(() => cold_run),
+        isPairConfirmed: jest.fn(() => pair_confirmed),
         areDigitSharesBelow: jest.fn(() => shares_ok),
         isDigitNotCold: jest.fn(() => bars_ok),
         riskCanTrade: jest.fn(() => risk),
@@ -94,7 +92,7 @@ describe('cold-run program decisions', () => {
         purchase: jest.fn(),
     });
 
-    it('buys Over 1 when the pair stays cold and the run is confirmed', () => {
+    it('buys Over 1 when the pair is confirmed and stays cold', () => {
         const bot = createBot();
         run(fields, bot);
 
@@ -103,7 +101,7 @@ describe('cold-run program decisions', () => {
     });
 
     it.each([
-        ['the run is broken', { cold_run: false }],
+        ['the pair is not confirmed', { pair_confirmed: false }],
         ['a losing digit is no longer cold', { shares_ok: false }],
         ['a losing digit carries the red bar', { bars_ok: false }],
         ['the risk guard blocks the trade', { risk: false }],
@@ -121,7 +119,7 @@ describe('cold-run program decisions', () => {
 
         expect(bot.eoParityReversal).toHaveBeenCalledWith(2, 'both');
         expect(bot.purchase).toHaveBeenCalledWith('DIGITODD');
-        expect(bot.areLastDigitsInSet).not.toHaveBeenCalled();
+        expect(bot.isPairConfirmed).not.toHaveBeenCalled();
     });
 
     it('buys EVEN when the last digits were all odd', () => {
