@@ -57,7 +57,7 @@ function FreeBotCard({
         const observation_rows: [string, string][] = [
             ['Mode', 'Observation only — the bot journals its signal and no contract is ever bought'],
             ['Signal', template.entryRule],
-            ['Journal', 'Every tick writes the signal or the wait to the Journal tab'],
+            ['Journal', 'Every tick writes the newest digit and detector stage; the observer journals each signal, outcome and wait'],
             ['Duration', `${template.durationTicks} tick`],
             [
                 template.marketScan ? 'Starting market in the XML' : 'Default market in the XML',

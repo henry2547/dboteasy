@@ -1161,23 +1161,40 @@ only thing that changes is the purchase path.
   `observe_under7`, `observe_even_odd`) are the five `src/xml/observe_*.xml` assets. They journal
   every tick and hold **no** `purchase`, no `eo_buy_*`, no `digits_parity_recovery` and no
   `trade_again`, so the canvas can never buy a contract — that is what "observation only" means
-  here, not merely the runtime flag. Each Over/Under bot reads the Digits gate
-  (`digits_over_under` "last digit is over/under N") ANDed with `digits_frequency < 10.3%` on the
-  digits the contract loses to; the Even/Odd bot reads `eo_signal_direction` with
-  `eo_configure RULE=reversal RUN=2`. Both write their line through `text_join` → `notify` into
-  `freebot:notice`.
+  here, not merely the runtime flag. They are built from the **observer block library**, not the
+  legacy digit blocks, so the Blocks menu's observation, pattern-detection, entry and monitoring
+  blocks are what run:
+  - `obs_on_start` sizes the analysis window (`obs_analyse_window` 100), fixes the barrier
+    (`obs_set_barrier`), configures the Over/Under strategy and arms `obs_prevent_duplicate`.
+  - `obs_on_tick` runs `obs_detect_run` (two identical digits) then `obs_entry`, whose condition is
+    `obs_confirmation_after` AND `obs_require_sample` (100 genuine ticks) AND `obs_freq_below 10.3%`
+    on each losing digit. Its body journals the signal (`obs_note`), arms the next-tick observation
+    (`obs_evaluate_over` / `obs_evaluate_under`), sets a two-tick cooldown (`obs_cooldown_ticks`) and
+    resets the detector (`obs_reset_pattern`) so the next pair is judged fresh.
+  - The Even/Odd bot uses two `obs_parity_pattern` blocks (2 even → confirm odd → observe ODD; 2 odd
+    → confirm even → observe EVEN) and gates its two `obs_entry` blocks on `obs_confirmation_after`,
+    `obs_require_sample` and `obs_check_parity_transition` (Even→Odd / Odd→Even), then arms
+    `obs_parity_outcome` for the target parity. A mixed pair matches neither entry — no entry.
+  - `obs_on_window` journals `obs_research_rank` every analysis window. Each bot also keeps a
+    `before_purchase` → `text_join` → `notify` line that reads `obs_latest` and `obs_pattern_stage`,
+    so the Journal tab always shows the newest digit and the detector stage.
   - Because such a canvas has no purchase path, `getMissingBlocks` (`scratch/utils/index.js`) skips
     the mandatory `purchase` requirement **while Observation mode is on**; with the switch off the
     gate is unchanged and Run is refused exactly as before. `required-blocks.test.js` pins both.
   - `inspectFreeBotXml` returns early for `template.observationOnly` after the trade-type,
     contract and duration checks: it requires no purchase path, at least one journal block fed by a
-    digit read, and resolving variables. The card shows Mode / Signal / Journal instead of
-    stake, take-profit and stop-loss rows.
+    market read (a legacy digit/Even-Odd read or an observer observation block such as
+    `obs_detect_run`, `obs_parity_pattern`, `obs_confirmation_after` or `obs_evaluate_*`), and
+    resolving variables. The card shows Mode / Signal / Journal instead of stake, take-profit and
+    stop-loss rows.
   - `useFreeBotLoader` turns Observation mode on when such a template loads and `validateBot` adds
     an "Observation mode is on" check, so the run panel and the journal describe the run truthfully.
-  - Verify: `npx jest src/pages/free-bots` (the templates load through the same inspection) and, in
-    the Free Bots tab, load "Observe Over 1 — Signal Watch": the Bot Builder opens with
-    `digits_over_under` + `notify` on the canvas, zero purchase blocks, and the eye toggle on.
+  - Verify: `npx jest src/pages/free-bots src/external/bot-skeleton/services/observer` (the
+    templates load through the same inspection) and, in the Free Bots tab, load
+    "Observe Over 1 — Signal Watch": the Bot Builder opens with the `obs_*` observer program
+    (`obs_on_start`, `obs_on_tick`, `obs_entry`, `obs_detect_run`, `obs_freq_below`) plus the
+    `notify` journal line, zero purchase blocks, and the eye toggle on. A live run needs a logged-in
+    Demo account, so the journal output is verified by hand.
 
 ## Demo account reset (header)
 The header account chip (`layout/header/account-switcher.tsx`) renders a small **Reset** button next

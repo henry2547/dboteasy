@@ -1,8 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true">
   <variables>
     <variable type="" id="freebot-notice" islocal="false" iscloud="false">freebot:notice</variable>
     <variable type="" id="freebot-stake" islocal="false" iscloud="false">freebot:stake</variable>
-    <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
   </variables>
   <block type="trade_definition" id="obs-eo-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
@@ -19,18 +19,18 @@
                 <field name="TYPE_LIST">both</field>
                 <next>
                   <block type="trade_definition_candleinterval" id="obs-eo-candleinterval" deletable="false" movable="false">
-                  <field name="CANDLEINTERVAL_LIST">60</field>
-                  <next>
-                    <block type="trade_definition_restartbuysell" id="obs-eo-restartbuysell" deletable="false" movable="false">
-                      <field name="TIME_MACHINE_ENABLED">FALSE</field>
-                      <next>
-                        <block type="trade_definition_restartonerror" id="obs-eo-restartonerror" deletable="false" movable="false">
-                          <field name="RESTARTONERROR">TRUE</field>
-                        </block>
-                      </next>
-                    </block>
-                  </next>
-                </block>
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="obs-eo-restartbuysell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="obs-eo-restartonerror" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
                 </next>
               </block>
             </next>
@@ -39,45 +39,72 @@
       </block>
     </statement>
     <statement name="INITIALIZATION">
-      <block type="controls_if" id="obs-eo-init">
-        <value name="IF0">
-          <block type="logic_negate" id="obs-eo-not-initialised">
-            <value name="BOOL">
-              <block type="variables_get" id="obs-eo-read-initialised">
-                <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
-              </block>
-            </value>
+      <block type="variables_set" id="obs-eo-set-stake">
+        <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+        <value name="VALUE">
+          <block type="math_number" id="obs-eo-base-stake">
+            <field name="NUM">10</field>
           </block>
         </value>
-        <statement name="DO0">
-          <block type="variables_set" id="obs-eo-set-initialised">
-            <field name="VAR" id="freebot-initialised" variabletype="">freebot:initialised</field>
-            <value name="VALUE">
-              <block type="logic_boolean" id="obs-eo-initialised-true">
-                <field name="BOOL">TRUE</field>
-              </block>
+      </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="obs-eo-tradeoptions">
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <field name="CURRENCY_LIST">USD</field>
+        <field name="AMOUNT_LIMITS"></field>
+        <value name="DURATION">
+          <shadow type="math_number" id="obs-eo-duration">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number" id="obs-eo-initial-stake">
+            <field name="NUM">10</field>
+          </shadow>
+          <block type="variables_get" id="obs-eo-stake">
+            <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+  <block type="before_purchase" id="obs-eo-before-purchase" x="0" y="740">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="text_join" id="obs-eo-notice">
+        <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
+        <statement name="STACK">
+          <block type="text_statement" id="obs-eo-notice-lead">
+            <value name="TEXT">
+              <shadow type="text" id="obs-eo-notice-lead-shadow">
+                <field name="TEXT">Observation · latest digit </field>
+              </shadow>
             </value>
             <next>
-              <block type="variables_set" id="obs-eo-set-stake">
-                <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
-                <value name="VALUE">
-                  <block type="math_number" id="obs-eo-base-stake">
-                    <field name="NUM">10</field>
+              <block type="text_statement" id="obs-eo-notice-digit">
+                <value name="TEXT">
+                  <shadow type="text" id="obs-eo-notice-digit-shadow">
+                    <field name="TEXT">-</field>
+                  </shadow>
+                  <block type="obs_latest" id="obs-eo-latest-digit">
                   </block>
                 </value>
                 <next>
-                  <block type="eo_configure" id="obs-eo-configure">
-                    <field name="RULE">reversal</field>
-                    <field name="DIRECTION">both</field>
-                    <field name="TICKS">20</field>
-                    <field name="PERCENT">65</field>
-                    <field name="RUN">2</field>
+                  <block type="text_statement" id="obs-eo-notice-stage-lead">
+                    <value name="TEXT">
+                      <shadow type="text" id="obs-eo-notice-stage-lead-shadow">
+                        <field name="TEXT"> · pattern stage </field>
+                      </shadow>
+                    </value>
                     <next>
-                      <block type="eo_monitor_ticks" id="obs-eo-monitor">
-                        <value name="TICKS">
-                          <shadow type="math_number" id="obs-eo-monitor-window">
-                            <field name="NUM">20</field>
+                      <block type="text_statement" id="obs-eo-notice-stage">
+                        <value name="TEXT">
+                          <shadow type="text" id="obs-eo-notice-stage-shadow">
+                            <field name="TEXT">-</field>
                           </shadow>
+                          <block type="obs_pattern_stage" id="obs-eo-pattern-stage">
+                          </block>
                         </value>
                       </block>
                     </next>
@@ -87,187 +114,159 @@
             </next>
           </block>
         </statement>
-      </block>
-    </statement>
-    <statement name="SUBMARKET">
-      <block type="trade_definition_tradeoptions" id="obs-eo-tradeoptions">
-        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
-        <field name="DURATIONTYPE_LIST">t</field>
-        <field name="CURRENCY_LIST">USD</field>
-        <value name="DURATION">
-          <shadow type="math_number_positive" id="obs-eo-duration">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="AMOUNT">
-          <shadow type="math_number_positive" id="obs-eo-initial-stake">
-            <field name="NUM">10</field>
-          </shadow>
-          <block type="variables_get" id="obs-eo-stake">
-            <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
+        <next>
+          <block type="notify" id="obs-eo-notify">
+            <field name="NOTIFICATION_TYPE">info</field>
+            <field name="NOTIFICATION_SOUND">silent</field>
+            <value name="MESSAGE">
+              <shadow type="text" id="obs-eo-notify-shadow">
+                <field name="TEXT">Observation</field>
+              </shadow>
+              <block type="variables_get" id="obs-eo-notice-read">
+                <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
+              </block>
+            </value>
           </block>
-        </value>
-        <field name="AMOUNT_LIMITS"></field>
+        </next>
       </block>
     </statement>
   </block>
-  <block type="before_purchase" id="obs-eo-before-purchase" x="0" y="740">
-    <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="obs-eo-even"><mutation else="1"></mutation>
-        <value name="IF0">
-          <block type="logic_compare" id="obs-eo-even-compare">
-            <field name="OP">EQ</field>
-            <value name="A">
-              <block type="eo_signal_direction" id="obs-eo-even-signal"></block>
-            </value>
-            <value name="B">
-              <shadow type="text" id="obs-eo-even-text">
-                <field name="TEXT">EVEN</field>
-              </shadow>
-            </value>
-          </block>
-        </value>
-        <statement name="DO0">
-          <block type="text_join" id="obs-eo-even-signal">
-                      <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
-                      <statement name="STACK">
-                        <block type="text_statement" id="obs-eo-even-signal-part-0">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-even-signal-part-0-text">
-                              <field name="TEXT">Even/Odd signal · </field>
-                            </shadow>
-                          </value>
-                        
-                          <next><block type="text_statement" id="obs-eo-even-signal-part-1">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-even-signal-part-1-text">
-                              <field name="TEXT">eo_signal_direction</field>
-                            </shadow>
-                          </value>
-                        
-                          <next><block type="text_statement" id="obs-eo-even-signal-part-2">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-even-signal-part-2-text">
-                              <field name="TEXT"> — observation only, no contract bought</field>
-                            </shadow>
-                          </value>
-                        </block></next>
-                        </block></next>
-                        </block>
-                      </statement>
-                      <next>
-                        <block type="notify" id="obs-eo-even-signal-notify">
-                          <field name="NOTIFICATION_TYPE">info</field>
-                          <field name="NOTIFICATION_SOUND">silent</field>
-                          <value name="MESSAGE">
-                            <shadow type="text" id="obs-eo-even-signal-notify-text">
-                              <field name="TEXT">Even/Odd signal</field>
-                            </shadow>
-                            <block type="variables_get" id="obs-eo-even-signal-notify-read">
-                              <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
-                            </block>
-                          </value>
-                        </block>
-                      </next>
-                    </block>
-        </statement>
-        <statement name="ELSE">
-          <block type="controls_if" id="obs-eo-odd"><mutation else="1"></mutation>
-            <value name="IF0">
-              <block type="logic_compare" id="obs-eo-odd-compare">
-                <field name="OP">EQ</field>
-                <value name="A">
-                  <block type="eo_signal_direction" id="obs-eo-odd-signal"></block>
-                </value>
-                <value name="B">
-                  <shadow type="text" id="obs-eo-odd-text">
-                    <field name="TEXT">ODD</field>
-                  </shadow>
-                </value>
+  <block type="obs_on_start" id="obs-eo-on-start" x="0" y="980">
+    <statement name="DO">
+      <block type="obs_analyse_window" id="obs-eo-window">
+        <field name="N">100</field>
+        <next>
+          <block type="obs_prevent_duplicate" id="obs-eo-dedupe">
+            <next>
+              <block type="obs_note" id="obs-eo-start-note">
+                <field name="TEXT">Watch rule · last 2 digits both even → ODD · both odd → EVEN · mixed pair → no entry</field>
               </block>
-            </value>
-            <statement name="DO0">
-              <block type="text_join" id="obs-eo-odd-signal">
-                      <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
-                      <statement name="STACK">
-                        <block type="text_statement" id="obs-eo-odd-signal-part-0">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-odd-signal-part-0-text">
-                              <field name="TEXT">Even/Odd signal · </field>
-                            </shadow>
-                          </value>
-                        
-                          <next><block type="text_statement" id="obs-eo-odd-signal-part-1">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-odd-signal-part-1-text">
-                              <field name="TEXT">eo_signal_direction</field>
-                            </shadow>
-                          </value>
-                        
-                          <next><block type="text_statement" id="obs-eo-odd-signal-part-2">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-odd-signal-part-2-text">
-                              <field name="TEXT"> — observation only, no contract bought</field>
-                            </shadow>
-                          </value>
-                        </block></next>
-                        </block></next>
-                        </block>
-                      </statement>
-                      <next>
-                        <block type="notify" id="obs-eo-odd-signal-notify">
-                          <field name="NOTIFICATION_TYPE">info</field>
-                          <field name="NOTIFICATION_SOUND">silent</field>
-                          <value name="MESSAGE">
-                            <shadow type="text" id="obs-eo-odd-signal-notify-text">
-                              <field name="TEXT">Even/Odd signal</field>
-                            </shadow>
-                            <block type="variables_get" id="obs-eo-odd-signal-notify-read">
-                              <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
-                            </block>
-                          </value>
-                        </block>
-                      </next>
-                    </block>
-            </statement>
-            <statement name="ELSE">
-              <block type="text_join" id="obs-eo-waiting">
-                      <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
-                      <statement name="STACK">
-                        <block type="text_statement" id="obs-eo-waiting-part-0">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-waiting-part-0-text">
-                              <field name="TEXT">Even/Odd observation · no reversal signal · </field>
-                            </shadow>
-                          </value>
-                        
-                          <next><block type="text_statement" id="obs-eo-waiting-part-1">
-                          <value name="TEXT">
-                            <shadow type="text" id="obs-eo-waiting-part-1-text">
-                              <field name="TEXT">eo_signal_direction</field>
-                            </shadow>
-                          </value>
-                        </block></next>
-                        </block>
-                      </statement>
-                      <next>
-                        <block type="notify" id="obs-eo-waiting-notify">
-                          <field name="NOTIFICATION_TYPE">info</field>
-                          <field name="NOTIFICATION_SOUND">silent</field>
-                          <value name="MESSAGE">
-                            <shadow type="text" id="obs-eo-waiting-notify-text">
-                              <field name="TEXT">Even/Odd observation</field>
-                            </shadow>
-                            <block type="variables_get" id="obs-eo-waiting-notify-read">
-                              <field name="VAR" id="freebot-notice" variabletype="">freebot:notice</field>
-                            </block>
-                          </value>
-                        </block>
-                      </next>
-                    </block>
-            </statement>
+            </next>
           </block>
-        </statement>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="obs_on_tick" id="obs-eo-on-tick" x="0" y="1260">
+    <statement name="DO">
+      <block type="obs_parity_pattern" id="obs-eo-even-pattern">
+        <field name="INITIAL">Even</field>
+        <field name="N">2</field>
+        <field name="CONFIRM">Odd</field>
+        <field name="TARGET">Odd</field>
+        <field name="TIMEOUT">5</field>
+        <field name="COOLDOWN">0</field>
+        <field name="MINIMUM">25</field>
+        <next>
+          <block type="obs_parity_pattern" id="obs-eo-odd-pattern">
+            <field name="INITIAL">Odd</field>
+            <field name="N">2</field>
+            <field name="CONFIRM">Even</field>
+            <field name="TARGET">Even</field>
+            <field name="TIMEOUT">5</field>
+            <field name="COOLDOWN">0</field>
+            <field name="MINIMUM">25</field>
+            <next>
+              <block type="obs_entry" id="obs-eo-even-entry">
+                <value name="CONDITION">
+                  <block type="obs_and" id="obs-eo-even-entry-and">
+                    <value name="A">
+                      <block type="obs_and" id="obs-eo-even-observing">
+                        <value name="A">
+                          <block type="obs_confirmation_after" id="obs-eo-even-confirmed">
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="obs_require_sample" id="obs-eo-even-sample">
+                            <field name="N">100</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="obs_check_parity_transition" id="obs-eo-even-transition">
+                        <field name="FROM">Even</field>
+                        <field name="TO_PARITY">Odd</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO">
+                  <block type="obs_note" id="obs-eo-even-note">
+                    <field name="TEXT">Reversal signal · 2 even digits → observe ODD</field>
+                    <next>
+                      <block type="obs_parity_outcome" id="obs-eo-even-outcome">
+                        <field name="PARITY">Odd</field>
+                        <next>
+                          <block type="obs_cooldown_ticks" id="obs-eo-even-cooldown">
+                            <field name="N">2</field>
+                            <next>
+                              <block type="obs_reset_pattern" id="obs-eo-even-reset">
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <next>
+                  <block type="obs_entry" id="obs-eo-odd-entry">
+                    <value name="CONDITION">
+                      <block type="obs_and" id="obs-eo-odd-entry-and">
+                        <value name="A">
+                          <block type="obs_and" id="obs-eo-odd-observing">
+                            <value name="A">
+                              <block type="obs_confirmation_after" id="obs-eo-odd-confirmed">
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="obs_require_sample" id="obs-eo-odd-sample">
+                                <field name="N">100</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="obs_check_parity_transition" id="obs-eo-odd-transition">
+                            <field name="FROM">Odd</field>
+                            <field name="TO_PARITY">Even</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO">
+                      <block type="obs_note" id="obs-eo-odd-note">
+                        <field name="TEXT">Reversal signal · 2 odd digits → observe EVEN</field>
+                        <next>
+                          <block type="obs_parity_outcome" id="obs-eo-odd-outcome">
+                            <field name="PARITY">Even</field>
+                            <next>
+                              <block type="obs_cooldown_ticks" id="obs-eo-odd-cooldown">
+                                <field name="N">2</field>
+                                <next>
+                                  <block type="obs_reset_pattern" id="obs-eo-odd-reset">
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="obs_on_window" id="obs-eo-on-window" x="0" y="1700">
+    <statement name="DO">
+      <block type="obs_research_rank" id="obs-eo-rank">
+        <field name="MINIMUM">5</field>
       </block>
     </statement>
   </block>

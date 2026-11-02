@@ -555,9 +555,24 @@ export function inspectFreeBotXml(
         const found_buys = buying_types.filter(type => doc.querySelector(`block[type="${type}"]`));
         const trade_again = blocksOfType(doc, 'trade_again').length;
         const journals = doc.querySelectorAll('block[type="notify"], block[type="report_journal"]').length;
-        const signal_reads = ['digits_over_under', 'digits_frequency', 'eo_signal_direction'].filter(type =>
-            doc.querySelector(`block[type="${type}"]`)
-        );
+        // A signal read is any Blocks-menu block that actually observes the market: the legacy
+        // digit/Even-Odd reads, or the observer blocks the observation bots are built from
+        // (pattern detection, parity detection, the armed observation itself).
+        const signal_reads = [
+            'digits_over_under',
+            'digits_frequency',
+            'eo_signal_direction',
+            'obs_latest',
+            'obs_detect_run',
+            'obs_parity_pattern',
+            'obs_confirmation_after',
+            'obs_evaluate_over',
+            'obs_evaluate_under',
+            'obs_evaluate_even',
+            'obs_evaluate_odd',
+            'obs_barrier_outcome',
+            'obs_parity_outcome',
+        ].filter(type => doc.querySelector(`block[type="${type}"]`));
 
         const never_buys = found_buys.length === 0 && trade_again === 0;
         checks.push({

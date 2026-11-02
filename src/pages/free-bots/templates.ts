@@ -423,7 +423,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     {
         id: 'observe_over1',
         name: 'Observe Over 1 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
         asset: 'observe_over1.xml',
         observationOnly: true,
         strategy: 'over1',
@@ -439,19 +439,20 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last digit is over 1 · digits 0 and 1 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+            'Pattern watch · two identical digits, then the confirmation tick · digits 0 and 1 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Over 1 observation for the next tick and journals the signal, the outcome and the wait',
         buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is over 1") and the frequency of the two digits the contract loses to; when both digits 0 and 1 stay under 10.3% of the last 100 ticks the journal gets "Signal · Over 1 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
-        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 1 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 0 and 1 both sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Over 1 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
+        afterPurchase:
+            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
         restartCondition:
-            'The bot never stops on its own: each new tick re-reads the digit and the two frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
         blocksUsed:
-            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+            'Digit & frequency: Digit Frequency Below (0, 1) · Read Latest Final Digit · Set Barrier · Configure Over Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Over · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
     },
     {
         id: 'observe_under8',
         name: 'Observe Under 8 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
         asset: 'observe_under8.xml',
         observationOnly: true,
         strategy: 'under8',
@@ -467,19 +468,20 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last digit is under 8 · digits 8 and 9 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+            'Pattern watch · two identical digits, then the confirmation tick · digits 8 and 9 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Under 8 observation for the next tick and journals the signal, the outcome and the wait',
         buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is under 8") and the frequency of the two digits the contract loses to; when digits 8 and 9 both stay under 10.3% of the last 100 ticks the journal gets "Signal · Under 8 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
-        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 8 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 8 and 9 both sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Under 8 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
+        afterPurchase:
+            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
         restartCondition:
-            'The bot never stops on its own: each new tick re-reads the digit and the two frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
         blocksUsed:
-            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+            'Digit & frequency: Digit Frequency Below (8, 9) · Read Latest Final Digit · Set Barrier · Configure Under Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Under · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
     },
     {
         id: 'observe_over2',
         name: 'Observe Over 2 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
         asset: 'observe_over2.xml',
         observationOnly: true,
         strategy: 'over2',
@@ -495,19 +497,20 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last digit is over 2 · digits 0, 1 and 2 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+            'Pattern watch · two identical digits, then the confirmation tick · digits 0, 1 and 2 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Over 2 observation for the next tick and journals the signal, the outcome and the wait',
         buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is over 2") and the frequency of digits 0, 1 and 2; when all three stay under 10.3% of the last 100 ticks the journal gets "Signal · Over 2 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
-        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 2 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 0, 1 and 2 all sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Over 2 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
+        afterPurchase:
+            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
         restartCondition:
-            'The bot never stops on its own: each new tick re-reads the digit and the three frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
         blocksUsed:
-            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+            'Digit & frequency: Digit Frequency Below (0, 1, 2) · Read Latest Final Digit · Set Barrier · Configure Over Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Over · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
     },
     {
         id: 'observe_under7',
         name: 'Observe Under 7 — Signal Watch',
-        sourceFile: 'Built from the Blocks-menu digit and journal blocks',
+        sourceFile: 'Built from the Blocks-menu observer blocks: pattern detection, entries and monitoring',
         asset: 'observe_under7.xml',
         observationOnly: true,
         strategy: 'under7',
@@ -523,19 +526,20 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last digit is under 7 · digits 7, 8 and 9 below 10.3% of the last 100 ticks · every tick journals the signal or the wait',
+            'Pattern watch · two identical digits, then the confirmation tick · digits 7, 8 and 9 below 10.3% of the 100-tick window · 100 genuine ticks observed · the observer arms an Under 7 observation for the next tick and journals the signal, the outcome and the wait',
         buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block, so the canvas cannot send an order. Each tick it reads the newest digit with the Digits gate ("Last digit is under 7") and the frequency of digits 7, 8 and 9; when all three stay under 10.3% of the last 100 ticks the journal gets "Signal · Under 7 setup · last digit N — observation only, no contract bought", otherwise "Observation · waiting · last digit N".',
-        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+            'Nothing is bought, ever: this bot holds no Purchase block and no "Trade again" block. The observer program sets a 100-tick analysis window and barrier 7 on start and watches for two identical digits; when the next tick confirms the pair, the session has already observed 100 genuine ticks and digits 7, 8 and 9 all sit below 10.3% of the window, "When All Entry Conditions Pass" arms an Under 7 observation of the next genuine tick and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a wait is never silent.',
+        afterPurchase:
+            'Nothing is settled — no contract is ever bought; each armed observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
         restartCondition:
-            'The bot never stops on its own: each new tick re-reads the digit and the three frequencies and writes either the signal line or the waiting line to the Journal tab, until you press Stop.',
+            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next two identical digits are judged fresh; the bot runs until you press Stop.',
         blocksUsed:
-            'Digits: Last digit over / under · Digit frequency · Compare · AND · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+            'Digit & frequency: Digit Frequency Below (7, 8, 9) · Read Latest Final Digit · Set Barrier · Configure Under Strategy · Analyse Last N Ticks · Pattern detection & parity: Detect Consecutive Run · Check Confirmation Occurred After Pair · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick For Under · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
     },
     {
         id: 'observe_even_odd',
         name: 'Observe Even/Odd — Last 2 Digits',
-        sourceFile: 'Built from the Blocks-menu Even/Odd and journal blocks',
+        sourceFile: 'Built from the Blocks-menu observer blocks: parity patterns, entries and monitoring',
         asset: 'observe_even_odd.xml',
         observationOnly: true,
         strategy: 'even',
@@ -552,14 +556,15 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Even/Odd reversal of the last 2 digits · both even → ODD · both odd → EVEN · a mixed pair is no signal · every tick journals the signal or the wait',
+            'Even/Odd reversal of the last 2 digits · both even → observe ODD · both odd → observe EVEN · a mixed pair is no entry · the observer journals every signal, the observed outcome and the wait',
         buyCondition:
-            'Nothing is bought, ever: this bot holds no Purchase block, no Buy EVEN / Buy ODD block and no "Trade again" block, so the canvas cannot send an order. It configures the Even/Odd rule as the reversal of the last 2 digits and reads the selected signal direction each tick: EVEN or ODD is written to the journal as "Even/Odd signal · … — observation only, no contract bought", and a mixed pair as "Even/Odd observation · no reversal signal · …".',
-        afterPurchase: 'Nothing is settled — no contract is ever bought, so there is no after-purchase step.',
+            'Nothing is bought, ever: this bot holds no Purchase block, no Buy EVEN / Buy ODD block and no "Trade again" block. The observer program sets a 100-tick analysis window and watches the parity pattern: two even digits must be confirmed by an odd tick, two odd digits by an even tick. When that confirmation arrives, the session has observed 100 genuine ticks and the newest parity transition runs in the same direction, "When All Entry Conditions Pass" arms an observation of the next tick for ODD (after an even run) or EVEN (after an odd run) and journals whether it qualified. Every tick also writes the newest digit and the pattern stage, so a mixed pair is visibly a wait, not a signal.',
+        afterPurchase:
+            'Nothing is settled — no contract is ever bought; each armed parity observation resolves on the next genuine tick and its Qualified / Not qualified result is written to the journal.',
         restartCondition:
-            'The bot never stops on its own: each new tick re-reads the signal direction and writes it to the Journal tab, until you press Stop.',
+            'After each setup the detector rests for two genuine ticks and then resets to Waiting for pair, so the next parity run is judged fresh; the bot runs until you press Stop.',
         blocksUsed:
-            'Digits: Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Compare · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
+            'Digit & frequency: Read Latest Final Digit · Analyse Last N Ticks · Pattern detection & parity: Parity Pattern · Check Confirmation Occurred After Pair · Check Parity Transition · Reset Pattern Detector · Prevent Duplicate Setup · Read Pattern Stage · Observer control: When Bot Starts · When New Tick Arrives · When Analysis Window Updates · AND · Entry & monitoring: When All Entry Conditions Pass · Require Minimum Sample Size · Evaluate Next Tick Parity · Restart After N New Ticks · Rank Strategies By Observed Results · Add Journal Note · Reporting: Notify · Create text with · Variables: Set variable · Get variable',
     },
 
 ];
