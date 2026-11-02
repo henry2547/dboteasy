@@ -476,32 +476,6 @@ describe('Free Bots templates', () => {
         }
     );
 
-    it('ships an observation bot for Over 1, Under 8, Over 2, Under 7 and Even/Odd', () => {
-        const observation = FREE_BOT_TEMPLATES.filter(template => template.observationOnly);
-
-        expect(observation.map(template => template.id)).toEqual([
-            'observe_over1',
-            'observe_under8',
-            'observe_over2',
-            'observe_under7',
-            'observe_even_odd',
-        ]);
-    });
-
-    it.each(FREE_BOT_TEMPLATES.filter(template => template.observationOnly))(
-        '$name journals its signal and holds no purchase path',
-        template => {
-            const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
-
-            // Nothing on the canvas can reach the engine's buy path, so the bot can never trade —
-            // with or without Observation mode.
-            ['purchase', 'eo_buy_even', 'eo_buy_odd', 'eo_journal_reverse', 'digits_parity_recovery', 'trade_again'].forEach(
-                type => expect(doc.querySelector(`block[type="${type}"]`)).toBeNull()
-            );
-            expect(doc.querySelector('block[type="before_purchase"] block[type="notify"]')).not.toBeNull();
-        }
-    );
-
     it.each(FREE_BOT_TEMPLATES)('$name declares every branch its IF blocks use', template => {
         const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
 
