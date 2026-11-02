@@ -1139,11 +1139,15 @@ rule is the pure `resolveSessionLimitHit` in
 `take_profit` / `stop_loss` with its amount.
 - It is called from `onBotStopEvent` only when the stop is final — a recoverable error that restarts
   the trade loop sets `bot_continues` and is skipped.
-- `components/session-limit-alert/` renders it as a centred card (shared `Modal`, `is_vertical_centered`,
-  no header): icon, "Take profit reached" / "Stop loss reached", the run profit and the limit, then
-  **Okay** — which closes the card, opens the trade window on Transactions and switches to the Bot
-  Builder tab (`showSessionLimitTrades`) — and a quieter **Run again**, which dismisses the alert and
-  calls the normal `onRunButtonClick()`. It is mounted in `main.tsx` next to the global `Dialog`.
+- `components/session-limit-alert/` renders it as a sweet-alert card (shared `Modal`,
+  `is_vertical_centered`, no header): the body carries `session-limit-alert__body--profit` (green
+  accent bar, disc and title, `--brand-success`) or `--loss` (`--status-danger`), then the icon,
+  "Take profit reached" / "Stop loss reached", the run profit and the limit, then **Okay** — which
+  closes the card, opens the trade window on Transactions and switches to the Bot Builder tab
+  (`showSessionLimitTrades`) — and a quieter **Run again**, which dismisses the alert and calls the
+  normal `onRunButtonClick()`. The **Okay** button takes the variant colour too. A close (`×`) button
+  top-right dismisses it, and `should_close_on_click_outside` plus Escape close it as well. It is
+  mounted in `main.tsx` next to the global `Dialog`.
 - Only a loaded Free Bots template carries thresholds, so an AI-built or hand-built canvas raises no
   alert. The live path needs a logged-in Demo run that actually reaches +take profit / −stop loss;
   the rule and the card are covered by `src/utils/__tests__/session-limits.test.ts` and

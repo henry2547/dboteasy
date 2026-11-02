@@ -77,6 +77,25 @@ describe('SessionLimitAlert', () => {
         expect(screen.getByText(/past its −10.00 AUD stop loss/)).toBeInTheDocument();
     });
 
+    it('marks the card green for take profit and red for stop loss', () => {
+        alert('take_profit');
+        const profit = render(<SessionLimitAlert />);
+        expect(document.querySelector('.session-limit-alert__body--profit')).toBeTruthy();
+        profit.unmount();
+
+        alert('stop_loss');
+        render(<SessionLimitAlert />);
+        expect(document.querySelector('.session-limit-alert__body--loss')).toBeTruthy();
+    });
+
+    it('closes when the close button is clicked', () => {
+        alert('take_profit');
+        render(<SessionLimitAlert />);
+
+        fireEvent.click(screen.getByLabelText('Close'));
+        expect(mockDismiss).toHaveBeenCalledTimes(1);
+    });
+
     it('Okay goes back to the trades of that bot', () => {
         alert('take_profit');
         render(<SessionLimitAlert />);
