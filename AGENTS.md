@@ -19,6 +19,12 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
   the live dev server and Rsbuild then dies mid-request with
   `ERR_MODULE_NOT_FOUND: @rsbuild/core/dist/0~range-parser.js` (a lazily imported chunk that had vanished from
   disk) — which is exactly why the installer is a separate one-shot service, started before `web`.
+- **Serialised, and `web` waits for a finished install.** `install` takes an `flock` on
+  `node_modules/.base44-install.lock`, so two `docker compose up` runs can never rewrite the shared volume at the
+  same time (a waiter re-reads the hash and exits without installing). It deletes
+  `node_modules/.base44-lock-hash` before `npm ci` and writes it back only when the install finishes; `web`'s
+  start command blocks until that marker matches `package-lock.json`, so a dev server that comes up mid-install
+  waits instead of serving a half-written `node_modules`.
 - **Never run `npm ci` / `npm install` inside the running `web` container** — it rewrites `node_modules` under the
   live dev server and kills it. Run tooling with `exec` and no install step, e.g.
   `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots`. If `web` is ever restarted
