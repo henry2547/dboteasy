@@ -6,6 +6,10 @@
     <variable type="" id="freebot-won" islocal="false" iscloud="false">freebot:won</variable>
     <variable type="" id="freebot-stop" islocal="false" iscloud="false">freebot:stop</variable>
     <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
+    <variable type="" id="freebot-take-profit" islocal="false" iscloud="false">freebot:take-profit</variable>
+    <variable type="" id="freebot-stop-loss" islocal="false" iscloud="false">freebot:stop-loss</variable>
+    <variable type="" id="freebot-reset-stake" islocal="false" iscloud="false">freebot:reset-stake</variable>
+    <variable type="" id="freebot-multiplier" islocal="false" iscloud="false">freebot:multiplier</variable>
   </variables>
   <block type="trade_definition" id="freebot-over1-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
@@ -84,7 +88,7 @@
                             <field name="BOOL">FALSE</field>
                           </block>
                         </value>
-                      <next><block type="risk_set_limits" id="freebot-over1-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-over1-risk-reset"><next><block type="learn_set_strategy" id="freebot-over1-learn-strategy"><field name="NAME">Over 1 — Two Low Digits in a Row</field><next><block type="market_discover_eligible" id="freebot-over1-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-over1-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block>
+                      <next><block type="variables_set" id="freebot-over1-set-take-profit"><field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field><value name="VALUE"><block type="math_number" id="freebot-over1-num-take-profit"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-over1-set-stop-loss"><field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field><value name="VALUE"><block type="math_number" id="freebot-over1-num-stop-loss"><field name="NUM">-20</field></block></value><next><block type="variables_set" id="freebot-over1-set-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field><value name="VALUE"><block type="math_number" id="freebot-over1-num-reset-stake"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-over1-set-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field><value name="VALUE"><block type="math_number" id="freebot-over1-num-multiplier"><field name="NUM">1.5</field></block></value><next><block type="risk_set_limits" id="freebot-over1-risk-limits"><field name="MAX_LOSSES">6</field><field name="MAX_GIVE_BACK">0</field><field name="MAX_EXPOSURE">0</field><field name="RISK_PERCENT">0</field><next><block type="risk_reset_session" id="freebot-over1-risk-reset"><next><block type="learn_set_strategy" id="freebot-over1-learn-strategy"><field name="NAME">Over 1 — Two Low Digits in a Row</field><next><block type="market_discover_eligible" id="freebot-over1-market-discover"><field name="CATEGORY">1-Second Volatility Indices</field><field name="VERIFY">no</field><value name="MIN_HISTORY"><shadow type="math_number" id="freebot-over1-market-history"><field name="NUM">20</field></shadow></value></block></next></block></next></block></next></block></next></block></next></block></next></block></next></block></next></block>
                     </next>
                   </block>
                 </next>
@@ -300,7 +304,7 @@
                     <value name="B">
                       <shadow type="math_number" id="freebot-over1-take-profit-value">
                         <field name="NUM">10</field>
-                      </shadow>
+                      </shadow><block type="variables_get" id="freebot-over1-read-take-profit"><field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field></block>
                     </value>
                   </block>
                 </value>
@@ -338,7 +342,7 @@
                         <value name="B">
                           <shadow type="math_number" id="freebot-over1-stop-loss-value">
                             <field name="NUM">-20</field>
-                          </shadow>
+                          </shadow><block type="variables_get" id="freebot-over1-read-stop-loss"><field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field></block>
                         </value>
                       </block>
                     </value>
@@ -375,9 +379,7 @@
                           <block type="variables_set" id="freebot-over1-reset-stake">
                             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                             <value name="VALUE">
-                              <block type="math_number" id="freebot-over1-reset-stake-value">
-                                <field name="NUM">10</field>
-                              </block>
+                              <block type="variables_get" id="freebot-over1-read-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field></block>
                             </value>
                           </block>
                         </statement>
@@ -395,7 +397,7 @@
                                 <value name="B">
                                   <shadow type="math_number" id="freebot-over1-multiplier-value">
                                     <field name="NUM">1.5</field>
-                                  </shadow>
+                                  </shadow><block type="variables_get" id="freebot-over1-read-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field></block>
                                 </value>
                               </block>
                             </value>

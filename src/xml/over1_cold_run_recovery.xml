@@ -7,6 +7,10 @@
     <variable type="" id="freebot-stop" islocal="false" iscloud="false">freebot:stop</variable>
     <variable type="" id="freebot-initialised" islocal="false" iscloud="false">freebot:initialised</variable>
     <variable type="" id="freebot-market-scanned" islocal="false" iscloud="false">freebot:market-scanned</variable>
+    <variable type="" id="freebot-take-profit" islocal="false" iscloud="false">freebot:take-profit</variable>
+    <variable type="" id="freebot-stop-loss" islocal="false" iscloud="false">freebot:stop-loss</variable>
+    <variable type="" id="freebot-reset-stake" islocal="false" iscloud="false">freebot:reset-stake</variable>
+    <variable type="" id="freebot-multiplier" islocal="false" iscloud="false">freebot:multiplier</variable>
   </variables>
   <block type="trade_definition" id="freebot-o1cr-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
@@ -86,7 +90,7 @@
                           </block>
                         </value>
                         <next>
-                          <block type="risk_set_limits" id="freebot-o1cr-risk-limits">
+                          <block type="variables_set" id="freebot-o1cr-set-take-profit"><field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field><value name="VALUE"><block type="math_number" id="freebot-o1cr-num-take-profit"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-o1cr-set-stop-loss"><field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field><value name="VALUE"><block type="math_number" id="freebot-o1cr-num-stop-loss"><field name="NUM">-20</field></block></value><next><block type="variables_set" id="freebot-o1cr-set-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field><value name="VALUE"><block type="math_number" id="freebot-o1cr-num-reset-stake"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-o1cr-set-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field><value name="VALUE"><block type="math_number" id="freebot-o1cr-num-multiplier"><field name="NUM">1.5</field></block></value><next><block type="variables_set" id="freebot-o1cr-set-market-scanned"><field name="VAR" id="freebot-market-scanned" variabletype="">freebot:market-scanned</field><value name="VALUE"><block type="logic_boolean" id="freebot-o1cr-market-scanned-value"><field name="BOOL">FALSE</field></block></value><next><block type="risk_set_limits" id="freebot-o1cr-risk-limits">
                             <field name="MAX_LOSSES">6</field>
                             <field name="MAX_GIVE_BACK">0</field>
                             <field name="MAX_EXPOSURE">0</field>
@@ -111,7 +115,7 @@
                                 </next>
                               </block>
                             </next>
-                          </block>
+                          </block></next></block></next></block></next></block></next></block></next></block>
                         </next>
                       </block>
                     </next>
@@ -245,7 +249,7 @@
                     <value name="B">
                       <shadow type="math_number" id="freebot-o1cr-take-profit-value">
                         <field name="NUM">10</field>
-                      </shadow>
+                      </shadow><block type="variables_get" id="freebot-o1cr-read-take-profit"><field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field></block>
                     </value>
                   </block>
                 </value>
@@ -283,7 +287,7 @@
                         <value name="B">
                           <shadow type="math_number" id="freebot-o1cr-stop-loss-value">
                             <field name="NUM">-20</field>
-                          </shadow>
+                          </shadow><block type="variables_get" id="freebot-o1cr-read-stop-loss"><field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field></block>
                         </value>
                       </block>
                     </value>
@@ -320,9 +324,7 @@
                           <block type="variables_set" id="freebot-o1cr-reset-stake">
                             <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                             <value name="VALUE">
-                              <block type="math_number" id="freebot-o1cr-reset-stake-value">
-                                <field name="NUM">10</field>
-                              </block>
+                              <block type="variables_get" id="freebot-o1cr-read-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field></block>
                             </value>
                           </block>
                         </statement>
@@ -340,7 +342,7 @@
                                 <value name="B">
                                   <shadow type="math_number" id="freebot-o1cr-multiplier-value">
                                     <field name="NUM">1.5</field>
-                                  </shadow>
+                                  </shadow><block type="variables_get" id="freebot-o1cr-read-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field></block>
                                 </value>
                               </block>
                             </value>
