@@ -4,6 +4,7 @@ import './block_holder';
 import './loader';
 import './notify';
 import './notify_telegram';
+import './sweet_alert';
 import './total_profit';
 import './total_runs';
 import './useless_block';

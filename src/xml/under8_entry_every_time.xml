@@ -393,6 +393,15 @@
                   </block>
                 </value>
                 <statement name="DO0">
+                  <block type="sweet_alert" id="freebot-under8-sweet-take-profit">
+                    <field name="ALERT_ICON">success</field>
+                    <value name="TITLE">
+                      <shadow type="text"><field name="TEXT">Take profit reached</field></shadow>
+                    </value>
+                    <value name="MESSAGE">
+                      <shadow type="text"><field name="TEXT">The bot stopped trading at its take profit target.</field></shadow>
+                    </value>
+                    <next>
                   <block type="variables_set" id="freebot-under8-stop-on-profit">
                     <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                     <value name="VALUE">
@@ -400,6 +409,8 @@
                         <field name="BOOL">TRUE</field>
                       </block>
                     </value>
+                  </block>
+                    </next>
                   </block>
                 </statement>
                 <next>
@@ -420,6 +431,15 @@
                       </block>
                     </value>
                     <statement name="DO0">
+                      <block type="sweet_alert" id="freebot-under8-sweet-stop-loss">
+                        <field name="ALERT_ICON">error</field>
+                        <value name="TITLE">
+                          <shadow type="text"><field name="TEXT">Stop loss reached</field></shadow>
+                        </value>
+                        <value name="MESSAGE">
+                          <shadow type="text"><field name="TEXT">The bot stopped trading at its stop loss limit.</field></shadow>
+                        </value>
+                        <next>
                       <block type="variables_set" id="freebot-under8-stop-on-loss">
                         <field name="VAR" id="freebot-stop" variabletype="">freebot:stop</field>
                         <value name="VALUE">
@@ -427,6 +447,8 @@
                             <field name="BOOL">TRUE</field>
                           </block>
                         </value>
+                      </block>
+                        </next>
                       </block>
                     </statement>
                     <next>

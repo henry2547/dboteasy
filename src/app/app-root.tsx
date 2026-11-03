@@ -6,6 +6,8 @@ import SplashScreen from '@/components/splash-screen/splash-screen';
 import { api_base } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
+// Styles for the SweetAlert popup the Bot Builder's "Sweet alert" block opens at run time.
+import 'sweetalert2/dist/sweetalert2.min.css';
 import './app-root.scss';
 
 const AppContent = lazy(() => import('./app-content'));

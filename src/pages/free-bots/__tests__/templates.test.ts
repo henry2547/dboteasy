@@ -356,12 +356,13 @@ describe('Free Bots templates', () => {
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
-        // 115 block/shadow elements − 5 shadows replaced by a real block in the
-        // same input = 110 for the first (Under 8) template. This exact number is
-        // what the loader compares the live workspace against, so a stale canvas
-        // cannot look valid.
+        // 121 block/shadow elements − 5 shadows replaced by a real block in the
+        // same input = 116 for the first (Under 8) template — its take-profit and
+        // stop-loss branches each carry a `sweet_alert` block with two shadows.
+        // This exact number is what the loader compares the live workspace
+        // against, so a stale canvas cannot look valid.
         const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
-        expect(report.blockCount).toBe(110);
+        expect(report.blockCount).toBe(116);
     });
 
     it('the two entry-every-time bots gate exactly as their cards say', () => {

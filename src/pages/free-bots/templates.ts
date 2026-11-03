@@ -190,7 +190,7 @@ export interface FreeBotTemplate {
 }
 
 const MARTINGALE_STOP =
-    'the bot stops for good at +10 profit or −20 loss — every tick it skips is journalled with the last digit';
+    'the bot stops for good at +10 profit or −20 loss, and a sweet alert announces which of the two limits stopped it — every tick it skips is journalled with the last digit';
 
 export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     {
@@ -217,9 +217,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Under 8 is bought when the newest digit is 4, 7 or 9 — any other digit skips the tick — while the losing digits 8 and 9 both hold less than 10.3% of the last 100 ticks and neither of them carries the hottest (green) or the coldest (red) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 4, 7 or 9 while digits 8 and 9 are still cold and bar-free, until the bot stops for good at +10 profit or −20 loss.',
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 4, 7 or 9 while digits 8 and 9 are still cold and bar-free, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digits: Last Digit · Compare · Digit frequency · Neutral digit bar · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digits: Last Digit · Compare · Digit frequency · Neutral digit bar · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'over1_entry_every_time',
@@ -245,9 +245,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Over 1 is bought when the newest digit is 2, 5 or 6 — any other digit skips the tick — while the losing digits 0 and 1 both hold less than 10.3% of the last 100 ticks and one of them carries the hottest (green) or the coldest (red) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 2, 5 or 6 while digits 0 and 1 are still cold and one of them carries a hot or cold bar, until the bot stops for good at +10 profit or −20 loss.',
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 2, 5 or 6 while digits 0 and 1 are still cold and one of them carries a hot or cold bar, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digits: Last Digit · Compare · Digit frequency · Neutral digit bar · NOT · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digits: Last Digit · Compare · Digit frequency · Neutral digit bar · NOT · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'over1_two_low_digits',
@@ -272,9 +272,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — the losing digits 0 and 1 both hold less than 10.3% of the last 100 ticks, digit 1 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double low run and still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double low run and still passes every gate, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'under8_two_high_digits',
@@ -299,9 +299,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — the losing digits 8 and 9 both hold less than 10.3% of the last 100 ticks, digit 8 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 100 genuine ticks.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double high run and still passes every gate, until the bot stops for good at +10 profit or −20 loss.',
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double high run and still passes every gate, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'even_odd_window',
@@ -338,7 +338,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             MARTINGALE_STOP +
             '. The market scan runs on the first trade loop of the run and again after every loss, so the bot re-picks the best market before it looks for the next entry; stopping and starting the bot scans from scratch.',
         blocksUsed:
-            'Use the best even/odd market · Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Buy EVEN · Buy ODD · Allow one entry per signal · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with',
+            'Use the best even/odd market · Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Buy EVEN · Buy ODD · Allow one entry per signal · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'over1_under6_recovery',
@@ -371,9 +371,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         afterPurchase:
             'Win → stake back to 10 and the loss count back to 0 (Over 1 again) · Loss → stake × 2 and the loss count + 1 (Under 6 recovery) · the session exits on the take-profit or stop-loss variable',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set, so it keeps running through losses until the take profit — or the stop loss — is hit. The barrier comes from the prediction variable, which Run on Start recalculates from the loss count: 0 buys Over 1, 1 or more buys Under 6. While a leg waits for its setup the journal shows the last digit that failed the gate.',
+            'Straight after each contract settles it trades again while the stop is not set, so it keeps running through losses until the take profit — or the stop loss — is hit, and a sweet alert then announces which of the two limits ended the run. The barrier comes from the prediction variable, which Run on Start recalculates from the loss count: 0 buys Over 1, 1 or more buys Under 6. While a leg waits for its setup the journal shows the last digit that failed the gate.',
         blocksUsed:
-            'Digits above in a row · Two digits below a share · Digit bar is neutral · Digit & frequency: Digit Frequency Below · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Create text with · AND',
+            'Digits above in a row · Two digits below a share · Digit bar is neutral · Digit & frequency: Digit Frequency Below · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with · AND',
     },
     {
         id: 'over1_parity_recovery',
@@ -403,9 +403,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         afterPurchase:
             'Win → stake back to 10 and Over 1 again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the newest digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back on Over 1, after a loss it waits for the next pair of same-parity digits and buys the opposite parity, until the take profit or the stop loss ends the run.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back on Over 1, after a loss it waits for the next pair of same-parity digits and buys the opposite parity, until the take profit or the stop loss ends the run — a sweet alert announces which of the two limits it was.',
         blocksUsed:
-            'Digits: Trade Over 1 / Under 8, recover on Even/Odd · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · OR · AND',
+            'Digits: Trade Over 1 / Under 8, recover on Even/Odd · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · OR · AND',
     },
     {
         id: 'over1_cold_run_recovery',
@@ -435,9 +435,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         afterPurchase:
             'Win → stake back to 10 and the confirmed-pair Over 1 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run, and a sweet alert announces which of the two limits it was.',
         blocksUsed:
-            'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+            'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · AND',
     },
     {
         id: 'under8_cold_run_recovery',
@@ -467,9 +467,9 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         afterPurchase:
             'Win → stake back to 10 and the confirmed-pair Under 8 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run, and a sweet alert announces which of the two limits it was.',
         blocksUsed:
-            'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · AND',
+            'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · AND',
     },
 ];
 

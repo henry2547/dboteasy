@@ -213,11 +213,13 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **110** for the first (Under 8) template and **112** for `over1_entry_every_time` — the two
+  **116** for the first (Under 8) template and **118** for `over1_entry_every_time` — the two
   `*_entry_every_time` templates carry one `digits_frequency` "losing digit stays cold" compare per losing
-  digit (see "Researched entries" below) plus a `logic_compare` `OP=EQ` per entry digit — **114** for each
-  `*_two_*_digits` template (their observer gate adds the blocks), **113** for `even_odd_window`, **90** for
-  `over1_parity_recovery` and **163** for the two-leg `over1_under6_recovery`. Block ids inside one asset must be unique: Blockly silently drops a
+  digit (see "Researched entries" below) plus a `logic_compare` `OP=EQ` per entry digit — **120** for each
+  `*_two_*_digits` template (their observer gate adds the blocks), **119** for `even_odd_window`, **96** for
+  `over1_parity_recovery` and **169** for the two-leg `over1_under6_recovery`. Every template's
+  take-profit and stop-loss branch opens with a `sweet_alert` block (1 block + 2 shadows each), which is
+  the six elements the counts grew by. Block ids inside one asset must be unique: Blockly silently drops a
   duplicate-id block on load, so the canvas came up short of the template count (the recovery asset had
   repeated `logic_boolean` / `math_number` ids and could never validate — they are now suffixed `-2`,
   `-3`, …). **A `controls_if` also drops its branch silently when its `<mutation>` does not declare it**:
@@ -1175,6 +1177,19 @@ rule is the pure `resolveSessionLimitHit` in
   alert. The live path needs a logged-in Demo run that actually reaches +take profit / −stop loss;
   the rule and the card are covered by `src/utils/__tests__/session-limits.test.ts` and
   `src/components/session-limit-alert/__tests__/session-limit-alert.spec.tsx`.
+
+### Sweet alert block (Bot Builder → Utility → Notifications)
+`scratch/blocks/Binary/Tools/Misc/sweet_alert.js` registers the `sweet_alert` block: an icon dropdown
+(success / error / warning / info / question), a title input and a message input. It generates
+`Bot.sweetAlert({ icon, title, message })`; `MiscInterface.js` answers that call by lazily importing
+`sweetalert2` and opening `Swal.fire({ … })`, so the engine never imports UI at module load and a bot
+can announce its own take profit / stop loss. `sweetalert2` is a real dependency (`package.json` +
+lockfile) and its stylesheet is imported once in `app-root.tsx`. Every Free Bots asset calls it in the
+`DO0` of its take-profit and stop-loss `controls_if` (before the stop flag is set), and each card's
+"Trades again when" line names that alert. Adding or removing one changes a template's pinned
+`blockCount` — see "Block-count guard". The palette check is `Blockly.Blocks.sweet_alert` plus a
+scratch workspace generating the call above; the popup itself needs a running bot, so it is verified
+by hand on a Demo account.
 
 ## Observation mode (Bot Builder)
 A run switch that uses the trade engine for observation: the blocks on the canvas run against the
