@@ -14,6 +14,8 @@
     <variable type="" id="freebot-runs" islocal="false" iscloud="false">freebot:runs</variable>
     <variable type="" id="freebot-trades" islocal="false" iscloud="false">freebot:trades</variable>
     <variable type="" id="freebot-notice" islocal="false" iscloud="false">freebot:notice</variable>
+    <variable type="" id="freebot-reset-stake" islocal="false" iscloud="false">freebot:reset-stake</variable>
+    <variable type="" id="freebot-multiplier" islocal="false" iscloud="false">freebot:multiplier</variable>
   </variables>
   <block type="trade_definition" id="freebot-o1u6-definition" x="0" y="0">
     <statement name="TRADE_OPTIONS">
@@ -93,7 +95,7 @@
                           </block>
                         </value>
                         <next>
-                          <block type="variables_set" id="freebot-o1u6-init-set-trades">
+                          <block type="variables_set" id="freebot-o1u6-init-set-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field><value name="VALUE"><block type="math_number" id="freebot-o1u6-init-num-reset-stake"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-o1u6-init-set-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field><value name="VALUE"><block type="math_number" id="freebot-o1u6-init-num-multiplier"><field name="NUM">2</field></block></value><next><block type="variables_set" id="freebot-o1u6-init-set-trades">
                             <field name="VAR" id="freebot-trades" variabletype="">freebot:trades</field>
                             <value name="VALUE">
                               <block type="math_number" id="freebot-o1u6-init-num-trades">
@@ -188,7 +190,7 @@
                                 </next>
                               </block>
                             </next>
-                          </block>
+                          </block></next></block></next></block>
                         </next>
                       </block>
                     </next>
@@ -707,9 +709,7 @@
                               <block type="variables_set" id="freebot-o1u6-ap-reset-stake">
                                 <field name="VAR" id="freebot-stake" variabletype="">freebot:stake</field>
                                 <value name="VALUE">
-                                  <block type="math_number" id="freebot-o1u6-ap-num-stake">
-                                    <field name="NUM">10</field>
-                                  </block>
+                                  <block type="variables_get" id="freebot-o1u6-ap-read-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field></block>
                                 </value>
                                 <next>
                                   <block type="variables_set" id="freebot-o1u6-ap-reset-loss-count">
@@ -735,7 +735,7 @@
                                       </block>
                                     </value>
                                     <value name="B">
-                                      <shadow type="math_number"><field name="NUM">2</field></shadow>
+                                      <shadow type="math_number"><field name="NUM">2</field></shadow><block type="variables_get" id="freebot-o1u6-ap-read-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field></block>
                                     </value>
                                   </block>
                                 </value>

@@ -18,10 +18,12 @@ import ServerTime from './../../footer/ServerTime';
 import AppGuideSubmenu from './app-guide-submenu';
 import BackButton from './back-button';
 import BlocksHelpSubmenu from './blocks-help-submenu';
+import ContactUsSubmenu from './contact-us-submenu';
 import MenuContent from './menu-content';
 import MenuHeader from './menu-header';
 import ReportsSubmenu from './reports-submenu';
 import ToggleButton from './toggle-button';
+import WhatsNewSubmenu from './whats-new-submenu';
 // [AI] Import hook to check if menu has items
 import useMobileMenuConfig from './use-mobile-menu-config';
 // [/AI]
@@ -133,6 +135,20 @@ const MobileMenu = ({ onLogout }: TMobileMenuProps) => {
                                 <BackButton buttonText={localize('Reports')} onClick={closeSubmenu} />
                             </div>
                             <ReportsSubmenu />
+                        </>
+                    ) : activeSubmenu === 'whats-new' ? (
+                        <>
+                            <div className='mobile-menu__back-btn'>
+                                <BackButton buttonText={localize("What's New")} onClick={closeSubmenu} />
+                            </div>
+                            <WhatsNewSubmenu />
+                        </>
+                    ) : activeSubmenu === 'contact' ? (
+                        <>
+                            <div className='mobile-menu__back-btn'>
+                                <BackButton buttonText={localize('Contact us')} onClick={closeSubmenu} />
+                            </div>
+                            <ContactUsSubmenu />
                         </>
                     ) : (
                         <MenuContent

@@ -127,7 +127,7 @@ function readSettings(doc: Document): FreeBotXmlSettings {
     const tradeoptions = blocksOfType(doc, 'trade_definition_tradeoptions')[0];
     const entry = findEntryCondition(doc);
     const after = blocksOfType(doc, 'after_purchase')[0] ?? null;
-    const multiplier = findMultiplier(after)?.multiplier ?? null;
+    const multiplier = findMultiplier(after, doc)?.multiplier ?? null;
     const purchases = Array.from(
         doc.querySelectorAll('block[type="before_purchase"] block[type="purchase"] field[name="PURCHASE_LIST"]')
     )
@@ -357,13 +357,18 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
 }
 
 /** The stake multiplier of the after-purchase martingale step. */
-function findMultiplier(afterPurchase: Element | null): { multiplier: string; op: string } | null {
+function findMultiplier(afterPurchase: Element | null, doc: Document): { multiplier: string; op: string } | null {
     if (!afterPurchase) return null;
     const arithmetic = blocksOfType(afterPurchase, 'math_arithmetic');
     for (const block of arithmetic) {
         if (fieldValue(block, 'OP') !== 'MULTIPLY') continue;
         const b = block.querySelector('value[name="B"] field[name="NUM"]')?.textContent?.trim();
         if (b) return { multiplier: b, op: 'MULTIPLY' };
+        // The multiplier is seeded in the run-once block like the thresholds, so a
+        // variable there still reports the number the template really multiplies by.
+        const variable = block.querySelector('value[name="B"] block[type="variables_get"] field[name="VAR"]');
+        const seeded = startedNumber(doc, variable?.getAttribute('id') ?? null);
+        if (seeded) return { multiplier: seeded, op: 'MULTIPLY' };
     }
     return null;
 }
@@ -820,7 +825,7 @@ export function inspectFreeBotXml(
     const hasTradeAgain = !!afterPurchase?.querySelector('block[type="trade_again"]');
     const hasProfitRead = !!afterPurchase?.querySelector('block[type="read_details"] field[name="DETAIL_INDEX"]');
     const hasWinCheck = !!afterPurchase?.querySelector('block[type="contract_check_result"]');
-    const multiplier = findMultiplier(afterPurchase);
+    const multiplier = findMultiplier(afterPurchase, doc);
     const multiplierOk = !!multiplier && Number(multiplier.multiplier) === template.multiplier;
     const takeProfitOk = Number(settings.takeProfit) === template.takeProfit;
     const stopLossOk = Number(settings.stopLoss) === Math.abs(template.stopLoss) * -1;

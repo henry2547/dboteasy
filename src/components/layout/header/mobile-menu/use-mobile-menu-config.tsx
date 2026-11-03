@@ -1,11 +1,25 @@
 import { ComponentProps, ReactNode, useMemo } from 'react';
 import useThemeSwitcher from '@/hooks/useThemeSwitcher';
 import RootStore from '@/stores/root-store';
-import { LegacyGuide1pxIcon, LegacyInfo1pxIcon, LegacyLogout1pxIcon, LegacyTheme1pxIcon } from '@deriv/quill-icons/Legacy';
+import {
+    LegacyAnnouncementIcon,
+    LegacyGuide1pxIcon,
+    LegacyInfo1pxIcon,
+    LegacyLiveChatOutlineIcon,
+    LegacyLogout1pxIcon,
+    LegacyTheme1pxIcon,
+} from '@deriv/quill-icons/Legacy';
 import { useTranslations } from '@deriv-com/translations';
 import { ToggleSwitch } from '@deriv-com/ui';
 
-export type TSubmenuSection = 'accountSettings' | 'cashier' | 'reports' | 'help' | 'blocks';
+export type TSubmenuSection =
+    | 'accountSettings'
+    | 'cashier'
+    | 'reports'
+    | 'help'
+    | 'blocks'
+    | 'whats-new'
+    | 'contact';
 
 //IconTypes
 type TMenuConfig = {
@@ -63,6 +77,20 @@ const useMobileMenuConfig = (
                     label: localize('Blocks help'),
                     LeftComponent: LegacyInfo1pxIcon,
                     submenu: 'blocks',
+                },
+                // Release notes for the latest shipped changes
+                {
+                    as: 'button',
+                    label: localize("What's New"),
+                    LeftComponent: LegacyAnnouncementIcon,
+                    submenu: 'whats-new',
+                },
+                // Ways to reach the person behind the app
+                {
+                    as: 'button',
+                    label: localize('Contact us'),
+                    LeftComponent: LegacyLiveChatOutlineIcon,
+                    submenu: 'contact',
                 },
                 // Conditionally include theme toggle based on brand config
                 enableThemeToggle && {
