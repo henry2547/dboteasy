@@ -152,6 +152,29 @@
         color: var(--text-general);
     }
 
+    /* Markets whose digits satisfy a bot's own trading rule — the notification in panel form. */
+    &__alerts {
+        margin: 0.8rem 0 0;
+        padding: 0.6rem 0.8rem;
+        border-radius: 8px;
+        border: 1px solid var(--brand-success);
+        background: var(--general-section-1);
+    }
+
+    &__alerts-title {
+        margin: 0 0 0.3rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--brand-success);
+    }
+
+    &__alerts-list {
+        margin: 0;
+        padding-left: 1.4rem;
+        font-size: 1.05rem;
+        color: var(--text-general);
+    }
+
     &__list {
         margin: 0;
         padding: 0;

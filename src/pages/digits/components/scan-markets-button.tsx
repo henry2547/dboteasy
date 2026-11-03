@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/hooks/useStore';
 import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
 import { formatCount, formatDuration, formatPercent } from '../format';
 import type { MarketScan, MarketScanFailure, ScanProgress, ScanSummary } from '../scan-markets';
+import { collectTradeAlerts } from '../scan-alerts';
 import type { MarketSymbol } from '../types';
 import './scan-markets-button.scss';
 
@@ -161,6 +162,9 @@ export default function ScanMarketsButton({
         handleScan();
     };
 
+    // Markets where a bot's own trading conditions hold right now — the same list the toast raises.
+    const alerts = useMemo(() => collectTradeAlerts(results), [results]);
+
     const best = results[0] ?? null;
     const total = progress?.marketsTotal ?? summary?.totalMarkets ?? 0;
     const completed = progress?.marketsCompleted ?? 0;
@@ -255,6 +259,21 @@ export default function ScanMarketsButton({
 
                     {!isScanning && !error && results.length > 0 && (
                         <>
+                            {alerts.length > 0 && (
+                                <div className='digits-scan__alerts' role='status'>
+                                    <h5 className='digits-scan__alerts-title'>
+                                        Trade conditions met on {alerts.length} market
+                                        {alerts.length === 1 ? '' : 's'}
+                                    </h5>
+                                    <ul className='digits-scan__alerts-list'>
+                                        {alerts.slice(0, 6).map(alert => (
+                                            <li key={`${alert.symbol}-${alert.botNumber}`}>
+                                                Bot {alert.botNumber} · {alert.strategyLabel} — {alert.market}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                             <p className='digits-scan__recommendation'>
                                 Trade <strong>{best?.market.displayName}</strong> — score {best?.score}/100, best rule{' '}
                                 {best?.bestRuleLabel} ({formatPercent(best?.edge, 0)}).
@@ -269,7 +288,7 @@ export default function ScanMarketsButton({
                                 </p>
                             )}
                             <ul className='digits-scan__list'>
-                                {results.slice(0, 8).map(result => (
+                                {results.map(result => (
                                     <li key={result.market.apiSymbol}>
                                         <ScannerBotResult
                                             result={result}

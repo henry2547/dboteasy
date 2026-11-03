@@ -150,6 +150,50 @@ export const hasNoRedBar = (digits, digit, sample) => {
     return state === 'hottest' || state === 'neutral';
 };
 
+/**
+ * True when the digit carries the red (coldest) bar of the newest `sample` ticks — the inverse of
+ * `hasNoRedBar`. A bar that cannot be read answers false, so an unreadable bar never looks cold.
+ */
+export const hasRedBar = (digits, digit, sample) => digitBarState(digits, digit, sample) === 'coldest';
+
+/** The fair share of one digit on a ten-digit wheel, in percent. */
+const FAIR_SHARE_PERCENT = 10;
+
+/**
+ * The cold-share ceiling bots 8 and 9 really gate on, adapted to the window they are reading.
+ *
+ * The configured ceiling is never loosened; it is TIGHTENED by how much more lopsided the newest
+ * `sample` ticks are than a fair ten-digit wheel would be (the spread of the ten shares against the
+ * spread chance alone produces). A calm window leaves the ceiling as configured, a lopsided one makes
+ * the bot demand colder digits before it trades. `null` means nothing could be read — the caller must
+ * fail closed rather than trade on a parameter it never measured.
+ */
+export const adaptiveShareLimit = (digits, percent, sample) => {
+    const ceiling = Number(percent);
+    if (!Number.isFinite(ceiling) || ceiling <= 0) return null;
+
+    const window = lastDigitsOfSample(digits, sample);
+    if (!window.length) return null;
+
+    const counts = new Array(10).fill(0);
+    window.forEach(digit => {
+        counts[digit] += 1;
+    });
+
+    const mean = window.length / 10;
+    const variance = counts.reduce((total, count) => total + (count - mean) ** 2, 0) / 10;
+    const shareSpread = (Math.sqrt(variance) / window.length) * 100;
+
+    const chance = FAIR_SHARE_PERCENT / 100;
+    const fairSpread = 100 * Math.sqrt((chance * (1 - chance)) / window.length);
+
+    // Half of the excess spread tightens the ceiling; a fair window tightens it by nothing.
+    const tightening = Math.max(0, shareSpread - fairSpread) * 0.5;
+    const floor = Math.min(ceiling, 5);
+    const limit = Math.min(ceiling, Math.max(floor, ceiling - tightening));
+    return Math.round(limit * 10) / 10;
+};
+
 /** The two losing-digit pairs the Over 1 / Under 8 setups wait for: the low 0–1 and the high 8–9. */
 export const DIGIT_SETS = { '0_1': [0, 1], '8_9': [8, 9] };
 

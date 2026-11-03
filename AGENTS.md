@@ -183,17 +183,24 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
 - **Scanner:** `scan-markets.ts` opens its OWN short-lived public WebSocket (never disturbs the live
   subscription) and ranks volatility markets. Remember `ticks_history` needs `subscribe: 1`; the scan
   sends `forget` straight after each request.
-- **Scanner → Load Bot:** every ranked row renders
+- **Scanner → Load Bot (bots 8 and 9):** every ranked row renders
   `src/pages/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
-  template through `matchFreeBotSetup` (`free-bots/scanner-match.ts`), so a row can only ever load the
-  strategy it displayed; **Load Bot is disabled unless all three setup conditions hold** (an unconfirmed
-  row keeps its conditions, reason, evidence and the disabled-reason visible instead of being forced
-  onto a template by its score). Loading goes through
+  templates through `matchFreeBotSetups` (`free-bots/scanner-match.ts`), which offers **bot 8**
+  (`over1_cold_run_recovery`) when digits **0 and 1 are both under 10%** of the sample and **bot 9**
+  (`under8_cold_run_recovery`) when digits **8 and 9 are both under** — both cards in one row when both
+  rules hold, and the closest partial setup (no Load) when neither does. So a row can only ever load a
+  strategy its digits satisfied; **Load Bot is disabled unless the row's two share conditions hold**.
+  The red (coldest) bar is reported as evidence and as the bots' `armed` state (a confirmed pair with the
+  bar on one losing digit), not as a scan condition. Each card also carries a **Backtest** button
+  (`free-bots/bot-backtest.ts`, walk-forward: gates over ticks up to the entry tick, outcome from the
+  next one) over the scanned sample. `collectTradeAlerts` (`digits/scan-alerts.ts`) turns the same
+  matches into the in-app toast raised when a scan finds a market meeting a bot's conditions, and the
+  scan panel repeats them as a "Trade conditions met" list. Loading goes through
   `useFreeBotLoader().loadBot({ marketSource: 'scanner' })`, which re-targets the XML, waits for the
   live workspace, checks the market/contract/prediction **and block count** it reports, then switches to
   the Bot Builder tab — the panel closes only when that load reports `loaded`
   (`botLoaderStore.status`). `MarketScan` carries `scannedAt` so each row can show its scan time.
-  Verify: press **Scan markets** (the floating button, visible on every tab), then **Load … bot** on a row whose conditions are
+  Verify: press **Scan markets** (the floating button, visible on every tab), then **Load bot N …** on a row whose conditions are
   all ✓ — expect the Bot Builder tab to open with that symbol in `trade_definition_market` and the
   matching `DIGITOVER`/`DIGITUNDER` + prediction; rows with ✗ conditions have the button disabled.
   `docker compose exec web npx jest src/pages/free-bots`.
@@ -1075,6 +1082,22 @@ entry rule taken from the published Deriv digit setups, not a bare "trade on thi
   it is cold (< 10.3%) — the 90%/10% split of the two contracts in one observation.
 - **Two-leg / parity-recovery bots** keep their own gates (cold losing digits, `digits_high_run`, parity
   switch), which already follow the same "barrier/frequency/parity" pattern.
+- **Bots 8 and 9 (`*_cold_run_recovery`) require the red bar, not its absence.** Their one
+  `digits_cold_run_recovery` block used to refuse a trade while any losing digit carried the red
+  (coldest) bar; it now buys only when **at least one of the two losing digits carries it** — digit 0 or
+  1 for Over 1, digit 8 or 9 for Under 8 — still ANDed with the confirmed losing pair and both digits
+  under the share ceiling. `hasRedBar` / `Bot.isDigitCold` are the inverse of the existing
+  `hasNoRedBar` / `Bot.isDigitNotCold` (both are registered; other templates keep using "no red bar").
+  - **The share ceiling adapts every trade loop.** The block passes `Bot.adaptiveColdShare(PERCENT,
+    SAMPLE)` instead of the literal, so `adaptiveShareLimit` (`utils/digit-analysis.js`) re-reads the
+    live window and tightens the configured ceiling by half of the excess spread of the ten digit
+    shares against what chance alone produces. It never loosens above the configured number, floors at
+    5%, and answers `null` when nothing can be read — `areDigitsBelowShare` then fails closed (an
+    unread window never passes). The block's `PERCENT` field is therefore the ceiling, not the fixed
+    gate; its label says "auto-tightened".
+  - Coverage: `digit-analysis.test.js` ("red bar", "adaptive cold-share ceiling") and
+    `digits-cold-run-recovery.test.js` (the generated call, and that a missing red bar or an unreadable
+    ceiling waits instead of buying).
 
 Where it lives: `MultiMarketConfig.maxFrequencyDigits` adds the "stays below 10.3%" compares to the
 generated switch + purchase condition (alongside `minFrequencyDigits` for the hot rules);
