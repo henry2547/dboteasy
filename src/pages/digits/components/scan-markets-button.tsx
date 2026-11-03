@@ -171,17 +171,22 @@ export default function ScanMarketsButton({
     const percent = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
     const panel_width = Math.min(PANEL_MAX_WIDTH, viewport.width - EDGE * 2);
     const panel_below = position ? position.top < viewport.height / 2 : false;
+    // The panel is absolutely positioned inside the button container, which is itself parked at
+    // `position.left/top` — so its offsets have to be measured from the container, not the viewport.
     const panel_style = position
         ? {
               width: `${panel_width}px`,
-              left: `${clamp(position.left + size.width - panel_width, EDGE, viewport.width - panel_width - EDGE)}px`,
+              left: `${
+                  clamp(position.left + size.width - panel_width, EDGE, viewport.width - panel_width - EDGE) -
+                  position.left
+              }px`,
               ...(panel_below
                   ? {
-                        top: `${position.top + size.height + EDGE}px`,
+                        top: `${size.height + EDGE}px`,
                         maxHeight: `${Math.max(160, viewport.height - position.top - size.height - EDGE * 2)}px`,
                     }
                   : {
-                        bottom: `${viewport.height - position.top + EDGE}px`,
+                        bottom: `${size.height + EDGE}px`,
                         maxHeight: `${Math.max(160, position.top - EDGE * 2)}px`,
                     }),
           }
@@ -206,12 +211,7 @@ export default function ScanMarketsButton({
             }
         >
             {isOpen && position && (
-                <div
-                    className='digits-scan__panel'
-                    role='dialog'
-                    aria-label='Market scan results'
-                    style={panel_style}
-                >
+                <div className='digits-scan__panel' role='dialog' aria-label='Market scan results' style={panel_style}>
                     <div className='digits-scan__panel-head'>
                         <h4 className='digits-scan__title'>Best markets to trade</h4>
                         <button
@@ -236,7 +236,10 @@ export default function ScanMarketsButton({
                                 aria-valuemax={total > 0 ? total : undefined}
                                 aria-valuenow={total > 0 ? completed : undefined}
                             >
-                                <span className='digits-scan__bar' style={total > 0 ? { width: `${percent}%` } : undefined} />
+                                <span
+                                    className='digits-scan__bar'
+                                    style={total > 0 ? { width: `${percent}%` } : undefined}
+                                />
                             </div>
                             <p className='digits-scan__note'>
                                 {total > 0 ? `${completed} of ${total} markets read` : 'Discovering markets…'}
@@ -281,8 +284,8 @@ export default function ScanMarketsButton({
                             {summary && (
                                 <p className='digits-scan__note'>
                                     {formatCount(summary.scannedMarkets)} of {formatCount(summary.totalMarkets)} markets
-                                    scanned in {formatDuration(summary.durationMs)} · {formatCount(summary.qualifiedSetups)}{' '}
-                                    qualifying
+                                    scanned in {formatDuration(summary.durationMs)} ·{' '}
+                                    {formatCount(summary.qualifiedSetups)} qualifying
                                     {summary.cancelled ? ' · scan cancelled' : ''}
                                     {failures.length > 0 ? ` · ${formatCount(failures.length)} not included` : ''}
                                 </p>
