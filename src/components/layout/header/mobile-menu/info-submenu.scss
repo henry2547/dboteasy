@@ -1,0 +1,126 @@
+/* Shared layout for the read-only drawer pages (What's New, Contact us). */
+
+.info-submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem 2rem;
+
+    &__intro {
+        margin: 0;
+        font-size: 1.15rem;
+        line-height: 1.4;
+        color: var(--text-less-prominent);
+    }
+
+    &__release {
+        align-self: flex-start;
+        padding: 0.2rem 0.8rem;
+        border-radius: 999px;
+        background: var(--general-main-2);
+        border: 1px solid var(--general-main-3);
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        padding: 0.9rem 1.1rem;
+        border: 1px solid var(--general-main-3);
+        border-radius: 10px;
+        background: var(--general-section-1);
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+
+    &__body {
+        margin: 0;
+        font-size: 1.15rem;
+        line-height: 1.45;
+        color: var(--text-less-prominent);
+    }
+
+    &__value {
+        font-size: 1.15rem;
+        line-height: 1.45;
+        color: var(--brand-primary);
+        word-break: break-word;
+    }
+
+    &__link {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+        padding: 0.9rem 1.1rem;
+        border: 1px solid var(--general-main-3);
+        border-radius: 10px;
+        background: var(--general-section-1);
+        color: var(--text-prominent);
+        text-align: left;
+        text-decoration: none;
+        transition: border-color 0.15s ease, background 0.15s ease;
+
+        &:active {
+            border-color: var(--brand-primary);
+            background: var(--general-main-2);
+        }
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 3.2rem;
+        height: 3.2rem;
+        border-radius: 50%;
+        background: var(--general-main-2);
+        color: var(--brand-primary);
+    }
+
+    &__text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__label {
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    &__arrow {
+        flex: 0 0 auto;
+        font-size: 1.6rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__note {
+        margin: 0;
+        padding: 0.9rem 1.1rem;
+        border-radius: 10px;
+        border: 1px dashed var(--general-main-3);
+        font-size: 1.15rem;
+        line-height: 1.4;
+        color: var(--text-less-prominent);
+    }
+}

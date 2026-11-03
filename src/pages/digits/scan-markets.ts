@@ -24,10 +24,11 @@ import { computeAdaptiveSignals } from './strategies';
 import type { ConnectionState, DigitStatistics, MarketSymbol } from './types';
 
 /**
- * Ticks requested per market — the same window the lab's rules are tuned for, and enough history for
- * the bots' walk-forward backtest (a 100-tick gate window plus roughly 200 decisions).
+ * Ticks requested per market — the window the lab's rules are tuned for (the frequency gates read the
+ * newest 100) and enough history for the bots' walk-forward backtest (a 100-tick gate window then
+ * ~900 decisions).
  */
-export const SCAN_TICKS = 300;
+export const SCAN_TICKS = 1000;
 /** Fewer ticks than this cannot be judged, and is reported as insufficient. */
 export const MIN_SCAN_TICKS = 30;
 /** How many markets may be in flight at once on the shared socket. */

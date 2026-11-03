@@ -182,7 +182,9 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   and `Volatility Indices` categories. The picker and the scanner both use it.
 - **Scanner:** `scan-markets.ts` opens its OWN short-lived public WebSocket (never disturbs the live
   subscription) and ranks volatility markets. Remember `ticks_history` needs `subscribe: 1`; the scan
-  sends `forget` straight after each request.
+  sends `forget` straight after each request. `SCAN_TICKS = 1000` is the sample requested per market
+  (a row may show 1001 when one streamed tick lands before the `forget`), and the panel lists every
+  ranked market with its own Load bot button.
 - **Scanner → Load Bot (bots 8 and 9):** every ranked row renders
   `src/pages/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
   templates through `matchFreeBotSetups` (`free-bots/scanner-match.ts`), which offers **bot 8**
@@ -349,6 +351,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   Statistics) with a one-line purpose and a tap that calls `dashboard.setActiveTab` and closes the
   drawer, plus a short "Getting around" list. It replaced the old Digits-only help content — keep it a
   map of the app, and keep `DESTINATIONS` in the `DBOT_TABS` / `TAB_IDS` order.
+- **What's New and Contact us (hamburger):** the `'whats-new'` submenu renders
+  `mobile-menu/whats-new-submenu.tsx`; its release notes are data in `whats-new-data.ts`
+  (`WHATS_NEW_RELEASE` must match `package.json`'s version — add the newest entry at the top). The
+  `'contact'` submenu renders `mobile-menu/contact-us-submenu.tsx`, whose three links (GitHub, email,
+  WhatsApp) are the `CONTACTS` constant. Both share `info-submenu.scss` for layout.
 - **Blocks guide (hamburger):** the `'blocks'` submenu ("Blocks help") renders
   `mobile-menu/blocks-help-submenu.tsx`, an accordion over the five Blocks-menu groups — Digits plus the
   four observer groups. Its content comes from `mobile-menu/blocks-help-data.ts`, which reads `GROUPS` /
