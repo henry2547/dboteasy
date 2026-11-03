@@ -26,22 +26,23 @@ const fields = { PRIMARY: 'over_1', PERCENT: 10.2, SAMPLE: 100, PARITY: 'both', 
 describe('cold-run recovery block generation', () => {
     const generate = loadGenerator();
 
-    it('reads the confirmed losing pair, its share and its red bar before buying Over 1', () => {
+    it('reads the confirmed losing pair, its adaptive share and its red bar before buying Over 1', () => {
         const code = generate(blockWith(fields));
 
         expect(code).toContain("Bot.isPairConfirmed('0_1')");
-        expect(code).toContain('Bot.areDigitSharesBelow([0, 1], 10.2, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(0, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(1, 100)');
+        // The ceiling is re-read from the live window on every trade loop instead of being fixed.
+        expect(code).toContain('Bot.areDigitSharesBelow([0, 1], Bot.adaptiveColdShare(10.2, 100), 100)');
+        expect(code).toContain('Bot.isDigitCold(0, 100) || Bot.isDigitCold(1, 100)');
+        expect(code).not.toContain('Bot.isDigitNotCold');
         expect(code).toContain("Bot.purchase('DIGITOVER', { barrier: 1 })");
     });
 
-    it('waits on the 8/9 pair for the Under 8 leg', () => {
+    it('waits on the 8/9 pair with a red bar on either digit for the Under 8 leg', () => {
         const code = generate(blockWith({ ...fields, PRIMARY: 'under_8' }));
 
         expect(code).toContain("Bot.isPairConfirmed('8_9')");
-        expect(code).toContain('Bot.areDigitSharesBelow([8, 9], 10.2, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(8, 100)');
+        expect(code).toContain('Bot.areDigitSharesBelow([8, 9], Bot.adaptiveColdShare(10.2, 100), 100)');
+        expect(code).toContain('Bot.isDigitCold(8, 100) || Bot.isDigitCold(9, 100)');
         expect(code).toContain("Bot.purchase('DIGITUNDER', { barrier: 8 })");
     });
 
@@ -77,7 +78,8 @@ describe('cold-run program decisions', () => {
         reversal = 'NO SIGNAL',
         pair_confirmed = true,
         shares_ok = true,
-        bars_ok = true,
+        red_bar = true,
+        ceiling = 8.4,
         risk = true,
     } = {}) => ({
         sessionHasOpenContract: jest.fn(() => open),
@@ -85,14 +87,15 @@ describe('cold-run program decisions', () => {
         eoParityReversal: jest.fn(() => reversal),
         isPairConfirmed: jest.fn(() => pair_confirmed),
         areDigitSharesBelow: jest.fn(() => shares_ok),
-        isDigitNotCold: jest.fn(() => bars_ok),
+        adaptiveColdShare: jest.fn(() => ceiling),
+        isDigitCold: jest.fn(() => red_bar),
         riskCanTrade: jest.fn(() => risk),
         getLastDigit: jest.fn(() => 1),
         sessionJournal: jest.fn(),
         purchase: jest.fn(),
     });
 
-    it('buys Over 1 when the pair is confirmed and stays cold', () => {
+    it('buys Over 1 when the pair is confirmed and one losing digit carries the red bar', () => {
         const bot = createBot();
         run(fields, bot);
 
@@ -103,7 +106,8 @@ describe('cold-run program decisions', () => {
     it.each([
         ['the pair is not confirmed', { pair_confirmed: false }],
         ['a losing digit is no longer cold', { shares_ok: false }],
-        ['a losing digit carries the red bar', { bars_ok: false }],
+        ['neither losing digit carries the red bar', { red_bar: false }],
+        ['the adaptive ceiling could not be read', { ceiling: null, shares_ok: false }],
         ['the risk guard blocks the trade', { risk: false }],
     ])('waits instead of buying when %s', (_reason, overrides) => {
         const bot = createBot(overrides);

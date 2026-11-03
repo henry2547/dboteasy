@@ -8,9 +8,11 @@ import { api_base } from '../../api/api-base';
 import { observerRuntime } from '../../observer';
 import { getDirection, getLastDigit, getLastDigitForList } from '../utils/helpers';
 import {
+    adaptiveShareLimit,
     areDigitsBelowShare,
     digitBarState,
     digitGap,
+    hasRedBar,
     digitsInSetRun,
     hasNoRedBar,
     highDigitRun,
@@ -326,6 +328,33 @@ export default Engine =>
                 this.getLastDigitList().then(digits => {
                     const size = Math.max(1, Number(sample) || 100);
                     resolve(hasNoRedBar(digits, digit, size));
+                })
+            );
+        }
+
+        /**
+         * True only when the digit genuinely carries the red (coldest) bar of the last `sample`
+         * ticks. No ticks to read means `unknown`, which answers false — never "cold".
+         */
+        isDigitCold(digit, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    resolve(hasRedBar(digits, digit, size));
+                })
+            );
+        }
+
+        /**
+         * The cold-share ceiling the cold-run bots gate on, adapted to the live window: the configured
+         * ceiling tightened while the ten digit shares spread wider than chance alone would produce.
+         * Resolves `null` when no ticks can be read, so the gate fails closed.
+         */
+        adaptiveColdShare(percent, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 100);
+                    resolve(adaptiveShareLimit(digits, percent, size));
                 })
             );
         }

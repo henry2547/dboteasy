@@ -44,11 +44,73 @@
         color: var(--text-less-prominent);
     }
 
+    /* One bot per matching rule — a market can qualify for bot 8 and bot 9 at once. */
+    &__setup {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        padding-top: 0.4rem;
+        border-top: 1px dashed var(--general-main-3);
+
+        &:first-of-type {
+            border-top: none;
+        }
+    }
+
     &__strategy {
         display: flex;
         flex-wrap: wrap;
         gap: 0.4rem;
         margin-top: 0.3rem;
+    }
+
+    &__backtest {
+        margin-top: 0.3rem;
+    }
+
+    &__backtest-toggle {
+        padding: 0.25rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid var(--general-main-3);
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-general);
+        cursor: pointer;
+    }
+
+    &__backtest-body {
+        margin-top: 0.35rem;
+    }
+
+    &__metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin: 0;
+
+        div {
+            padding: 0.3rem 0.4rem;
+            border-radius: 6px;
+            background: var(--general-main-2);
+        }
+
+        dt {
+            font-size: 0.95rem;
+            color: var(--text-less-prominent);
+        }
+
+        dd {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+    }
+
+    &__note {
+        margin: 0.3rem 0 0;
+        font-size: 1rem;
+        color: var(--text-less-prominent);
     }
 
     &__chip {

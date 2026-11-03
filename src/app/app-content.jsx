@@ -207,7 +207,17 @@ const AppContent = observer(() => {
                                 `ToastContainer.defaultProps`, and without it react-toastify renders
                                 undefined as an element type, which used to crash the whole page the
                                 first time any bot notification appeared. */}
-                            <ToastContainer limit={3} draggable={false} transition={Slide} />
+                            {/* `position` must be set: the Slide transition derives its enter/exit
+                                direction from it, and without one the toast gets `…--undefined` classes
+                                that no keyframes match. The exit animation then never ends, so a toast
+                                dismissed with its × (or by autoClose) stayed on screen for ever.
+                                `bottom-left` matches where bot-notification.scss parks the stack. */}
+                            <ToastContainer
+                                position='bottom-left'
+                                limit={3}
+                                draggable={false}
+                                transition={Slide}
+                            />
                         </div>
                     </ThemeProvider>
                 </AuthLoadingWrapper>

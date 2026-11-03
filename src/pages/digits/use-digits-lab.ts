@@ -11,6 +11,7 @@ import { DerivPublicWebSocketClient, type DerivMessage } from './deriv-public-ws
 import { filterDigitMarkets, groupMarkets, normalizeActiveSymbols, pickDefaultMarket } from './markets';
 import { UNRESOLVED_PRECISION, extractLastDigit, formatQuote, resolvePrecision } from './precision';
 import { scanDigitMarkets, type MarketScan, type ScanProgress, type ScanReport } from './scan-markets';
+import { collectTradeAlerts, notifyTradeAlerts } from './scan-alerts';
 import { DEFAULT_BARRIERS, calculateBarrierStats, calculateDigitStatistics, digitSequence } from './statistics';
 import { computeAdaptiveSignals, computeRulePerformance } from './strategies';
 import type { ConnectionState, ConnectionStatus, MarketSymbol, NormalizedTick, PrecisionState } from './types';
@@ -206,6 +207,10 @@ export function useDigitsLab() {
             if (scanIdRef.current !== scanId) return report.results; // a newer scan owns the screen
 
             setScanReport(report);
+            if (!report.summary.cancelled) {
+                // Alert the user the moment a scanned market meets a bot's trading conditions.
+                notifyTradeAlerts(collectTradeAlerts(report.results));
+            }
             if (report.summary.cancelled) {
                 setScanError(null);
             } else if (report.results.length === 0) {

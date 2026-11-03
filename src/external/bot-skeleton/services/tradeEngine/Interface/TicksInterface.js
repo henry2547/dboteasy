@@ -24,6 +24,8 @@ const getTicksInterface = tradeEngine => {
         isPairConfirmed: (...args) => tradeEngine.isPairConfirmed(...args),
         isDigitBarNeutral: (...args) => tradeEngine.isDigitBarNeutral(...args),
         isDigitNotCold: (...args) => tradeEngine.isDigitNotCold(...args),
+        isDigitCold: (...args) => tradeEngine.isDigitCold(...args),
+        adaptiveColdShare: (...args) => tradeEngine.adaptiveColdShare(...args),
         areDigitSharesBelow: (...args) => tradeEngine.areDigitSharesBelow(...args),
         getTicks: (...args) => tradeEngine.getTicks(...args),
         checkDirection: (...args) => tradeEngine.checkDirection(...args),

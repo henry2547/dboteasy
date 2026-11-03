@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/hooks/useStore';
 import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
 import { formatCount, formatDuration, formatPercent } from '../format';
 import type { MarketScan, MarketScanFailure, ScanProgress, ScanSummary } from '../scan-markets';
+import { collectTradeAlerts } from '../scan-alerts';
 import type { MarketSymbol } from '../types';
 import './scan-markets-button.scss';
 
@@ -161,23 +162,31 @@ export default function ScanMarketsButton({
         handleScan();
     };
 
+    // Markets where a bot's own trading conditions hold right now — the same list the toast raises.
+    const alerts = useMemo(() => collectTradeAlerts(results), [results]);
+
     const best = results[0] ?? null;
     const total = progress?.marketsTotal ?? summary?.totalMarkets ?? 0;
     const completed = progress?.marketsCompleted ?? 0;
     const percent = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
     const panel_width = Math.min(PANEL_MAX_WIDTH, viewport.width - EDGE * 2);
     const panel_below = position ? position.top < viewport.height / 2 : false;
+    // The panel is absolutely positioned inside the button container, which is itself parked at
+    // `position.left/top` — so its offsets have to be measured from the container, not the viewport.
     const panel_style = position
         ? {
               width: `${panel_width}px`,
-              left: `${clamp(position.left + size.width - panel_width, EDGE, viewport.width - panel_width - EDGE)}px`,
+              left: `${
+                  clamp(position.left + size.width - panel_width, EDGE, viewport.width - panel_width - EDGE) -
+                  position.left
+              }px`,
               ...(panel_below
                   ? {
-                        top: `${position.top + size.height + EDGE}px`,
+                        top: `${size.height + EDGE}px`,
                         maxHeight: `${Math.max(160, viewport.height - position.top - size.height - EDGE * 2)}px`,
                     }
                   : {
-                        bottom: `${viewport.height - position.top + EDGE}px`,
+                        bottom: `${size.height + EDGE}px`,
                         maxHeight: `${Math.max(160, position.top - EDGE * 2)}px`,
                     }),
           }
@@ -202,12 +211,7 @@ export default function ScanMarketsButton({
             }
         >
             {isOpen && position && (
-                <div
-                    className='digits-scan__panel'
-                    role='dialog'
-                    aria-label='Market scan results'
-                    style={panel_style}
-                >
+                <div className='digits-scan__panel' role='dialog' aria-label='Market scan results' style={panel_style}>
                     <div className='digits-scan__panel-head'>
                         <h4 className='digits-scan__title'>Best markets to trade</h4>
                         <button
@@ -232,7 +236,10 @@ export default function ScanMarketsButton({
                                 aria-valuemax={total > 0 ? total : undefined}
                                 aria-valuenow={total > 0 ? completed : undefined}
                             >
-                                <span className='digits-scan__bar' style={total > 0 ? { width: `${percent}%` } : undefined} />
+                                <span
+                                    className='digits-scan__bar'
+                                    style={total > 0 ? { width: `${percent}%` } : undefined}
+                                />
                             </div>
                             <p className='digits-scan__note'>
                                 {total > 0 ? `${completed} of ${total} markets read` : 'Discovering markets…'}
@@ -255,6 +262,21 @@ export default function ScanMarketsButton({
 
                     {!isScanning && !error && results.length > 0 && (
                         <>
+                            {alerts.length > 0 && (
+                                <div className='digits-scan__alerts' role='status'>
+                                    <h5 className='digits-scan__alerts-title'>
+                                        Trade conditions met on {alerts.length} market
+                                        {alerts.length === 1 ? '' : 's'}
+                                    </h5>
+                                    <ul className='digits-scan__alerts-list'>
+                                        {alerts.slice(0, 6).map(alert => (
+                                            <li key={`${alert.symbol}-${alert.botNumber}`}>
+                                                Bot {alert.botNumber} · {alert.strategyLabel} — {alert.market}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                             <p className='digits-scan__recommendation'>
                                 Trade <strong>{best?.market.displayName}</strong> — score {best?.score}/100, best rule{' '}
                                 {best?.bestRuleLabel} ({formatPercent(best?.edge, 0)}).
@@ -262,14 +284,14 @@ export default function ScanMarketsButton({
                             {summary && (
                                 <p className='digits-scan__note'>
                                     {formatCount(summary.scannedMarkets)} of {formatCount(summary.totalMarkets)} markets
-                                    scanned in {formatDuration(summary.durationMs)} · {formatCount(summary.qualifiedSetups)}{' '}
-                                    qualifying
+                                    scanned in {formatDuration(summary.durationMs)} ·{' '}
+                                    {formatCount(summary.qualifiedSetups)} qualifying
                                     {summary.cancelled ? ' · scan cancelled' : ''}
                                     {failures.length > 0 ? ` · ${formatCount(failures.length)} not included` : ''}
                                 </p>
                             )}
                             <ul className='digits-scan__list'>
-                                {results.slice(0, 8).map(result => (
+                                {results.map(result => (
                                     <li key={result.market.apiSymbol}>
                                         <ScannerBotResult
                                             result={result}

@@ -6,12 +6,14 @@
  * reports 0 rather than an invented share.
  */
 import {
+    adaptiveShareLimit,
     areDigitsBelowShare,
     digitBarState,
     digitGap,
     digitShare,
     digitsInSetRun,
     hasNoRedBar,
+    hasRedBar,
     highDigitRun,
     hotColdDigit,
     isDigitBarNeutral,
@@ -218,6 +220,46 @@ describe('no red bar', () => {
     it('fails closed when the bar cannot be read', () => {
         expect(hasNoRedBar([], 5, 100)).toBe(false);
         expect(hasNoRedBar(digits, 'x', 100)).toBe(false);
+    });
+});
+
+describe('red bar', () => {
+    // 5 appeared three times, 7 twice; 1 never appeared, so it is the coldest digit.
+    const digits = [5, 7, 5, 0, 7, 5, 2, 9];
+
+    it('is the exact inverse of "no red bar"', () => {
+        expect(hasRedBar(digits, 1, 100)).toBe(true);
+        expect(hasRedBar(digits, 5, 100)).toBe(false);
+        expect(hasRedBar(digits, 7, 100)).toBe(false);
+    });
+
+    it('fails closed when the bar cannot be read', () => {
+        expect(hasRedBar([], 1, 100)).toBe(false);
+        expect(hasRedBar(digits, 'x', 100)).toBe(false);
+    });
+});
+
+describe('adaptive cold-share ceiling', () => {
+    /** A perfectly flat window: every digit takes exactly 10%. */
+    const fair = Array.from({ length: 100 }, (_value, index) => index % 10);
+    /** 50 zeros: the ten shares spread far wider than chance alone would produce. */
+    const lopsided = [...Array(50).fill(0), ...Array(50).fill(0).map((_value, index) => (index % 9) + 1)];
+
+    it('never loosens the ceiling the bot was configured with', () => {
+        expect(adaptiveShareLimit(fair, 10.2, 100)).toBe(10.2);
+        expect(adaptiveShareLimit(lopsided, 10.2, 100)).toBeLessThanOrEqual(10.2);
+    });
+
+    it('tightens the ceiling while the window is more lopsided than chance', () => {
+        const limit = adaptiveShareLimit(lopsided, 10.2, 100);
+        expect(limit).toBeLessThan(10.2);
+        expect(limit).toBeGreaterThanOrEqual(5);
+    });
+
+    it('fails closed when nothing can be measured', () => {
+        expect(adaptiveShareLimit([], 10.2, 100)).toBeNull();
+        expect(adaptiveShareLimit(fair, 0, 100)).toBeNull();
+        expect(adaptiveShareLimit(fair, Number.NaN, 100)).toBeNull();
     });
 });
 

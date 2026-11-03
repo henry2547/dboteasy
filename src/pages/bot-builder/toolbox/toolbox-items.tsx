@@ -793,6 +793,19 @@ export const ToolboxItems = () =>
                             </Shadow>
                         </Value>
                     </Block>
+                    <Block type='sweet_alert'>
+                        <Field name='ALERT_ICON'>success</Field>
+                        <Value name='TITLE'>
+                            <Shadow type='text'>
+                                <Field name='TEXT'>Take profit reached</Field>
+                            </Shadow>
+                        </Value>
+                        <Value name='MESSAGE'>
+                            <Shadow type='text'>
+                                <Field name='TEXT'>The bot stopped at its take profit.</Field>
+                            </Shadow>
+                        </Value>
+                    </Block>
                     <Block type='notify_telegram'>
                         <Value name='TELEGRAM_ACCESS_TOKEN'>
                             <Shadow type='text'>
