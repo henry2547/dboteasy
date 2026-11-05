@@ -383,7 +383,7 @@
                         <field name="FIRST">0</field>
                         <field name="SECOND">1</field>
                         <value name="PERCENT">
-                          <shadow type="math_number"><field name="NUM">10.3</field></shadow>
+                          <shadow type="math_number"><field name="NUM">10.2</field></shadow>
                         </value>
                         <value name="SAMPLE">
                           <shadow type="math_number"><field name="NUM">1000</field></shadow>
@@ -391,44 +391,8 @@
                       </block>
                     </value>
                     <statement name="DO0">
-                      <block type="controls_if" id="freebot-o1u6-p1-neutral-gate">
-                        <value name="IF0">
-                          <block type="logic_operation" id="freebot-o1u6-p1-filters-and">
-                            <field name="OP">AND</field>
-                            <value name="A">
-                              <block type="obs_freq_below" id="freebot-o1u6-observer-rare-one">
-                                <field name="DIGIT">1</field>
-                                <field name="PERCENT">10.3</field>
-                              </block>
-                            </value>
-                            <value name="B">
-                          <block type="logic_operation" id="freebot-o1u6-p1-neutral-and">
-                            <field name="OP">AND</field>
-                            <value name="A">
-                              <block type="digits_bar_neutral" id="freebot-o1u6-p1-neutral-5">
-                                <field name="DIGIT">5</field>
-                                <value name="SAMPLE">
-                                  <shadow type="math_number"><field name="NUM">1000</field></shadow>
-                                </value>
-                              </block>
-                            </value>
-                            <value name="B">
-                              <block type="digits_bar_neutral" id="freebot-o1u6-p1-neutral-6">
-                                <field name="DIGIT">6</field>
-                                <value name="SAMPLE">
-                                  <shadow type="math_number"><field name="NUM">1000</field></shadow>
-                                </value>
-                              </block>
-                            </value>
-                          </block>
-                            </value>
-                          </block>
-                        </value>
-                        <statement name="DO0">
-                          <block type="purchase" id="freebot-o1u6-p1-purchase">
-                            <field name="PURCHASE_LIST">DIGITOVER</field>
-                          </block>
-                        </statement>
+                      <block type="purchase" id="freebot-o1u6-p1-purchase">
+                        <field name="PURCHASE_LIST">DIGITOVER</field>
                       </block>
                     </statement>
                   </block>

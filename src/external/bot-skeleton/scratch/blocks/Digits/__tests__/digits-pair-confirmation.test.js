@@ -48,22 +48,22 @@ describe('pair confirmation block', () => {
 describe('cold pair setup block', () => {
     const generators = loadBlocks();
 
-    it('builds the Over 1 condition from the pair, the shares and the red bar', () => {
+    it('builds the Over 1 condition from the pair and the 10.2% share, ignoring the bars', () => {
         const [code] = generators.digits_cold_pair_entry(blockWith({ PRIMARY: 'over_1' }, { PERCENT: '10.2' }));
 
         expect(code).toContain("Bot.isPairConfirmed('0_1')");
-        expect(code).toContain('Bot.areDigitSharesBelow([0, 1], 10.2, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(0, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(1, 100)');
+        expect(code).toContain('Bot.areDigitSharesAtOrBelow([0, 1], 10.2, 100)');
+        // The red (coldest) bar is not a condition: the digits may carry it or not.
+        expect(code).not.toContain('Bot.isDigitNotCold');
+        expect(code).not.toContain('Bot.isDigitCold');
     });
 
     it('builds the Under 8 condition from the 8/9 pair', () => {
         const [code] = generators.digits_cold_pair_entry(blockWith({ PRIMARY: 'under_8' }, { PERCENT: '10' }));
 
         expect(code).toContain("Bot.isPairConfirmed('8_9')");
-        expect(code).toContain('Bot.areDigitSharesBelow([8, 9], 10, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(8, 100)');
-        expect(code).toContain('Bot.isDigitNotCold(9, 100)');
+        expect(code).toContain('Bot.areDigitSharesAtOrBelow([8, 9], 10, 100)');
+        expect(code).not.toContain('Bot.isDigitNotCold');
     });
 
     it('refuses an unusable share', () => {

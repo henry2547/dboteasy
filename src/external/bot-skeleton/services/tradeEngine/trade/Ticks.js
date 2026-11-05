@@ -9,6 +9,7 @@ import { observerRuntime } from '../../observer';
 import { getDirection, getLastDigit, getLastDigitForList } from '../utils/helpers';
 import {
     adaptiveShareLimit,
+    areDigitsAtOrBelowShare,
     areDigitsBelowShare,
     digitBarState,
     digitGap,
@@ -309,9 +310,10 @@ export default Engine =>
         }
 
         /**
-         * True when the newest tick confirms a losing pair: the last two digits were 0,0 / 0,1 /
-         * 1,1 / 1,0 (`'0_1'`) or 8,8 / 8,9 / 9,9 / 9,8 (`'8_9'`) and the newest tick ended in that
-         * same pair. Other digits may pass between the pair and its confirmation.
+         * True when the newest tick confirms a losing pair: a 0,0 / 0,1 / 1,1 / 1,0 (`'0_1'`) or
+         * 8,8 / 8,9 / 9,9 / 9,8 (`'8_9'`) pair appeared and the newest tick ended in that same set.
+         * The confirmation may sit right after the pair or up to `CONFIRMATION_MAX_GAP` ticks later —
+         * digits from the pair itself may pass in between — and a pair further back is stale.
          */
         isPairConfirmed(set) {
             return new Promise(resolve =>
@@ -365,6 +367,19 @@ export default Engine =>
                 this.getLastDigitList().then(digits => {
                     const size = Math.max(1, Number(sample) || 1000);
                     resolve(areDigitsBelowShare(digits, digits_to_check, percent, size));
+                })
+            );
+        }
+
+        /**
+         * True when every digit in `digits_to_check` is at or below `percent` of the window — the
+         * Over 1 / Under 8 rule, where a digit sitting exactly on the ceiling still passes.
+         */
+        areDigitSharesAtOrBelow(digits_to_check, percent, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 1000);
+                    resolve(areDigitsAtOrBelowShare(digits, digits_to_check, percent, size));
                 })
             );
         }

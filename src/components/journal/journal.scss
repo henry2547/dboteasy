@@ -143,6 +143,11 @@
             color: var(--status-warning);
         }
 
+        &--confirmation {
+            color: var(--status-warning);
+            font-weight: bold;
+        }
+
         &--info {
             color: var(--status-info);
         }

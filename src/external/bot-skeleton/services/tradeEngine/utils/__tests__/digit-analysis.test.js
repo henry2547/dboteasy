@@ -7,6 +7,7 @@
  */
 import {
     adaptiveShareLimit,
+    areDigitsAtOrBelowShare,
     areDigitsBelowShare,
     digitBarState,
     digitGap,
@@ -20,6 +21,7 @@ import {
     lastDigitsOfSample,
     longestDigitRun,
     pairConfirmation,
+    pairConfirmationPosition,
     parityShare,
     repeatShare,
     transitionCount,
@@ -174,9 +176,39 @@ describe('pair confirmation', () => {
         expect(pairConfirmation([7, 8, 9, 3, 2, 8], '8_9')).toBe(true);
     });
 
-    it('treats a set digit inside the gap as the confirmation that already fired', () => {
-        expect(pairConfirmation([0, 0, 5, 1, 0], '0_1')).toBe(false);
+    it('lets set digits pass inside the gap too, confirming the pair on the newest tick', () => {
+        expect(pairConfirmation([0, 0, 5, 1, 0], '0_1')).toBe(true);
         expect(pairConfirmation([0, 1, 0], '0_1')).toBe(true);
+        expect(pairConfirmation([9, 8, 3, 9, 2, 8], '8_9')).toBe(true);
+    });
+
+    it('confirms the observed Over 1 / Under 8 examples', () => {
+        // Over 1: the pair is confirmed immediately, or with three digits in between.
+        expect(pairConfirmation([0, 1, 0], '0_1')).toBe(true);
+        expect(pairConfirmation([0, 1, 3, 5, 7, 1], '0_1')).toBe(true);
+        // Under 8: the bot trades on the confirmation digit the same way.
+        expect(pairConfirmation([8, 9, 9], '8_9')).toBe(true);
+        expect(pairConfirmation([9, 8, 6, 7, 5, 8], '8_9')).toBe(true);
+    });
+
+    it('reports where the confirmation digit sits relative to the pair', () => {
+        expect(pairConfirmationPosition([0, 0, 1], '0_1')).toEqual({
+            confirmed: true,
+            pairEnd: 1,
+            confirmation: 2,
+            gap: 0,
+        });
+        expect(pairConfirmationPosition([0, 1, 5, 4, 1], '0_1')).toMatchObject({ pairEnd: 1, gap: 2 });
+        expect(pairConfirmationPosition([0, 1, 5, 4, 1], '0_1', 1)).toMatchObject({ confirmed: false });
+        expect(pairConfirmationPosition([0, 1], '0_1')).toMatchObject({ confirmed: false, gap: -1 });
+        expect(pairConfirmationPosition([5, 6, 7], '0_1')).toMatchObject({ confirmed: false });
+        expect(pairConfirmationPosition([0, 0, 1], 'nonsense')).toMatchObject({ confirmed: false });
+    });
+
+    it('refuses a pair that is already too far behind the confirmation', () => {
+        // The pair sits six ticks before the confirmation digit — the setup is stale.
+        expect(pairConfirmation([0, 0, 5, 4, 3, 2, 1], '0_1')).toBe(false);
+        expect(pairConfirmation([0, 0, 5, 4, 3, 1], '0_1', 3)).toBe(true);
     });
 
     it('never confirms without a pair or without a confirmation tick', () => {
@@ -307,5 +339,16 @@ describe('digit share gate', () => {
         expect(areDigitsBelowShare([], [0, 1], 10.3, 1000)).toBe(false);
         expect(areDigitsBelowShare([1, 2], [], 10.3, 1000)).toBe(false);
         expect(areDigitsBelowShare([1, 2], [0, 1], 'x', 1000)).toBe(false);
+    });
+
+    it('passes a digit sitting exactly on the 10.2% ceiling for the Over 1 / Under 8 gate', () => {
+        // 10.2% each passes — the rule is "10.2% and below" — while one tick more (10.3%) fails.
+        expect(areDigitsAtOrBelowShare(windowOf({ 0: 102, 1: 102 }), [0, 1], 10.2, 1000)).toBe(true);
+        expect(areDigitsAtOrBelowShare(windowOf({ 0: 103, 1: 102 }), [0, 1], 10.2, 1000)).toBe(false);
+        const high = [...Array(102).fill(8), ...Array(102).fill(9), ...Array(796).fill(0)];
+        expect(areDigitsAtOrBelowShare(high, [8, 9], 10.2, 1000)).toBe(true);
+        // Below the ceiling passes as well, and an unmeasured window still answers false.
+        expect(areDigitsAtOrBelowShare(windowOf({ 0: 90, 1: 96 }), [0, 1], 10.2, 1000)).toBe(true);
+        expect(areDigitsAtOrBelowShare([], [0, 1], 10.2, 1000)).toBe(false);
     });
 });
