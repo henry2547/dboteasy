@@ -215,12 +215,15 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **124** for the first (Under 8) template and **126** for `over1_entry_every_time` — the two
+  **128** for the first (Under 8) template and **130** for `over1_entry_every_time` — the two
   `*_entry_every_time` templates carry one `digits_frequency` "losing digit stays cold" compare per losing
-  digit (see "Researched entries" below) plus a `logic_compare` `OP=EQ` per entry digit — **128** for each
-  `*_two_*_digits` template (their observer gate adds the blocks), **129** for `even_odd_window`, **92** for
-  each `*_cold_run_recovery` template, **106** for `over1_parity_recovery` and **173** for the two-leg
-  `over1_under6_recovery`. Every template's
+  digit (see "Researched entries" below) plus a `logic_compare` `OP=EQ` per entry digit — **132** for each
+  `*_two_*_digits` template (their observer gate adds the blocks), **133** for `even_odd_window`, **92** for
+  each `*_cold_run_recovery` template, **108** for `over1_parity_recovery` and **179** for the two-leg
+  `over1_under6_recovery`. Every entry failure branch also opens with an `entry_check` block (block + its
+  text shadow): the bot stops itself after 3 failed entry checks in a row, with the branch's own reason in
+  the run log (see "Bot Control" below), and the two block-driven templates (`digits_cold_run_recovery`,
+  `digits_parity_recovery`) report the same check from their generators. Every template's
   take-profit and stop-loss branch opens with a `sweet_alert` block (1 block + 2 shadows each), which is
   the six elements the counts grew by; the run-once block also seeds take profit, stop loss, the reset
   stake and the multiplier (four `variables_set` + `math_number` pairs, 8 blocks), and the
@@ -293,7 +296,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   too: this builder registers `logic_operation` only, so an AND must be `logic_operation` with
   `OP=AND`, otherwise the load reports an unsupported block type.
 - **Every template seeds its session numbers in "Run once at start", and the restart-trading section reads them.** `INITIALIZATION` sets `freebot:stake`, `freebot:profit`, `freebot:stop` and — for all nine assets — `freebot:take-profit`, `freebot:stop-loss`, `freebot:reset-stake` and `freebot:multiplier`; the `after_purchase` take-profit / stop-loss compares, the win branch's stake reset and the loss branch's martingale step read those variables instead of repeating the numbers (the literal stays only as the input's shadow fallback). The four templates that declare `freebot:market-scanned` seed it to FALSE there as well, so the scan-once guard never starts from an unset variable. `over1_under6_recovery` additionally seeds `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 20, `freebot:stop-loss` −50 and `freebot:runs` 3, and `over1_parity_recovery` seeds its two legs the same way. Only the digit gates keep literal numbers
-  (10.3% share, 1000/100-tick samples, entry digits 5/6), because their block inputs read the number
+  (10.3% share, 1000-tick samples, entry digits 5/6), because their block inputs read the number
   straight from the shadow.
   - **The prediction gate sits OUTSIDE the `not initialised` guard**, chained as its `<next>`: the guard
     seeds once, while the gate must run on every trade loop — `Bot.start()` reads the trade options
@@ -652,9 +655,20 @@ never trade, size a stake or stop a session on their own initiative.
   by `blocks/index.js`. Category constants: `window.Blockly.Categories.Trading_Execution` /
   `Bot_Control` / `Session_Reporting` in `scratch/hooks/constant.js`; palette entries in
   `toolbox-items.tsx` (`trading_execution`, `bot_control`, `session_reporting`).
-- Eleven blocks: `exec_last_result`, `exec_last_profit`, `exec_session_profit`, `exec_session_trades`,
+- Twelve blocks: `exec_last_result`, `exec_last_profit`, `exec_session_profit`, `exec_session_trades`,
   `exec_open_contracts`, `exec_has_open_contract`, `exec_wait_settlement` (the only statement with a
-  promise), `bot_stop`, `bot_trade_limit_reached`, `report_session` and `report_journal`.
+  promise), `bot_stop`, `bot_trade_limit_reached`, `entry_check`, `report_session` and `report_journal`.
+- **`entry_check` is the Free Bots stop rule.** It records one entry check that came back invalid
+  (`Bot.entryCheckFailed(reason)` → `trade/SessionControl.js`); the third consecutive failure stops the
+  session through the same `bot.stop_button_click` path as the Stop button, with
+  `Entry invalid — <reason> (3 failed checks)` in the journal. A real entry (the engine's own
+  `recordSessionEntry`) restarts the count, and `ENTRY_CHECK_LIMIT` in
+  `services/tradeEngine/utils/session-control.js` is the one place the limit lives. Every Free Bots
+  template reports it from each entry failure branch, so a market that no longer meets the bot's
+  percentage/frequency or condition gates ends the run instead of waiting forever. The stop is also
+  announced with the run panel's own **Sweet alert** popup (`utils/sweet-alert.js` `showSweetAlert`,
+  the same call the Utility → Sweet alert block makes): warning icon, "Bot stopped", and the entry
+  reason, raised once, right before `stopBotWithReason`.
 - Rules are pure functions in `services/tradeEngine/utils/session-control.js` (tested by
   `utils/__tests__/session-control.test.js`). A contract is counted when the engine bought it; a
   result exists only after settlement, and flat contracts (`profit === 0`) count as losses — the same
@@ -1189,9 +1203,11 @@ rule is the pure `resolveSessionLimitHit` in
 ### Sweet alert block (Bot Builder → Utility → Notifications)
 `scratch/blocks/Binary/Tools/Misc/sweet_alert.js` registers the `sweet_alert` block: an icon dropdown
 (success / error / warning / info / question), a title input and a message input. It generates
-`Bot.sweetAlert({ icon, title, message })`; `MiscInterface.js` answers that call by lazily importing
-`sweetalert2` and opening `Swal.fire({ … })`, so the engine never imports UI at module load and a bot
-can announce its own take profit / stop loss. `sweetalert2` is a real dependency (`package.json` +
+`Bot.sweetAlert({ icon, title, message })`; `MiscInterface.js` forwards it to
+`services/tradeEngine/utils/sweet-alert.js` `showSweetAlert`, which lazily imports `sweetalert2` and
+opens `Swal.fire({ … })`, so the engine never imports UI at module load and a bot can announce its own
+take profit / stop loss. The engine raises the same popup itself when the bot stops on its own
+(three failed entry checks in a row — see "Bot Control"), so both paths always look identical. `sweetalert2` is a real dependency (`package.json` +
 lockfile) and its stylesheet is imported once in `app-root.tsx`. Every Free Bots asset calls it in the
 `DO0` of its take-profit and stop-loss `controls_if` (before the stop flag is set), and each card's
 "Trades again when" line names that alert. Adding or removing one changes a template's pinned

@@ -23,6 +23,13 @@ const count = value => {
     return Math.floor(number);
 };
 
+/**
+ * Consecutive entry checks a bot tolerates before it stops itself. Every Free Bots template records
+ * each entry check that came back invalid, so a bot whose conditions stay invalid ends the run with
+ * the reason instead of waiting forever.
+ */
+export const ENTRY_CHECK_LIMIT = 3;
+
 /** A fresh session: nothing taken, nothing settled, no result yet. */
 export const createSessionState = () => ({
     bought: 0,
@@ -34,10 +41,23 @@ export const createSessionState = () => ({
     last_profit: 0,
     last_stake: 0,
     stopped_reason: '',
+    entry_checks_failed: 0,
 });
 
-/** The engine bought one contract: the trade is taken, whatever happens next. */
-export const recordSessionEntry = state => ({ ...state, bought: state.bought + 1 });
+/**
+ * The engine bought one contract: the trade is taken, whatever happens next. A real entry also
+ * restarts the failed-check run, so only consecutive failures count towards the limit.
+ */
+export const recordSessionEntry = state => ({ ...state, bought: state.bought + 1, entry_checks_failed: 0 });
+
+/** One more entry check that came back invalid. */
+export const recordFailedEntryCheck = state => ({
+    ...state,
+    entry_checks_failed: (state.entry_checks_failed || 0) + 1,
+});
+
+/** True once the bot has failed `ENTRY_CHECK_LIMIT` entry checks in a row. */
+export const entryCheckLimitReached = state => (state.entry_checks_failed || 0) >= ENTRY_CHECK_LIMIT;
 
 /**
  * A contract settled with `profit` (sell price − buy price). Profit 0 counts as a loss, exactly like

@@ -7,13 +7,18 @@
  * run panel's Stop button emits, so a program that decides to stop is indistinguishable from a user
  * clicking Stop. Nothing here places a trade or sizes a stake on its own.
  */
+import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
+import { showSweetAlert } from '../utils/sweet-alert';
 import * as constants from './state/constants';
 import {
     createSessionState,
+    ENTRY_CHECK_LIMIT,
+    entryCheckLimitReached,
     journalLevel,
     lastTradeResult,
     normalizeStopReason,
+    recordFailedEntryCheck,
     recordSessionEntry,
     recordSessionSettlement,
     sessionSummary,
@@ -114,6 +119,29 @@ export default Engine =>
             this.session_control = { ...this.getSessionControl(), stopped_reason: text };
             notify(`Bot control: stopping — ${text}`, 'warn');
             globalObserver.emit('bot.stop_button_click');
+        }
+
+        /**
+         * One entry check came back invalid. The bot stops itself on the third consecutive failure,
+         * with this reason in the run log, so a market that no longer meets the entry conditions
+         * ends the run instead of leaving the bot waiting forever. A real entry restarts the count.
+         */
+        entryCheckFailed(reason) {
+            if (this.session_stop_requested) return;
+            this.session_control = recordFailedEntryCheck(this.getSessionControl());
+            if (!entryCheckLimitReached(this.getSessionControl())) return;
+            const text = normalizeStopReason(reason);
+            // The run panel's own "Sweet alert" popup, so the stop is announced to the user the same
+            // way the block announces a take profit or a stop loss — then the session stops once.
+            showSweetAlert({
+                icon: 'warning',
+                title: localize('Bot stopped'),
+                message: localize(
+                    'Entry conditions are no longer valid: {{ reason }}. The bot stopped after {{ limit }} failed entry checks in a row.',
+                    { reason: text, limit: ENTRY_CHECK_LIMIT }
+                ),
+            });
+            this.stopBotWithReason(`Entry invalid — ${text} (${ENTRY_CHECK_LIMIT} failed checks)`);
         }
 
         /** Writes one line into the run journal at the requested level. */

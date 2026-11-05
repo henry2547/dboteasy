@@ -468,6 +468,13 @@ export const ToolboxItems = () =>
                         </Shadow>
                     </Value>
                 </Block>
+                <Block type='entry_check'>
+                    <Value name='REASON'>
+                        <Shadow type='text'>
+                            <Field name='TEXT'>Entry conditions no longer met</Field>
+                        </Shadow>
+                    </Value>
+                </Block>
             </Category>
             {/* Reporting: one measured summary line, and a note in the run log. */}
             <Category id='session_reporting' name={localize('Reporting')}>

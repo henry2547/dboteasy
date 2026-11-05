@@ -92,6 +92,7 @@ describe('cold-run program decisions', () => {
         riskCanTrade: jest.fn(() => risk),
         getLastDigit: jest.fn(() => 1),
         sessionJournal: jest.fn(),
+        entryCheckFailed: jest.fn(),
         purchase: jest.fn(),
     });
 
@@ -115,6 +116,8 @@ describe('cold-run program decisions', () => {
 
         expect(bot.purchase).not.toHaveBeenCalled();
         expect(bot.sessionJournal).toHaveBeenCalled();
+        // Every wait is also a failed entry check, so the run stops after 3 of them in a row.
+        expect(bot.entryCheckFailed).toHaveBeenCalled();
     });
 
     it('buys the opposite parity of the last digits after a loss', () => {

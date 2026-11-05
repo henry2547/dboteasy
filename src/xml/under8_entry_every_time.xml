@@ -193,7 +193,7 @@
                             <field name="DIGIT">8</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-freq-8-sample">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -213,7 +213,7 @@
                             <field name="DIGIT">9</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-freq-9-sample">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -238,7 +238,7 @@
                             <field name="DIGIT">8</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-digit-bar-sample">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -248,7 +248,7 @@
                             <field name="DIGIT">9</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-digit-bar-sample-nine">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -297,8 +297,7 @@
                 <field name="PURCHASE_LIST">DIGITUNDER</field>
               </block>
             </statement>
-            <statement name="ELSE">
-              <block type="notify" id="freebot-under8-strategy-wait-notify">
+            <statement name="ELSE"><block type="entry_check" id="freebot-under8-strategy-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-under8-strategy-entry-entry-check-reason"><field name="TEXT">Under 8: digits 8 and 9 are not cold enough (under 10.3%) or a bar is not neutral</field></shadow></value><next><block type="notify" id="freebot-under8-strategy-wait-notify">
                 <field name="NOTIFICATION_TYPE">info</field>
                 <field name="NOTIFICATION_SOUND">silent</field>
                 <value name="MESSAGE">
@@ -306,12 +305,10 @@
                     <field name="TEXT">Waiting · strategy guard</field>
                   </shadow>
                 </value>
-              </block>
-            </statement>
+              </block></next></block></statement>
           </block>
         </statement>
-        <statement name="ELSE">
-          <block type="text_join" id="freebot-under8-entry-wait-notice">
+        <statement name="ELSE"><block type="entry_check" id="freebot-under8-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-under8-entry-entry-check-reason"><field name="TEXT">Under 8: last digit is not 4, 7 or 9</field></shadow></value><next><block type="text_join" id="freebot-under8-entry-wait-notice">
             <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
             <statement name="STACK">
               <block type="text_statement" id="freebot-under8-entry-wait-notice-label">
@@ -346,8 +343,7 @@
                 </value>
               </block>
             </next>
-          </block>
-        </statement>
+          </block></next></block></statement>
       </block>
     </statement>
   </block>
