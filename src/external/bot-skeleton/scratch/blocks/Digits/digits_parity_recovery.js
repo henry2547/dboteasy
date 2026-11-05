@@ -105,12 +105,10 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_parity_recovery = 
         );
     }
 
-    // The reason the run ends with when the conditions stay invalid: it names the contract and the
-    // gate that refused it, so the report can say why the bot stopped instead of just "no entry".
-    const label = primary.contract === 'DIGITOVER' ? 'Over 1' : 'Under 8';
-    const entry_reason = `${label}: the last digit does not pass the ${primary.barrier} barrier`;
-    const recovery_reason = `${label}: the last ${run} digits are mixed, so there is no parity reversal`;
-
+    // Waiting on this gate never ends the run. The only stop rule the Free Bots templates carry is
+    // the frequency-limit guard in their `before_purchase`, which stops the bot with a reason as soon
+    // as a losing digit rises above its share ceiling.
+    //
     // The engine reports a settled contract as `win` or `loss`, so the loss branch has to read
     // `loss` — the recovery never ran while this compared against anything else.
     return `
@@ -120,13 +118,9 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_parity_recovery = 
                     Bot.purchase('DIGITODD');
                 } else if (Bot.eoParityReversal(${run}, '${parity}') === 'EVEN') {
                     Bot.purchase('DIGITEVEN');
-                } else {
-                    Bot.entryCheckFailed('${recovery_reason}');
                 }
             } else if (Bot.getLastDigit() ${primary.compare} ${primary.barrier} && Bot.riskCanTrade()) {
                 Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });
-            } else {
-                Bot.entryCheckFailed('${entry_reason}');
             }
         }
     `;

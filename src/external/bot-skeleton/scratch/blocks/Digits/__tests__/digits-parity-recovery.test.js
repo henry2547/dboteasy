@@ -94,8 +94,8 @@ describe('parity recovery program after a settled loss', () => {
         const bot = createBot({ reversal: 'NO SIGNAL' });
         run(fields, bot);
         expect(bot.purchase).not.toHaveBeenCalled();
-        // A mixed run is a failed entry check, so the run ends after 3 of them in a row.
-        expect(bot.entryCheckFailed).toHaveBeenCalled();
+        // A mixed run is a wait, not a failed entry check: only the template's frequency-limit guard stops the run.
+        expect(bot.entryCheckFailed).not.toHaveBeenCalled();
     });
 
     it('never trades the recovery leg while a contract is open', () => {

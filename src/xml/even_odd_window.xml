@@ -303,7 +303,7 @@
                   <statement name="DO0">
                     <block type="eo_buy_odd" id="freebot-eo-buy-odd"></block>
                   </statement>
-                  <statement name="ELSE"><block type="entry_check" id="freebot-eo-entry-odd-entry-check"><value name="REASON"><shadow type="text" id="freebot-eo-entry-odd-entry-check-reason"><field name="TEXT">Even/Odd: the last 2 digits are mixed, so there is no parity signal</field></shadow></value><next><block type="text_join" id="freebot-eo-entry-wait-notice">
+                  <statement name="ELSE"><block type="text_join" id="freebot-eo-entry-wait-notice">
                       <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
                       <statement name="STACK">
                         <block type="text_statement" id="freebot-eo-entry-wait-notice-label">
@@ -338,12 +338,12 @@
                           </value>
                         </block>
                       </next>
-                    </block></next></block></statement>
+                    </block></statement>
                 </block>
               </statement>
             </block>
                 </statement>
-                <statement name="ELSE"><block type="entry_check" id="freebot-eo-observer-gate-entry-check"><value name="REASON"><shadow type="text" id="freebot-eo-observer-gate-entry-check-reason"><field name="TEXT">Even/Odd: the observer conditions are not met (parity, freshness or sample)</field></shadow></value><next><block type="notify" id="freebot-eo-observer-wait-notify">
+                <statement name="ELSE"><block type="notify" id="freebot-eo-observer-wait-notify">
                     <field name="NOTIFICATION_TYPE">info</field>
                     <field name="NOTIFICATION_SOUND">silent</field>
                     <value name="MESSAGE">
@@ -351,7 +351,7 @@
                         <field name="TEXT">Waiting · observer gate</field>
                       </shadow>
                     </value>
-                  </block></next></block></statement>
+                  </block></statement>
               </block>
             </statement>
             <statement name="ELSE">

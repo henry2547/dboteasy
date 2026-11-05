@@ -114,8 +114,8 @@ describe('cold-run program decisions', () => {
 
         expect(bot.purchase).not.toHaveBeenCalled();
         expect(bot.sessionJournal).toHaveBeenCalled();
-        // Every wait is also a failed entry check, so the run stops after 3 of them in a row.
-        expect(bot.entryCheckFailed).toHaveBeenCalled();
+        // A wait is not a failed entry check: only the template's frequency-limit guard may stop the run.
+        expect(bot.entryCheckFailed).not.toHaveBeenCalled();
     });
 
     it('buys the opposite parity of the last digits after a loss', () => {

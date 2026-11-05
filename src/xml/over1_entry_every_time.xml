@@ -127,7 +127,63 @@
   </block>
   <block type="before_purchase" id="freebot-over1-before-purchase" x="0" y="740">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-over1-entry"><mutation else="1"></mutation>
+      <block type="controls_if" id="freebot-over1-frequency-limit"><mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_operation" id="freebot-over1-frequency-limit-any">
+            <field name="OP">OR</field>
+            <value name="A">
+              <block type="logic_compare" id="freebot-over1-frequency-limit-0">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="digits_frequency" id="freebot-over1-frequency-0">
+            <field name="DIGIT">0</field>
+            <value name="SAMPLE">
+              <shadow type="math_number" id="freebot-over1-frequency-0-sample">
+                <field name="NUM">1000</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="freebot-over1-frequency-limit-0-max">
+            <field name="NUM">10.2</field>
+          </shadow>
+        </value>
+      </block>
+            </value>
+            <value name="B">
+              <block type="logic_compare" id="freebot-over1-frequency-limit-1">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="digits_frequency" id="freebot-over1-frequency-1">
+            <field name="DIGIT">1</field>
+            <value name="SAMPLE">
+              <shadow type="math_number" id="freebot-over1-frequency-1-sample">
+                <field name="NUM">1000</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="freebot-over1-frequency-limit-1-max">
+            <field name="NUM">10.2</field>
+          </shadow>
+        </value>
+      </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="bot_stop" id="freebot-over1-frequency-stop">
+            <value name="REASON">
+              <shadow type="text" id="freebot-over1-frequency-stop-reason">
+                <field name="TEXT">Over 1 stopped: digit 0 or 1 is above 10.2% of the last 1000 ticks</field>
+              </shadow>
+            </value>
+          </block>
+        </statement>
+      <statement name="ELSE">
+<block type="controls_if" id="freebot-over1-entry"><mutation else="1"></mutation>
         <value name="IF0">
           <block type="logic_operation" id="freebot-over1-entry-any">
             <field name="OP">OR</field>
@@ -278,7 +334,7 @@
                 </next>
               </block>
             </statement>
-            <statement name="ELSE"><block type="entry_check" id="freebot-over1-strategy-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-strategy-entry-entry-check-reason"><field name="TEXT">Over 1: digits 0 and 1 are above 10.2% of the last 1000 ticks</field></shadow></value><next><block type="notify" id="freebot-over1-strategy-wait-notify">
+            <statement name="ELSE"><block type="notify" id="freebot-over1-strategy-wait-notify">
                 <field name="NOTIFICATION_TYPE">info</field>
                 <field name="NOTIFICATION_SOUND">silent</field>
                 <value name="MESSAGE">
@@ -286,10 +342,10 @@
                     <field name="TEXT">Waiting · strategy guard</field>
                   </shadow>
                 </value>
-              </block></next></block></statement>
+              </block></statement>
           </block>
         </statement>
-        <statement name="ELSE"><block type="entry_check" id="freebot-over1-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-entry-entry-check-reason"><field name="TEXT">Over 1: last digit is not 2, 5 or 6</field></shadow></value><next><block type="text_join" id="freebot-over1-entry-wait-notice">
+        <statement name="ELSE"><block type="text_join" id="freebot-over1-entry-wait-notice">
             <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
             <statement name="STACK">
               <block type="text_statement" id="freebot-over1-entry-wait-notice-label">
@@ -324,7 +380,9 @@
                 </value>
               </block>
             </next>
-          </block></next></block></statement>
+          </block></statement>
+      </block>
+      </statement>
       </block>
     </statement>
   </block>

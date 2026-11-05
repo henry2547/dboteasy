@@ -24,9 +24,10 @@ const count = value => {
 };
 
 /**
- * Consecutive entry checks a bot tolerates before it stops itself. Every Free Bots template records
- * each entry check that came back invalid, so a bot whose conditions stay invalid ends the run with
- * the reason instead of waiting forever.
+ * Consecutive entry checks a hand-built bot tolerates before it stops itself (`entry_check` block).
+ * The shipped Free Bots templates no longer record entry misses — they stop through their own
+ * frequency-limit guard (`bot_stop`) the moment a losing digit rises above its share ceiling — but
+ * the block stays available for canvases that want the "3 in a row" rule.
  */
 export const ENTRY_CHECK_LIMIT = 3;
 

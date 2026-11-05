@@ -151,7 +151,63 @@
   </block>
   <block type="before_purchase" id="freebot-u8cr-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-u8cr-session-guard"><mutation else="1"></mutation>
+      <block type="controls_if" id="freebot-u8cr-frequency-limit"><mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_operation" id="freebot-u8cr-frequency-limit-any">
+            <field name="OP">OR</field>
+            <value name="A">
+              <block type="logic_compare" id="freebot-u8cr-frequency-limit-8">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="digits_frequency" id="freebot-u8cr-frequency-8">
+            <field name="DIGIT">8</field>
+            <value name="SAMPLE">
+              <shadow type="math_number" id="freebot-u8cr-frequency-8-sample">
+                <field name="NUM">1000</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="freebot-u8cr-frequency-limit-8-max">
+            <field name="NUM">10.2</field>
+          </shadow>
+        </value>
+      </block>
+            </value>
+            <value name="B">
+              <block type="logic_compare" id="freebot-u8cr-frequency-limit-9">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="digits_frequency" id="freebot-u8cr-frequency-9">
+            <field name="DIGIT">9</field>
+            <value name="SAMPLE">
+              <shadow type="math_number" id="freebot-u8cr-frequency-9-sample">
+                <field name="NUM">1000</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="freebot-u8cr-frequency-limit-9-max">
+            <field name="NUM">10.2</field>
+          </shadow>
+        </value>
+      </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="bot_stop" id="freebot-u8cr-frequency-stop">
+            <value name="REASON">
+              <shadow type="text" id="freebot-u8cr-frequency-stop-reason">
+                <field name="TEXT">Under 8 stopped: digit 8 or 9 is above 10.2% of the last 1000 ticks</field>
+              </shadow>
+            </value>
+          </block>
+        </statement>
+      <statement name="ELSE">
+<block type="controls_if" id="freebot-u8cr-session-guard"><mutation else="1"></mutation>
         <value name="IF0">
           <block type="logic_operation" id="freebot-u8cr-session-guard-and">
             <field name="OP">AND</field>
@@ -205,6 +261,8 @@
             </value>
           </block>
         </statement>
+      </block>
+      </statement>
       </block>
     </statement>
   </block>

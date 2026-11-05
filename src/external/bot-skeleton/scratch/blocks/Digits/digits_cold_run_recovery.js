@@ -167,12 +167,10 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_run_recovery 
 
     const [first, second] = primary.digits;
 
-    // The reason the run ends with when the conditions stay invalid: it names the contract and the
-    // gate that refused it, so the report can say why the bot stopped instead of just "no entry".
-    const label = primary.contract === 'DIGITOVER' ? 'Over 1' : 'Under 8';
-    const share_reason = `${label}: digits ${first} and ${second} are above ${percent}% or the pair is not confirmed`;
-    const recovery_reason = `${label}: the last digits are mixed, so there is no parity reversal`;
-
+    // Waiting on this gate never ends the run. The only stop rule the Free Bots templates carry is
+    // the frequency-limit guard in their `before_purchase`, which stops the bot with a reason as soon
+    // as a losing digit rises above its share ceiling; a pair that is not confirmed yet is just a wait.
+    //
     // The engine reports a settled contract as `win` or `loss`, so the recovery branch has to read
     // `loss` — the reversal never runs while this compares against anything else.
     return `
@@ -183,13 +181,11 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_run_recovery 
                 } else if (Bot.eoParityReversal(${reversal}, '${parity}') === 'EVEN') {
                     Bot.purchase('DIGITEVEN');
                 } else {
-                    Bot.entryCheckFailed('${recovery_reason}');
                     Bot.sessionJournal('Recovery waiting · the last digits are mixed', 'info');
                 }
             } else if (Bot.isPairConfirmed('${primary.set}') && Bot.areDigitSharesAtOrBelow([${first}, ${second}], Bot.adaptiveColdShare(${percent}, ${sample}), ${sample}) && Bot.riskCanTrade()) {
                 Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });
             } else {
-                Bot.entryCheckFailed('${share_reason}');
                 Bot.sessionJournal('Pair gate waiting · last digit ' + Bot.getLastDigit(), 'info');
             }
         }
