@@ -21,6 +21,7 @@ import {
     lastDigitsOfSample,
     longestDigitRun,
     pairConfirmation,
+    pairConfirmationPosition,
     parityShare,
     repeatShare,
     transitionCount,
@@ -175,9 +176,30 @@ describe('pair confirmation', () => {
         expect(pairConfirmation([7, 8, 9, 3, 2, 8], '8_9')).toBe(true);
     });
 
-    it('treats a set digit inside the gap as the confirmation that already fired', () => {
-        expect(pairConfirmation([0, 0, 5, 1, 0], '0_1')).toBe(false);
+    it('lets set digits pass inside the gap too, confirming the pair on the newest tick', () => {
+        expect(pairConfirmation([0, 0, 5, 1, 0], '0_1')).toBe(true);
         expect(pairConfirmation([0, 1, 0], '0_1')).toBe(true);
+        expect(pairConfirmation([9, 8, 3, 9, 2, 8], '8_9')).toBe(true);
+    });
+
+    it('reports where the confirmation digit sits relative to the pair', () => {
+        expect(pairConfirmationPosition([0, 0, 1], '0_1')).toEqual({
+            confirmed: true,
+            pairEnd: 1,
+            confirmation: 2,
+            gap: 0,
+        });
+        expect(pairConfirmationPosition([0, 1, 5, 4, 1], '0_1')).toMatchObject({ pairEnd: 1, gap: 2 });
+        expect(pairConfirmationPosition([0, 1, 5, 4, 1], '0_1', 1)).toMatchObject({ confirmed: false });
+        expect(pairConfirmationPosition([0, 1], '0_1')).toMatchObject({ confirmed: false, gap: -1 });
+        expect(pairConfirmationPosition([5, 6, 7], '0_1')).toMatchObject({ confirmed: false });
+        expect(pairConfirmationPosition([0, 0, 1], 'nonsense')).toMatchObject({ confirmed: false });
+    });
+
+    it('refuses a pair that is already too far behind the confirmation', () => {
+        // The pair sits six ticks before the confirmation digit — the setup is stale.
+        expect(pairConfirmation([0, 0, 5, 4, 3, 2, 1], '0_1')).toBe(false);
+        expect(pairConfirmation([0, 0, 5, 4, 3, 1], '0_1', 3)).toBe(true);
     });
 
     it('never confirms without a pair or without a confirmation tick', () => {

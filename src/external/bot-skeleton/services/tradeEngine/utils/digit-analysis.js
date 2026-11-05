@@ -217,27 +217,60 @@ export const digitsInSetRun = (digits, set) => {
 };
 
 /**
- * True when the newest tick confirms a losing-pair setup: the last two digits were a pair from
- * `set` and the newest tick ended in `set` too.
+ * Most ticks allowed between the pair and the digit that confirms it.
  *
- * Other digits may pass between the pair and its confirmation — 0, 1, 5, 4, 1 is a confirmed pair —
- * but a digit from `set` inside that gap uses the pattern up, so the two most recent in-set ticks
- * before the confirmation have to sit next to each other. 0, 1 alone (no confirmation yet) and
- * 0, 0, 5, 1, 0 (the 1 already confirmed the pair) both answer false.
+ * The confirmation may sit right after the pair (0, 0, 1) or several ticks later (0, 1, 5, 4, 1);
+ * past this many ticks the pair is stale and the setup is not the one the bots trade.
  */
-export const pairConfirmation = (digits, set) => {
+export const CONFIRMATION_MAX_GAP = 3;
+
+/**
+ * Where the confirmation digit sits relative to the losing pair.
+ *
+ * The newest tick has to end in a digit from `set` — that is the confirmation. Walking back from it,
+ * the check looks for the nearest adjacent pair of in-set digits and reports the gap (how many ticks
+ * sit between the pair's second digit and the confirmation). Any digits may occupy that gap,
+ * including digits from the set: 0, 1, 5, 4, 1 and 0, 0, 5, 1, 0 are both confirmed pairs.
+ *
+ * A pair further back than `max_gap` ticks, a newest tick outside the set, an unknown set, or a
+ * window too short to hold a pair all answer `confirmed: false` (`pairEnd`, `confirmation` and `gap`
+ * are -1), so the caller fails closed instead of trading on a pattern it never read.
+ */
+export const pairConfirmationPosition = (digits, set, max_gap = CONFIRMATION_MAX_GAP) => {
+    const missing = { confirmed: false, pairEnd: -1, confirmation: -1, gap: -1 };
+
     const allowed = DIGIT_SETS[set];
-    if (!allowed) return false;
+    if (!allowed) return missing;
 
     const list = toDigitList(digits);
-    if (list.length < 3 || !allowed.includes(list[list.length - 1])) return false;
+    if (list.length < 3) return missing;
 
-    const in_set = [];
-    for (let index = list.length - 2; index >= 0 && in_set.length < 2; index -= 1) {
-        if (allowed.includes(list[index])) in_set.push(index);
+    const confirmation = list.length - 1;
+    if (!allowed.includes(list[confirmation])) return missing;
+
+    const requested = Number(max_gap);
+    const limit = Number.isFinite(requested) ? Math.max(0, Math.floor(requested)) : CONFIRMATION_MAX_GAP;
+
+    for (let pairEnd = confirmation - 1; pairEnd >= 1; pairEnd -= 1) {
+        const gap = confirmation - pairEnd - 1;
+        if (gap > limit) break;
+        if (allowed.includes(list[pairEnd]) && allowed.includes(list[pairEnd - 1])) {
+            return { confirmed: true, pairEnd, confirmation, gap };
+        }
     }
-    return in_set.length === 2 && in_set[0] - in_set[1] === 1;
+
+    return missing;
 };
+
+/**
+ * True when the newest tick confirms a losing-pair setup: a pair from `set` appeared and the newest
+ * tick ended in `set` too, with no more than `max_gap` ticks in between (the pair may sit right
+ * before the confirmation or have other digits, in-set ones included, pass in between).
+ *
+ * 0, 1 alone (no confirmation yet) answers false, and so does a pair that is already too far back.
+ */
+export const pairConfirmation = (digits, set, max_gap) =>
+    pairConfirmationPosition(digits, set, max_gap).confirmed;
 
 /** A digit's share of the newest `sample` ticks, in percent. 0 when the window is empty. */
 export const digitShare = (digits, digit, sample) => {

@@ -1130,12 +1130,22 @@ entry rule taken from the published Deriv digit setups, not a bare "trade on thi
   it is cold (< 10.3%) — the 90%/10% split of the two contracts in one observation.
 - **Two-leg / parity-recovery bots** keep their own gates (cold losing digits, `digits_high_run`, parity
   switch), which already follow the same "barrier/frequency/parity" pattern.
-- **Bots 8 and 9 (`*_cold_run_recovery`) require the red bar, not its absence.** Their one
-  `digits_cold_run_recovery` block used to refuse a trade while any losing digit carried the red
-  (coldest) bar; it now buys only when **at least one of the two losing digits carries it** — digit 0 or
-  1 for Over 1, digit 8 or 9 for Under 8 — still ANDed with the confirmed losing pair and both digits
-  under the share ceiling. `hasRedBar` / `Bot.isDigitCold` are the inverse of the existing
-  `hasNoRedBar` / `Bot.isDigitNotCold` (both are registered; other templates keep using "no red bar").
+- **Bots 8 and 9 (`*_cold_run_recovery`): cold losing pair, then a position-aware confirmation.**
+  Their one `digits_cold_run_recovery` block buys Over 1 / Under 8 only while both losing digits sit
+  at or below the adaptive share ceiling AND the pair (0,0 · 0,1 · 1,1 · 1,0 or 8,8 · 8,9 · 9,9 ·
+  9,8) is confirmed by a later tick ending in the same set. The red (coldest) bar is **not** part of
+  the rule — a losing digit may carry it or not (`hasRedBar` / `Bot.isDigitCold` stay registered for
+  other templates; nothing here reads them).
+  - **The confirmation may arrive immediately or with digits in between.** `pairConfirmationPosition`
+    (`utils/digit-analysis.js`) reads where the newest (confirmation) digit sits against the nearest
+    adjacent pair behind it and reports `{ confirmed, pairEnd, confirmation, gap }`; `gap` is how many
+    ticks separate the pair from its confirmation. Any digits may fill that gap, **including digits
+    from the pair itself** — `0,1,5,4,1` and `0,0,5,1,0` are both confirmed 0/1 pairs. A pair further
+    back than `CONFIRMATION_MAX_GAP` (3 ticks) is stale and `pairConfirmation` answers false, so the
+    gate cannot fire on a pair the market has already moved past. `Bot.isPairConfirmed(set)` is the
+    engine read over the same function (`Ticks.js`), and the `digits_pair_confirmation` block,
+    `scanner-match.ts` (`armed`) and `bot-backtest.ts` all use it, so the bot, the scanner card and
+    the backtest apply one rule.
   - **The share ceiling adapts every trade loop.** The block passes `Bot.adaptiveColdShare(PERCENT,
     SAMPLE)` instead of the literal, so `adaptiveShareLimit` (`utils/digit-analysis.js`) re-reads the
     live window and tightens the configured ceiling by half of the excess spread of the ten digit

@@ -19,10 +19,12 @@ const MAX_PERCENT = 100;
  * block.
  *
  * The first leg buys the bot's own Over/Under contract only while BOTH losing digits sit at or below
- * the share ceiling (10.2% by default, the fair share being 10%) AND the last two digits were a pair
- * from that losing pair — 0,0 · 0,1 · 1,1 · 1,0 for Over 1, 8,8 · 8,9 · 9,9 · 9,8 for Under 8 — AND
- * a later tick confirmed it by ending in the pair. Other digits may pass between the pair and its
- * confirmation. The red (coldest) bar is not part of the rule: a losing digit may carry it or not.
+ * the share ceiling (10.2% by default, the fair share being 10%) AND a pair from that losing pair —
+ * 0,0 · 0,1 · 1,1 · 1,0 for Over 1, 8,8 · 8,9 · 9,9 · 9,8 for Under 8 — AND a later tick confirmed
+ * it by ending in the pair. The confirmation may come straight after the pair or several ticks
+ * later, and any digits may pass in between (in-set ones included); `pairConfirmationPosition` reads
+ * both positions and refuses a pair that is already too far back. The red (coldest) bar is not part
+ * of the rule: a losing digit may carry it or not.
  *
  * The ceiling is not a fixed number at run time: `Bot.adaptiveColdShare` re-reads the live window on
  * every trade loop and tightens the configured ceiling whenever the ten digit shares spread wider
@@ -113,7 +115,7 @@ window.Blockly.Blocks.digits_cold_run_recovery = {
             colourSecondary: window.Blockly.Colours.Base.colourSecondary,
             colourTertiary: window.Blockly.Colours.Base.colourTertiary,
             tooltip: localize(
-                'Buys Over 1 (or Under 8) only while both losing digits stay at or below the share ceiling — tightened automatically from the live window, never loosened above the percentage you set — and the last two digits were a pair from that losing pair — 0/1 for Over 1, 8/9 for Under 8 — with a later tick confirming it. Other digits may pass between the pair and its confirmation, and the losing digits may carry the red (coldest) bar or not. After a settled loss it buys the parity the newest digits predict to break, on the market it is already trading: all even → ODD, all odd → EVEN. A mixed run is no entry, so the block waits for one instead of trading blind.'
+                'Buys Over 1 (or Under 8) only while both losing digits stay at or below the share ceiling — tightened automatically from the live window, never loosened above the percentage you set — and a pair from that losing pair — 0/1 for Over 1, 8/9 for Under 8 — is confirmed by a later tick ending in the same pair. The confirmation may come straight after the pair or several ticks later, with any digits (including digits from the pair) passing in between, and a pair that is already too far back is not a setup. The losing digits may carry the red (coldest) bar or not. After a settled loss it buys the parity the newest digits predict to break, on the market it is already trading: all even → ODD, all odd → EVEN. A mixed run is no entry, so the block waits for one instead of trading blind.'
             ),
             category: window.Blockly.Categories.Digits,
         };
@@ -122,7 +124,7 @@ window.Blockly.Blocks.digits_cold_run_recovery = {
         return {
             display_name: localize('Pair entry: Over 1 / Under 8, Even/Odd recovery'),
             description: localize(
-                'One two-leg entry: Over 1 (or Under 8) while the losing pair stays at or below the share ceiling — the red bar on those digits plays no part — and its pair is confirmed on a later tick (other digits may pass in between), then — after a loss — the even/odd reversal of the newest digits on the same market. The cold-share ceiling adapts to the live window on every trade loop.'
+                'One two-leg entry: Over 1 (or Under 8) while the losing pair stays at or below the share ceiling — the red bar on those digits plays no part — and its pair is confirmed on a later tick, either straight after the pair or with digits passing in between (in-set ones too; the position check refuses a stale pair), then — after a loss — the even/odd reversal of the newest digits on the same market. The cold-share ceiling adapts to the live window on every trade loop.'
             ),
             key_words: localize(
                 'over 1 under 8 cold pair confirmation even odd recovery loss reversal adaptive frequency digit'

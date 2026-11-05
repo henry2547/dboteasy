@@ -310,9 +310,10 @@ export default Engine =>
         }
 
         /**
-         * True when the newest tick confirms a losing pair: the last two digits were 0,0 / 0,1 /
-         * 1,1 / 1,0 (`'0_1'`) or 8,8 / 8,9 / 9,9 / 9,8 (`'8_9'`) and the newest tick ended in that
-         * same pair. Other digits may pass between the pair and its confirmation.
+         * True when the newest tick confirms a losing pair: a 0,0 / 0,1 / 1,1 / 1,0 (`'0_1'`) or
+         * 8,8 / 8,9 / 9,9 / 9,8 (`'8_9'`) pair appeared and the newest tick ended in that same set.
+         * The confirmation may sit right after the pair or up to `CONFIRMATION_MAX_GAP` ticks later —
+         * digits from the pair itself may pass in between — and a pair further back is stale.
          */
         isPairConfirmed(set) {
             return new Promise(resolve =>
