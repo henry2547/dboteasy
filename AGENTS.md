@@ -367,6 +367,12 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   from ordinary journal text. A bot is re-announced only after its conditions cleared and 60 s passed,
   so a flickering condition cannot flood the journal. Covered by
   `__tests__/confirmation-notices.test.ts`.
+- **The bot journals its own confirmation.** Once the two `*_entry_every_time` digit gates pass, the
+  strategy branch writes a green (silent) `notify` line — `Confirmed · digits 0 and 1 at or below
+  10.2% … — buying Over 1`, and the Under 8 equivalent — into the run journal before the purchase, so
+  the market it is actually trading shows the passing check. The same branch's `entry_check` stop rule
+  is unchanged: a third consecutive failed digit check raises the sweet alert and stops the session.
+  `templates.test.ts` pins both the line and that the purchase follows it.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
   card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.
