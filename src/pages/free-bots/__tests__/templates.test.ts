@@ -163,8 +163,9 @@ describe('Free Bots templates', () => {
         });
 
         // Eight of the nine assets carry an explicit window; the parity bot reads parity and
-        // freshness instead of a frequency window.
-        expect(windows).toBe(22);
+        // freshness instead of a frequency window. The two neutral bar reads per Over/Under
+        // asset were dropped when the red bar stopped gating the entry, so 14 windows remain.
+        expect(windows).toBe(14);
     });
 
     it.each(FREE_BOT_TEMPLATES)('$name states its purchase and restart conditions', template => {
@@ -363,7 +364,7 @@ describe('Free Bots templates', () => {
         expect(report.settings.dynamicPrediction).toBe(true);
         expect(report.settings.prediction).toBe('1');
         expect(report.blockTypes).toEqual(
-            expect.arrayContaining(['digits_high_run', 'digits_shares_below', 'digits_bar_neutral'])
+            expect.arrayContaining(['digits_high_run', 'digits_shares_below'])
         );
         expect(report.checks.find(check => check.id === 'recovery-leg')?.passed).toBe(true);
     });
@@ -383,8 +384,9 @@ describe('Free Bots templates', () => {
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
-        // 136 block/shadow elements − 8 shadows replaced by a real block in the
-        // same input = 128 for the first (Under 8) template. Its take-profit and
+        // The first (Under 8) template holds 122 blocks once the two neutral digit-bar
+        // reads and their AND chain were dropped from its entry gate (10.2% and below,
+        // red bar optional). Its take-profit and
         // stop-loss branches each carry a `sweet_alert` block with two shadows,
         // and its run-once block seeds take profit, stop loss, reset stake and
         // multiplier, which the restart-trading branches then read instead of
@@ -393,7 +395,7 @@ describe('Free Bots templates', () => {
         // after 3 failed checks. This exact number is what the loader compares
         // the live workspace against, so a stale canvas cannot look valid.
         const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
-        expect(report.blockCount).toBe(128);
+        expect(report.blockCount).toBe(122);
     });
 
     it('stops every Free Bot after 3 failed entry checks', () => {
@@ -429,7 +431,7 @@ describe('Free Bots templates', () => {
                 'application/xml'
             );
 
-        // Bot 1 — Under 8 enters on 4, 7 or 9 while digits 8 and 9 stay cold and bar-free.
+        // Bot 1 — Under 8 enters on 4, 7 or 9 while digits 8 and 9 stay at or below 10.2%.
         const under8 = doc_of('under8_entry_every_time');
         const under8_entry = under8.querySelector('block[id="freebot-under8-entry"]')!;
         expect(
@@ -437,14 +439,10 @@ describe('Free Bots templates', () => {
                 .filter(compare => compare.querySelector('block[type="last_digit"]'))
                 .map(compare => compare.querySelector('value[name="B"] field[name="NUM"]')?.textContent)
         ).toEqual(['4', '7', '9']);
-        expect(
-            [...under8.querySelectorAll('block[type="digits_bar_neutral"]')].map(
-                block => block.querySelector('field[name="DIGIT"]')?.textContent
-            )
-        ).toEqual(['8', '9']);
+        // The red (coldest) bar is no longer a gate on either bot.
+        expect(under8.querySelectorAll('block[type="digits_bar_neutral"]').length).toBe(0);
 
-        // Bot 2 — Over 1 enters on 2, 5 or 6; digits 0 and 1 stay cold and one of them must
-        // carry the green (hottest) or red (coldest) bar, so both neutral reads are negated.
+        // Bot 2 — Over 1 enters on 2, 5 or 6 while digits 0 and 1 stay at or below 10.2%.
         const over1 = doc_of('over1_entry_every_time');
         const over1_entry = over1.querySelector('block[id="freebot-over1-entry"]')!;
         expect(
@@ -452,13 +450,8 @@ describe('Free Bots templates', () => {
                 .filter(compare => compare.querySelector('block[type="last_digit"]'))
                 .map(compare => compare.querySelector('value[name="B"] field[name="NUM"]')?.textContent)
         ).toEqual(['2', '5', '6']);
-        const bar_reads = [...over1.querySelectorAll('block[id="freebot-over1-bar-any"] block[type="digits_bar_neutral"]')].map(
-            block => block.querySelector('field[name="DIGIT"]')?.textContent
-        );
-        expect(bar_reads).toEqual(['0', '1']);
-        expect(
-            over1.querySelectorAll('block[id="freebot-over1-bar-any"] > value > block[type="logic_negate"]').length
-        ).toBe(2);
+        expect(over1.querySelectorAll('block[type="digits_bar_neutral"]').length).toBe(0);
+        expect(over1.querySelectorAll('block[id="freebot-over1-bar-any"]').length).toBe(0);
     });
 
     it('the Even/Odd bot reverses the last two digits', () => {
@@ -477,9 +470,9 @@ describe('Free Bots templates', () => {
         expect(template.buyCondition).toContain('both are ODD');
     });
 
-    it('every Over/Under template keeps the losing digits cold', () => {
+    it('every Over/Under template keeps the losing digits at or below 10.2%', () => {
         // The published Over/Under setups enter only while the digits the contract loses to sit
-        // below the fair 10.3% share — Over 1 waits for digits 0 and 1, Under 8 for 8 and 9.
+        // at or below 10.2% — Over 1 waits for digits 0 and 1, Under 8 for 8 and 9.
         const cold_digits: Record<string, number[]> = {
             over1_entry_every_time: [0, 1],
             under8_entry_every_time: [8, 9],
@@ -490,8 +483,10 @@ describe('Free Bots templates', () => {
         Object.entries(cold_digits).forEach(([id, digits]) => {
             const template = FREE_BOT_TEMPLATES.find(item => item.id === id)!;
             const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
-            const gates = [...doc.querySelectorAll('block[type="logic_compare"]')].filter(compare =>
-                compare.querySelector('field[name="OP"]')?.textContent === 'LT'
+            const gates = [...doc.querySelectorAll('block[type="logic_compare"]')].filter(
+                compare =>
+                    compare.querySelector('field[name="OP"]')?.textContent === 'LTE' &&
+                    compare.querySelector('block[type="digits_frequency"]')
             );
 
             const field_of = (scope: Element, name: string) =>
@@ -511,7 +506,7 @@ describe('Free Bots templates', () => {
                 )!;
 
                 expect(field_of(frequency, 'DIGIT')?.textContent).toBe(String(digit));
-                expect(field_of(limit, 'NUM')?.textContent).toBe('10.3');
+                expect(field_of(limit, 'NUM')?.textContent).toBe('10.2');
             });
             // The trigger comparison itself is untouched — the cold filter is an extra guard.
             expect(template.entryOperator).not.toBeNull();
@@ -559,14 +554,15 @@ describe('Free Bots templates', () => {
         });
     });
 
-    it('the recovery bot reads 10.3% on the rare digits and waits for three high digits', () => {
+    it('the recovery bot reads 10.2% on the rare digits and waits for three high digits', () => {
         const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
         const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
         const percent_of = (selector: string) => doc.querySelector(selector)?.textContent?.trim();
 
-        // Over 1 waits for digit 0 and digit 1 under 10.3% of the last 1000 ticks ...
-        expect(percent_of('block[id="freebot-o1u6-observer-rare-one"] field[name="PERCENT"]')).toBe('10.3');
-        expect(percent_of('block[id="freebot-o1u6-p1-shares"] value[name="PERCENT"] field[name="NUM"]')).toBe('10.3');
+        // Over 1 waits for digit 0 and digit 1 at or below 10.2% of the last 1000 ticks, and no
+        // bar read gates the entry.
+        expect(percent_of('block[id="freebot-o1u6-p1-shares"] value[name="PERCENT"] field[name="NUM"]')).toBe('10.2');
+        expect(doc.querySelectorAll('block[type="digits_bar_neutral"]').length).toBe(0);
         // ... and the Under 6 recovery waits for three ticks in a row above 6 (7, 8 or 9).
         expect(percent_of('block[id="freebot-o1u6-init-num-runs"] field[name="NUM"]')).toBe('3');
         expect(percent_of('block[id="freebot-o1u6-rec-high-run"] field[name="MODE"]')).toBe('above');

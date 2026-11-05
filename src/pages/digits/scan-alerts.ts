@@ -2,7 +2,7 @@
  * Trade-condition alerts for the market scan.
  *
  * A scanned market raises an alert for every bot whose rule the sample satisfies — bot 8 (Over 1:
- * digits 0 and 1 under 10%) and bot 9 (Under 8: digits 8 and 9 under 10%). The messages are built
+ * digits 0 and 1 at or below 10.2%) and bot 9 (Under 8: digits 8 and 9 at or below 10.2%). The messages are built
  * from the scan's own digits through `matchFreeBotSetups`, so an alert can never name a bot the row
  * would not offer.
  *

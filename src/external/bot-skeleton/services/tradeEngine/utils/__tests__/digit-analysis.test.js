@@ -7,6 +7,7 @@
  */
 import {
     adaptiveShareLimit,
+    areDigitsAtOrBelowShare,
     areDigitsBelowShare,
     digitBarState,
     digitGap,
@@ -307,5 +308,16 @@ describe('digit share gate', () => {
         expect(areDigitsBelowShare([], [0, 1], 10.3, 1000)).toBe(false);
         expect(areDigitsBelowShare([1, 2], [], 10.3, 1000)).toBe(false);
         expect(areDigitsBelowShare([1, 2], [0, 1], 'x', 1000)).toBe(false);
+    });
+
+    it('passes a digit sitting exactly on the 10.2% ceiling for the Over 1 / Under 8 gate', () => {
+        // 10.2% each passes — the rule is "10.2% and below" — while one tick more (10.3%) fails.
+        expect(areDigitsAtOrBelowShare(windowOf({ 0: 102, 1: 102 }), [0, 1], 10.2, 1000)).toBe(true);
+        expect(areDigitsAtOrBelowShare(windowOf({ 0: 103, 1: 102 }), [0, 1], 10.2, 1000)).toBe(false);
+        const high = [...Array(102).fill(8), ...Array(102).fill(9), ...Array(796).fill(0)];
+        expect(areDigitsAtOrBelowShare(high, [8, 9], 10.2, 1000)).toBe(true);
+        // Below the ceiling passes as well, and an unmeasured window still answers false.
+        expect(areDigitsAtOrBelowShare(windowOf({ 0: 90, 1: 96 }), [0, 1], 10.2, 1000)).toBe(true);
+        expect(areDigitsAtOrBelowShare([], [0, 1], 10.2, 1000)).toBe(false);
     });
 });

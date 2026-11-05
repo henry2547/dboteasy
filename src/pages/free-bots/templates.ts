@@ -10,9 +10,9 @@
  * ("Over 1 with Entry every time.xml" / "Under 8 with Entry every time.xml");
  * `sourceFile` records that origin. Their entry gates follow the setups the
  * uploads were named after: Under 8 enters on 4, 7 or 9 while digits 8 and 9 stay
- * below 10.3% and carry neither the green nor the red bar, Over 1 enters on 2, 5
- * or 6 while digits 0 and 1 stay below 10.3% and one of them carries a hot or cold
- * bar. The two `*_two_*_digits` variants add a confirmation gate built from the
+ * at or below 10.2%, Over 1 enters on 2, 5 or 6 while digits 0 and 1 stay at or
+ * below 10.2%. The red (coldest) bar plays no part in either gate — a losing digit
+ * may carry it or not. The two `*_two_*_digits` variants add a confirmation gate built from the
  * Bot Builder's observer blocks, which is why each card lists the blocks it uses.
  * Those gates draw on all four Blocks-menu groups: the digit/frequency condition
  * (`Read Digit N Ticks Ago`, `Digit Frequency Below`, …) is ANDed with a
@@ -25,15 +25,15 @@
  * variable set per branch. Run on Start seeds every number those blocks call —
  * OVER 1, UNDER PREDICTION 6, LOSS COUNT 0, TAKE PROFIT 10, STOP LOSS −20 and the
  * three-tick run — and the purchase conditions branch on the loss count itself
- * rather than on a recovery flag. Its extra gates come from the Digits analysis
- * blocks (`Digits above in a row`, `Two digits below a share`, `Digit bar is
- * neutral`) rather than the observer blocks.
+ * rather than on a recovery flag. Its extra gate comes from the Digits analysis
+ * blocks (`Digits above in a row`, `Two digits at or below a share`) rather than
+ * the observer blocks.
  *
  * Every card's entry rule follows the published Deriv digit setups, not just the
  * contract's own digit: the two `*_entry_every_time` assets AND the tick pattern
  * with a frequency guard on the digits the contract loses to ("Over 1: digit 0 and
- * 1 under 10%, no green or red bar on 0 or 1"), which the asset builds from
- * `digits_frequency` compares against the fair 10.3% share of the last 1000 ticks.
+ * 1 at or below 10.2%"), which the asset builds from `digits_frequency` compares
+ * against 10.2% of the last 1000 ticks. The red (coldest) bar is never a condition.
  */
 
 import evenOddWindowXml from '@/xml/even_odd_window.xml';
@@ -212,14 +212,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         triggerDigit: 4,
         entryDigits: [4, 7, 9],
         entryRule:
-            'Last digit is 4, 7 or 9 · digits 8 and 9 below 10.3% of the last 1000 ticks · neither 8 nor 9 carries a green (hottest) or red (coldest) bar · risk guard, no open contract, trade cap',
+            'Last digit is 4, 7 or 9 · digits 8 and 9 at or below 10.2% of the last 1000 ticks · risk guard, no open contract, trade cap',
         buyCondition:
-            'Under 8 is bought when the newest digit is 4, 7 or 9 — any other digit skips the tick — while the losing digits 8 and 9 both hold less than 10.3% of the last 1000 ticks and neither of them carries the hottest (green) or the coldest (red) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken.',
+            'Under 8 is bought when the newest digit is 4, 7 or 9 — any other digit skips the tick — while the losing digits 8 and 9 both hold 10.2% or less of the last 1000 ticks. The red (coldest) bar plays no part: either losing digit may carry it or not. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 4, 7 or 9 while digits 8 and 9 are still cold and bar-free, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 4, 7 or 9 while digits 8 and 9 are still at or below 10.2%, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digits: Last Digit · Compare · Digit frequency · Neutral digit bar · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
+            'Digits: Last Digit · Compare · Digit frequency · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'over1_entry_every_time',
@@ -240,14 +240,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         triggerDigit: 2,
         entryDigits: [2, 5, 6],
         entryRule:
-            'Last digit is 2, 5 or 6 · digits 0 and 1 below 10.3% of the last 1000 ticks · digit 0 or digit 1 carries the green (hottest) or red (coldest) bar · risk guard, no open contract, trade cap',
+            'Last digit is 2, 5 or 6 · digits 0 and 1 at or below 10.2% of the last 1000 ticks · risk guard, no open contract, trade cap',
         buyCondition:
-            'Over 1 is bought when the newest digit is 2, 5 or 6 — any other digit skips the tick — while the losing digits 0 and 1 both hold less than 10.3% of the last 1000 ticks and one of them carries the hottest (green) or the coldest (red) bar of that window. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken.',
+            'Over 1 is bought when the newest digit is 2, 5 or 6 — any other digit skips the tick — while the losing digits 0 and 1 both hold 10.2% or less of the last 1000 ticks. The red (coldest) bar plays no part: either losing digit may carry it or not. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 2, 5 or 6 while digits 0 and 1 are still cold and one of them carries a hot or cold bar, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
+            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that ends 2, 5 or 6 while digits 0 and 1 are still at or below 10.2%, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digits: Last Digit · Compare · Digit frequency · Neutral digit bar · NOT · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
+            'Digits: Last Digit · Compare · Digit frequency · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'over1_two_low_digits',
@@ -267,14 +267,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'LTE',
         triggerDigit: 1,
         entryRule:
-            'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1 · digits 0 and 1 below 10.3% of the last 1000 ticks · no hot/cold bar on digit 1 · risk guard, no open contract, trade cap · parity switched · fresh data · 1000-tick sample',
+            'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1 · digits 0 and 1 at or below 10.2% of the last 1000 ticks · risk guard, no open contract, trade cap · parity switched · fresh data · 1000-tick sample',
         buyCondition:
-            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — the losing digits 0 and 1 both hold less than 10.3% of the last 1000 ticks, digit 1 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 1000 genuine ticks.',
+            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — the losing digits 0 and 1 both hold 10.2% or less of the last 1000 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 1000 genuine ticks. The red (coldest) bar plays no part.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double low run and still passes every gate, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'under8_two_high_digits',
@@ -294,14 +294,14 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 8,
         entryRule:
-            'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8 · digits 8 and 9 below 10.3% of the last 1000 ticks · no hot/cold bar on digit 8 · risk guard, no open contract, trade cap · parity switched · fresh data · 1000-tick sample',
+            'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8 · digits 8 and 9 at or below 10.2% of the last 1000 ticks · risk guard, no open contract, trade cap · parity switched · fresh data · 1000-tick sample',
         buyCondition:
-            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — the losing digits 8 and 9 both hold less than 10.3% of the last 1000 ticks, digit 8 carries neither the hottest nor the coldest bar of that window, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 1000 genuine ticks.',
+            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — the losing digits 8 and 9 both hold 10.2% or less of the last 1000 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 1000 genuine ticks. The red (coldest) bar plays no part.',
         afterPurchase: 'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20',
         restartCondition:
             'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double high run and still passes every gate, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
         blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit bar is neutral · Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
+            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
         id: 'even_odd_window',
@@ -365,15 +365,15 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: 'GTE',
         triggerDigit: 5,
         entryRule:
-            'Last digit is 5 or 6 · digit 0 and digit 1 both under 10.3% of the last 1000 ticks · neither digit 5 nor digit 6 carries a green or red bar',
+            'Last digit is 5 or 6 · digit 0 and digit 1 both at or below 10.2% of the last 1000 ticks',
         buyCondition:
-            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6, digit 0 and digit 1 are both under 10.3% of the last 1000 ticks, and neither digit 5 nor digit 6 carries a green (hottest) or red (coldest) bar. At 1 or more it waits for the Under 6 recovery instead: the last three ticks in a row each ended 7, 8 or 9 — every one of them above 6, so a 6 breaks the wait (9, 9, 8 counts, 8, 6, 9 does not), and a 9 on the newest tick counts as a high digit like 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
+            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6 and digit 0 and digit 1 are both at or below 10.2% of the last 1000 ticks — the red (coldest) bar on any digit plays no part. At 1 or more it waits for the Under 6 recovery instead: the last three ticks in a row each ended 7, 8 or 9 — every one of them above 6, so a 6 breaks the wait (9, 9, 8 counts, 8, 6, 9 does not), and a 9 on the newest tick counts as a high digit like 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
         afterPurchase:
             'Win → stake back to 10 and the loss count back to 0 (Over 1 again) · Loss → stake × 2 and the loss count + 1 (Under 6 recovery) · the session exits on the take-profit or stop-loss variable',
         restartCondition:
             'Straight after each contract settles it trades again while the stop is not set, so it keeps running through losses until the take profit — or the stop loss — is hit, and a sweet alert then announces which of the two limits ended the run. The barrier comes from the prediction variable, which Run on Start recalculates from the loss count: 0 buys Over 1, 1 or more buys Under 6. While a leg waits for its setup the journal shows the last digit that failed the gate.',
         blocksUsed:
-            'Digits above in a row · Two digits below a share · Digit bar is neutral · Digit & frequency: Digit Frequency Below · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with · AND',
+            'Digits above in a row · Two digits at or below a share · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with · AND',
     },
     {
         id: 'over1_parity_recovery',
@@ -429,13 +429,13 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last 2 digits were a 0,0 · 0,1 · 1,1 · 1,0 pair, then a later tick ended in 0 or 1 — other digits may pass before that confirmation · digits 0 and 1 both under 10.2% of the last 1000 ticks, a ceiling that tightens itself from the live window · at least one of 0 or 1 carries the red (coldest) bar · risk guard, no open contract, trade cap',
+            'Last 2 digits were a 0,0 · 0,1 · 1,1 · 1,0 pair, then a later tick ended in 0 or 1 — other digits may pass before that confirmation · digits 0 and 1 both at or below 10.2% of the last 1000 ticks, a ceiling that tightens itself from the live window · red bar on 0 or 1 optional · risk guard, no open contract, trade cap',
         buyCondition:
-            'Over 1 is bought only when the whole observed setup holds: the last two digits were a pair from 0 and 1 — 0,0 · 0,1 · 1,1 · 1,0 — and a later tick confirmed it by ending in 0 or 1. Other digits may pass between the pair and its confirmation (0,1 then 5, 4, 1 is confirmed), but a 0 or 1 inside that gap uses the pattern up, so the bot waits for the next pair. Digits 0 and 1 both hold less than 10.2% of the last 1000 ticks, and at least one of them carries the red (coldest) bar of that window. The share ceiling is not fixed: on every trade loop the bot re-reads the live window and tightens it whenever the ten digit shares spread wider than chance would, so a lopsided market has to show colder losing digits before it trades — the configured 10.2% is the loosest it ever gets. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Over 1: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
+            'Over 1 is bought only when the whole observed setup holds: the last two digits were a pair from 0 and 1 — 0,0 · 0,1 · 1,1 · 1,0 — and a later tick confirmed it by ending in 0 or 1. Other digits may pass between the pair and its confirmation (0,1 then 5, 4, 1 is confirmed), but a 0 or 1 inside that gap uses the pattern up, so the bot waits for the next pair. Digits 0 and 1 both hold 10.2% or less of the last 1000 ticks, and either of them may carry the red (coldest) bar or not — it is not part of the rule. The share ceiling is not fixed: on every trade loop the bot re-reads the live window and tightens it whenever the ten digit shares spread wider than chance would, so a lopsided market has to show colder losing digits before it trades — the configured 10.2% is the loosest it ever gets. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Over 1: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
         afterPurchase:
             'Win → stake back to 10 and the confirmed-pair Over 1 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run, and a sweet alert announces which of the two limits it was.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 0 and 1 to stay at or below 10.2% in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run, and a sweet alert announces which of the two limits it was.',
         blocksUsed:
             'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · AND',
     },
@@ -461,13 +461,13 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         entryOperator: null,
         triggerDigit: null,
         entryRule:
-            'Last 2 digits were an 8,8 · 8,9 · 9,9 · 9,8 pair, then a later tick ended in 8 or 9 — other digits may pass before that confirmation · digits 8 and 9 both under 10.2% of the last 1000 ticks, a ceiling that tightens itself from the live window · at least one of 8 or 9 carries the red (coldest) bar · risk guard, no open contract, trade cap',
+            'Last 2 digits were an 8,8 · 8,9 · 9,9 · 9,8 pair, then a later tick ended in 8 or 9 — other digits may pass before that confirmation · digits 8 and 9 both at or below 10.2% of the last 1000 ticks, a ceiling that tightens itself from the live window · red bar on 8 or 9 optional · risk guard, no open contract, trade cap',
         buyCondition:
-            'Under 8 is bought only when the whole observed setup holds: the last two digits were a pair from 8 and 9 — 8,8 · 8,9 · 9,9 · 9,8 — and a later tick confirmed it by ending in 8 or 9. Other digits may pass between the pair and its confirmation (8,9 then 5, 4, 9 is confirmed), but an 8 or 9 inside that gap uses the pattern up, so the bot waits for the next pair. Digits 8 and 9 both hold less than 10.2% of the last 1000 ticks, and at least one of them carries the red (coldest) bar of that window. The share ceiling is not fixed: on every trade loop the bot re-reads the live window and tightens it whenever the ten digit shares spread wider than chance would, so a lopsided market has to show colder losing digits before it trades — the configured 10.2% is the loosest it ever gets. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Under 8: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
+            'Under 8 is bought only when the whole observed setup holds: the last two digits were a pair from 8 and 9 — 8,8 · 8,9 · 9,9 · 9,8 — and a later tick confirmed it by ending in 8 or 9. Other digits may pass between the pair and its confirmation (8,9 then 5, 4, 9 is confirmed), but an 8 or 9 inside that gap uses the pattern up, so the bot waits for the next pair. Digits 8 and 9 both hold 10.2% or less of the last 1000 ticks, and either of them may carry the red (coldest) bar or not — it is not part of the rule. The share ceiling is not fixed: on every trade loop the bot re-reads the live window and tightens it whenever the ten digit shares spread wider than chance would, so a lopsided market has to show colder losing digits before it trades — the configured 10.2% is the loosest it ever gets. The risk guard must allow a trade, no contract may still be open and fewer than 250 trades may have been taken. After a settled loss the bot takes the Even/Odd reversal instead of another Under 8: the last 2 digits both even → buy ODD, both odd → buy EVEN, and a mixed pair buys nothing, so it waits for the next pair. Every wait is journalled with the newest digit.',
         afterPurchase:
             'Win → stake back to 10 and the confirmed-pair Under 8 entry again · Loss → stake × 1.5 and the next entry is the Even/Odd reversal of the last 2 digits · stops at +10 profit or −20 loss',
         restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay cold in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run, and a sweet alert announces which of the two limits it was.',
+            'Straight after each contract settles it trades again while the stop is not set: after a win it is back to waiting for digits 8 and 9 to stay at or below 10.2% in a confirmed pair, after a loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — until the take profit or the stop loss ends the run, and a sweet alert announces which of the two limits it was.',
         blocksUsed:
             'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · AND',
     },

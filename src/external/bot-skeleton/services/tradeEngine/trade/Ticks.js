@@ -9,6 +9,7 @@ import { observerRuntime } from '../../observer';
 import { getDirection, getLastDigit, getLastDigitForList } from '../utils/helpers';
 import {
     adaptiveShareLimit,
+    areDigitsAtOrBelowShare,
     areDigitsBelowShare,
     digitBarState,
     digitGap,
@@ -365,6 +366,19 @@ export default Engine =>
                 this.getLastDigitList().then(digits => {
                     const size = Math.max(1, Number(sample) || 1000);
                     resolve(areDigitsBelowShare(digits, digits_to_check, percent, size));
+                })
+            );
+        }
+
+        /**
+         * True when every digit in `digits_to_check` is at or below `percent` of the window — the
+         * Over 1 / Under 8 rule, where a digit sitting exactly on the ceiling still passes.
+         */
+        areDigitSharesAtOrBelow(digits_to_check, percent, sample) {
+            return new Promise(resolve =>
+                this.getLastDigitList().then(digits => {
+                    const size = Math.max(1, Number(sample) || 1000);
+                    resolve(areDigitsAtOrBelowShare(digits, digits_to_check, percent, size));
                 })
             );
         }

@@ -2,8 +2,8 @@
  * One Market Scanner result, with every bot its digits qualify.
  *
  * `matchFreeBotSetups` returns each bot whose rule the scanned digits satisfy — bot 8 for an Over 1
- * market (digits 0 and 1 under 10%) and bot 9 for an Under 8 market (digits 8 and 9 under 10%), in
- * the same row when both hold. A result can therefore never hand a different strategy to the Bot
+ * market (digits 0 and 1 at or below 10.2%) and bot 9 for an Under 8 market (digits 8 and 9 at or
+ * below 10.2%), in the same row when both hold. A result can therefore never hand a different strategy to the Bot
  * Builder than the one it displayed.
  *
  * Loading re-targets that template's XML at the scanned market and opens the Bot Builder; it places
@@ -208,7 +208,8 @@ const ScannerBotResult = observer(({ result, selected, onPick, onLoaded }: Scann
                                 .map(item => `${item.digit} ${formatPercent(item.percentage, 1)}`)
                                 .join(' · ')}
                             {' · '}
-                            red bar: {setup.redBarDigit === null ? 'none on the losing digits' : `digit ${setup.redBarDigit}`}
+                            red bar (optional):{' '}
+                            {setup.redBarDigit === null ? 'none on the losing digits' : `digit ${setup.redBarDigit}`}
                             {setup.adaptiveCeiling !== null ? ` · ceiling now ${setup.adaptiveCeiling.toFixed(1)}%` : ''}
                         </p>
                         <p className='scanner-bot__reason'>{setup.reason}</p>

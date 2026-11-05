@@ -15,14 +15,14 @@ const MAX_PERCENT = 100;
 
 /**
  * "Over 1 / Under 8 setup ready" — the whole entry condition of the cold-pair setup as one Boolean:
- * the pair was confirmed on the newest tick, both losing digits sit under the share you set and
- * neither of them carries the red (coldest) bar.
+ * the pair was confirmed on the newest tick and both losing digits sit at or below the share you set.
+ * The red (coldest) bar plays no part — a losing digit may carry it or not.
  *
  * It buys nothing itself, so it drops into any entry gate in front of a normal Purchase block.
  */
 window.Blockly.Blocks.digits_cold_pair_entry = digitBlock({
     message: localize(
-        '{{ primary }} setup: pair confirmed, both digits under {{ percent }} %, no red bar, last {{ sample }} ticks',
+        '{{ primary }} setup: pair confirmed, both digits at or below {{ percent }} %, last {{ sample }} ticks',
         { primary: '%1', percent: '%2', sample: '%3' }
     ),
     args: [
@@ -47,13 +47,13 @@ window.Blockly.Blocks.digits_cold_pair_entry = digitBlock({
     ],
     output: 'Boolean',
     tooltip: localize(
-        'True when the last two digits were a 0/1 pair (or 8/9) and a later tick confirmed it, both losing digits are under the percentage you set, and neither of them carries the red bar.'
+        'True when the last two digits were a 0/1 pair (or 8/9) and a later tick confirmed it, and both losing digits are at or below the percentage you set. The red (coldest) bar is ignored — the digits may carry it or not.'
     ),
     displayName: localize('Cold pair setup ready'),
     description: localize(
-        'The Over 1 / Under 8 entry in one condition: the pair is confirmed (other digits may pass before the confirmation), both losing digits — 0 and 1 for Over 1, 8 and 9 for Under 8 — are under the percentage you set, and neither carries the red (coldest) bar. Join it to a Purchase block inside “before purchase”.'
+        'The Over 1 / Under 8 entry in one condition: the pair is confirmed (other digits may pass before the confirmation) and both losing digits — 0 and 1 for Over 1, 8 and 9 for Under 8 — are at or below the percentage you set. The red (coldest) bar plays no part. Join it to a Purchase block inside “before purchase”.'
     ),
-    keyWords: localize('over 1 under 8 cold pair confirmed frequency red bar entry ready'),
+    keyWords: localize('over 1 under 8 cold pair confirmed frequency entry ready'),
 });
 
 window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_pair_entry = digitGenerator(block => {
@@ -71,5 +71,5 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_pair_entry = 
     }
 
     const [first, second] = leg.digits;
-    return `(Bot.isPairConfirmed('${leg.set}') && Bot.areDigitSharesBelow([${first}, ${second}], ${percent}, ${sample}) && Bot.isDigitNotCold(${first}, ${sample}) && Bot.isDigitNotCold(${second}, ${sample}))`;
+    return `(Bot.isPairConfirmed('${leg.set}') && Bot.areDigitSharesAtOrBelow([${first}, ${second}], ${percent}, ${sample}))`;
 });

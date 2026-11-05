@@ -248,12 +248,11 @@ export const digitShare = (digits, digit, sample) => {
 };
 
 /**
- * True when every digit in `wanted` is strictly below `percent` of the newest `sample` ticks.
- *
- * Strictly below: a digit sitting exactly on the threshold does not pass, and an empty window
- * reports false (undecided) rather than a share that was never measured.
+ * Shared engine behind the share gates: every digit in `wanted` against `percent` of the newest
+ * `sample` ticks. Compared as counts (hits × 100 against percent × window) so a digit sitting exactly
+ * on the threshold cannot slip through on a floating-point rounding error.
  */
-export const areDigitsBelowShare = (digits, wanted, percent, sample) => {
+const digitsShareGate = (digits, wanted, percent, sample, passes) => {
     const window = lastDigitsOfSample(digits, sample);
     if (!window.length) return false;
 
@@ -263,10 +262,27 @@ export const areDigitsBelowShare = (digits, wanted, percent, sample) => {
     const list = (Array.isArray(wanted) ? wanted : [wanted]).map(value => Number(value));
     if (!list.length || list.some(digit => !Number.isInteger(digit) || digit < 0 || digit > 9)) return false;
 
-    // Compared as counts (hits × 100 against percent × window) so a digit sitting exactly on the
-    // threshold cannot slip through on a floating-point rounding error.
-    return list.every(digit => window.filter(value => value === digit).length * 100 < threshold * window.length);
+    return list.every(digit => passes(window.filter(value => value === digit).length * 100, threshold * window.length));
 };
+
+/**
+ * True when every digit in `wanted` is strictly below `percent` of the newest `sample` ticks.
+ *
+ * Strictly below: a digit sitting exactly on the threshold does not pass, and an empty window
+ * reports false (undecided) rather than a share that was never measured.
+ */
+export const areDigitsBelowShare = (digits, wanted, percent, sample) =>
+    digitsShareGate(digits, wanted, percent, sample, (hits, limit) => hits < limit);
+
+/**
+ * True when every digit in `wanted` is at or below `percent` of the newest `sample` ticks — the
+ * Over 1 / Under 8 rule ("digits 0 and 1 at 10.2% and below", "digits 8 and 9 at 10.2% and below").
+ *
+ * At or below: a digit sitting exactly on the threshold passes. An empty window reports false
+ * (undecided) rather than a share that was never measured.
+ */
+export const areDigitsAtOrBelowShare = (digits, wanted, percent, sample) =>
+    digitsShareGate(digits, wanted, percent, sample, (hits, limit) => hits <= limit);
 
 /**
  * Share of ticks whose digit equals the previous tick's digit, in percent. The first tick has no

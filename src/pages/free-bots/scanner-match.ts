@@ -3,15 +3,14 @@
  *
  * The scanner ranks every volatility market on its own scanned digits and offers exactly the bots
  * whose rule those digits satisfy:
- * - Bot 8 — Over 1, Confirmed 0/1 Pair: digits **0 and 1 both below 10%** of the sample.
- * - Bot 9 — Under 8, Confirmed 8/9 Pair: digits **8 and 9 both below 10%** of the sample.
+ * - Bot 8 — Over 1, Confirmed 0/1 Pair: digits **0 and 1 both at or below 10.2%** of the sample.
+ * - Bot 9 — Under 8, Confirmed 8/9 Pair: digits **8 and 9 both at or below 10.2%** of the sample.
  *
  * A market can satisfy both rules at once, so the match returns every rule that holds — each with
  * the bot that trades it — instead of forcing one strategy onto the row by its score.
  *
- * The red (coldest) bar is reported as evidence rather than as a scan condition: bots 8 and 9 buy
- * once one of their two losing digits carries that bar and their pair is confirmed, so the row says
- * whether that entry trigger is already set on the scanned market.
+ * The red (coldest) bar is reported as evidence only: the bots do not require it, so a losing digit
+ * may carry it or not. What arms them is the confirmed losing pair.
  *
  * These are observations about the ticks already seen — never a prediction of the next tick.
  */
@@ -26,8 +25,8 @@ import { FREE_BOT_TEMPLATES, freeBotById, type FreeBotId } from './templates';
 
 /** Below this many ticks the scan cannot judge a setup. */
 export const MIN_SETUP_SAMPLE = 30;
-/** The scanner's own rule: a losing digit has to stay below this share of the sample. */
-export const SETUP_SHARE_CEILING = 10;
+/** The scanner's own rule: a losing digit has to stay at or below this share of the sample. */
+export const SETUP_SHARE_CEILING = 10.2;
 /** The bots' configured share ceiling — the loosest the adaptive ceiling ever gets at run time. */
 export const BOT_SHARE_CEILING = 10.2;
 /** Window the bots read the digit bars over. */
@@ -118,11 +117,13 @@ function buildSetup(
     const [first, second] = rule.pair;
     const firstShare = percentOf(frequencies, first);
     const secondShare = percentOf(frequencies, second);
-    const sharePassed = firstShare < SETUP_SHARE_CEILING && secondShare < SETUP_SHARE_CEILING;
+    const sharePassed = firstShare <= SETUP_SHARE_CEILING && secondShare <= SETUP_SHARE_CEILING;
 
     const redBarDigit = rule.pair.find(digit => digitBarState(digits, digit, SETUP_SAMPLE) === 'coldest') ?? null;
     const latestDigit = digits.length ? digits[digits.length - 1] : null;
-    const armed = redBarDigit !== null && pairConfirmation(digits, rule.set);
+    // The red (coldest) bar is not a condition: a losing digit may carry it or not, so the
+    // confirmed pair alone arms the bot.
+    const armed = pairConfirmation(digits, rule.set);
     const adaptiveCeiling = adaptiveShareLimit(digits, BOT_SHARE_CEILING, SETUP_SAMPLE);
     const botNumber = botNumberFor(rule.templateId);
     const strategyLabel = rule.strategy === 'over1' ? 'Over 1' : 'Under 8';
@@ -132,27 +133,22 @@ function buildSetup(
     const conditions: FreeBotSetupCondition[] = [
         {
             id: `digit-${first}-below`,
-            label: `Digit ${first} below ${SETUP_SHARE_CEILING}% of the sample`,
-            passed: firstShare < SETUP_SHARE_CEILING,
+            label: `Digit ${first} at or below ${SETUP_SHARE_CEILING}% of the sample`,
+            passed: firstShare <= SETUP_SHARE_CEILING,
             detail: `${first} at ${firstShare.toFixed(1)}% over ${digits.length} ticks.`,
         },
         {
             id: `digit-${second}-below`,
-            label: `Digit ${second} below ${SETUP_SHARE_CEILING}% of the sample`,
-            passed: secondShare < SETUP_SHARE_CEILING,
+            label: `Digit ${second} at or below ${SETUP_SHARE_CEILING}% of the sample`,
+            passed: secondShare <= SETUP_SHARE_CEILING,
             detail: `${second} at ${secondShare.toFixed(1)}% over ${digits.length} ticks.`,
         },
     ];
 
-    const waitingFor =
-        redBarDigit === null
-            ? `the bot waits until ${pairText} carries the red (coldest) bar`
-            : `the bot waits for a confirmed ${first}/${second} pair`;
-
     const reason = sharePassed
         ? armed
-            ? `Bot ${botNumber} (${strategyLabel}) conditions met — its entry trigger is set right now: a confirmed ${first}/${second} pair with the red bar on digit ${redBarDigit}.`
-            : `Bot ${botNumber} (${strategyLabel}) conditions met — ${waitingFor}, then a confirmed ${first}/${second} pair. Red bar now: ${redBarText}.`
+            ? `Bot ${botNumber} (${strategyLabel}) conditions met — its entry trigger is set right now: a confirmed ${first}/${second} pair.`
+            : `Bot ${botNumber} (${strategyLabel}) conditions met — the bot waits for a confirmed ${first}/${second} pair. Red bar now: ${redBarText} (not required).`
         : `No bot ${botNumber} setup: ${conditions
               .filter(condition => !condition.passed)
               .map(condition => condition.label.toLowerCase())

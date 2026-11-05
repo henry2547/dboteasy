@@ -345,7 +345,7 @@ export const CAPABILITY_CATALOG: BlockCapability[] = [
         'digits_cold_pair_entry',
         'Cold pair setup ready',
         'digits',
-        'The Over 1 / Under 8 entry in one condition: the last 2 digits were a pair from the losing digits (0/1 or 8/9) and a later tick confirmed it — other digits may pass in between — both losing digits are under the percentage and neither carries the red (coldest) bar.',
+        'The Over 1 / Under 8 entry in one condition: the last 2 digits were a pair from the losing digits (0/1 or 8/9) and a later tick confirmed it — other digits may pass in between — and both losing digits are at or below the percentage. The red (coldest) bar is ignored.',
         {
             fields: [dropdown('PRIMARY', ['over_1', 'under_8'], 'over_1')],
             inputs: [value('PERCENT', ['Number']), value('SAMPLE', ['Number'])],

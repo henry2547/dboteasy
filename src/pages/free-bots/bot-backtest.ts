@@ -2,9 +2,10 @@
  * Walk-forward backtest for bots 8 and 9, on ticks the scanner already read.
  *
  * Every entry decision is made from the ticks up to and including the entry tick — the same gates the
- * loaded bot applies: a confirmed losing pair, both losing digits under the adaptive share ceiling,
- * and the red (coldest) bar on one of the two. The outcome is read strictly from the NEXT tick, so no
- * future tick ever informs an earlier decision.
+ * loaded bot applies: a confirmed losing pair and both losing digits at or below the adaptive share
+ * ceiling (10.2% at its loosest). The red (coldest) bar is not a gate: a losing digit may carry it or
+ * not. The outcome is read strictly from the NEXT tick, so no future tick ever informs an earlier
+ * decision.
  *
  * Nothing here predicts a digit: the result is a measurement of what this rule would have done on the
  * sample it was given, with the sample size reported so a thin reading is never mistaken for an edge.
@@ -12,8 +13,7 @@
 
 import {
     adaptiveShareLimit,
-    areDigitsBelowShare,
-    digitBarState,
+    areDigitsAtOrBelowShare,
     pairConfirmation,
 } from '@/external/bot-skeleton/services/tradeEngine/utils/digit-analysis';
 import { BOT_SHARE_CEILING, SETUP_SAMPLE } from './scanner-match';
@@ -64,7 +64,6 @@ export function backtestColdRunBot(
     const sample = Math.max(2, options.sample ?? SETUP_SAMPLE);
     const shareCeiling = options.shareCeiling ?? BOT_SHARE_CEILING;
     const template = freeBotById(leg.templateId);
-    const [first, second] = leg.pair;
 
     const equityCurve: number[] = [];
     const ceilings: number[] = [];
@@ -82,9 +81,7 @@ export function backtestColdRunBot(
         const signal =
             ceiling !== null &&
             pairConfirmation(history, leg.set) &&
-            areDigitsBelowShare(history, leg.pair, ceiling, sample) &&
-            (digitBarState(history, first, sample) === 'coldest' ||
-                digitBarState(history, second, sample) === 'coldest');
+            areDigitsAtOrBelowShare(history, leg.pair, ceiling, sample);
 
         if (!signal) continue;
 

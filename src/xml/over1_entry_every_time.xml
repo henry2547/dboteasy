@@ -187,7 +187,7 @@
                     <field name="OP">AND</field>
                     <value name="A">
                       <block type="logic_compare" id="freebot-over1-cold-0">
-                        <field name="OP">LT</field>
+                        <field name="OP">LTE</field>
                         <value name="A">
                           <block type="digits_frequency" id="freebot-over1-freq-0">
                             <field name="DIGIT">0</field>
@@ -200,14 +200,14 @@
                         </value>
                         <value name="B">
                           <shadow type="math_number" id="freebot-over1-cold-0-max">
-                            <field name="NUM">10.3</field>
+                            <field name="NUM">10.2</field>
                           </shadow>
                         </value>
                       </block>
                     </value>
                     <value name="B">
                       <block type="logic_compare" id="freebot-over1-cold-1">
-                        <field name="OP">LT</field>
+                        <field name="OP">LTE</field>
                         <value name="A">
                           <block type="digits_frequency" id="freebot-over1-freq-1">
                             <field name="DIGIT">1</field>
@@ -220,7 +220,7 @@
                         </value>
                         <value name="B">
                           <shadow type="math_number" id="freebot-over1-cold-1-max">
-                            <field name="NUM">10.3</field>
+                            <field name="NUM">10.2</field>
                           </shadow>
                         </value>
                       </block>
@@ -228,67 +228,29 @@
                   </block>
                 </value>
                 <value name="B">
-                  <block type="logic_operation" id="freebot-over1-bar-guards">
+                  <block type="logic_operation" id="freebot-over1-session-guards">
                     <field name="OP">AND</field>
                     <value name="A">
-                      <block type="logic_operation" id="freebot-over1-bar-any">
-                        <field name="OP">OR</field>
-                        <value name="A">
-                          <block type="logic_negate" id="freebot-over1-bar-zero">
-                            <value name="BOOL">
-                              <block type="digits_bar_neutral" id="freebot-over1-digit-bar-zero">
-                                <field name="DIGIT">0</field>
-                                <value name="SAMPLE">
-                                  <shadow type="math_number" id="freebot-over1-digit-bar-zero-sample">
-                                    <field name="NUM">1000</field>
-                                  </shadow>
-                                </value>
-                              </block>
-                            </value>
-                          </block>
-                        </value>
-                        <value name="B">
-                          <block type="logic_negate" id="freebot-over1-bar-one">
-                            <value name="BOOL">
-                              <block type="digits_bar_neutral" id="freebot-over1-digit-bar-one">
-                                <field name="DIGIT">1</field>
-                                <value name="SAMPLE">
-                                  <shadow type="math_number" id="freebot-over1-digit-bar-one-sample">
-                                    <field name="NUM">1000</field>
-                                  </shadow>
-                                </value>
-                              </block>
-                            </value>
-                          </block>
-                        </value>
-                      </block>
+                      <block type="risk_can_trade" id="freebot-over1-risk-guard"></block>
                     </value>
                     <value name="B">
-                      <block type="logic_operation" id="freebot-over1-session-guards">
+                      <block type="logic_operation" id="freebot-over1-session-guards-execution">
                         <field name="OP">AND</field>
                         <value name="A">
-                          <block type="risk_can_trade" id="freebot-over1-risk-guard"></block>
+                          <block type="logic_negate" id="freebot-over1-no-open-contract">
+                            <value name="BOOL">
+                              <block type="exec_has_open_contract" id="freebot-over1-open-contract"></block>
+                            </value>
+                          </block>
                         </value>
                         <value name="B">
-                          <block type="logic_operation" id="freebot-over1-session-guards-execution">
-                            <field name="OP">AND</field>
-                            <value name="A">
-                              <block type="logic_negate" id="freebot-over1-no-open-contract">
-                                <value name="BOOL">
-                                  <block type="exec_has_open_contract" id="freebot-over1-open-contract"></block>
-                                </value>
-                              </block>
-                            </value>
-                            <value name="B">
-                              <block type="logic_negate" id="freebot-over1-trade-limit-ok">
-                                <value name="BOOL">
-                                  <block type="bot_trade_limit_reached" id="freebot-over1-trade-limit">
-                                    <value name="LIMIT">
-                                      <shadow type="math_number" id="freebot-over1-trade-limit-value">
-                                        <field name="NUM">250</field>
-                                      </shadow>
-                                    </value>
-                                  </block>
+                          <block type="logic_negate" id="freebot-over1-trade-limit-ok">
+                            <value name="BOOL">
+                              <block type="bot_trade_limit_reached" id="freebot-over1-trade-limit">
+                                <value name="LIMIT">
+                                  <shadow type="math_number" id="freebot-over1-trade-limit-value">
+                                    <field name="NUM">250</field>
+                                  </shadow>
                                 </value>
                               </block>
                             </value>
@@ -305,7 +267,7 @@
                 <field name="PURCHASE_LIST">DIGITOVER</field>
               </block>
             </statement>
-            <statement name="ELSE"><block type="entry_check" id="freebot-over1-strategy-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-strategy-entry-entry-check-reason"><field name="TEXT">Over 1: digits 0 and 1 are not cold enough (under 10.3%) or neither carries a hot/cold bar</field></shadow></value><next><block type="notify" id="freebot-over1-strategy-wait-notify">
+            <statement name="ELSE"><block type="entry_check" id="freebot-over1-strategy-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-strategy-entry-entry-check-reason"><field name="TEXT">Over 1: digits 0 and 1 are above 10.2% of the last 1000 ticks</field></shadow></value><next><block type="notify" id="freebot-over1-strategy-wait-notify">
                 <field name="NOTIFICATION_TYPE">info</field>
                 <field name="NOTIFICATION_SOUND">silent</field>
                 <value name="MESSAGE">

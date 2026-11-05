@@ -27,6 +27,7 @@ const getTicksInterface = tradeEngine => {
         isDigitCold: (...args) => tradeEngine.isDigitCold(...args),
         adaptiveColdShare: (...args) => tradeEngine.adaptiveColdShare(...args),
         areDigitSharesBelow: (...args) => tradeEngine.areDigitSharesBelow(...args),
+        areDigitSharesAtOrBelow: (...args) => tradeEngine.areDigitSharesAtOrBelow(...args),
         getTicks: (...args) => tradeEngine.getTicks(...args),
         checkDirection: (...args) => tradeEngine.checkDirection(...args),
         getOhlcFromEnd: (...args) => tradeEngine.getOhlcFromEnd(...args),

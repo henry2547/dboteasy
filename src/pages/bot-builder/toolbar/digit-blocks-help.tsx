@@ -34,11 +34,11 @@ const NEW_BLOCKS = [
     },
     {
         name: localize('Cold pair setup ready'),
-        summary: localize('The whole Over 1 / Under 8 entry — pair confirmed, both digits cold, no red bar — in one Boolean.'),
+        summary: localize('The whole Over 1 / Under 8 entry — pair confirmed and both digits at or below the share — in one Boolean.'),
         steps: [
-            localize('Drag “Over 1 setup: pair confirmed, both digits under … %” from Blocks menu → Digits onto the canvas.'),
-            localize('Pick the leg and the cold share — 10.2% keeps the losing digits below the fair 10% share — and set the window to 100 ticks.'),
-            localize('Both losing digits — 0 and 1 for Over 1, 8 and 9 for Under 8 — must sit strictly under that share and neither may carry the red bar.'),
+            localize('Drag “Over 1 setup: pair confirmed, both digits at or below … %” from Blocks menu → Digits onto the canvas.'),
+            localize('Pick the leg and the cold share — 10.2% keeps the losing digits at or below the fair 10% share — and set the window to 100 ticks.'),
+            localize('Both losing digits — 0 and 1 for Over 1, 8 and 9 for Under 8 — must sit at or below that share. The red (coldest) bar plays no part: the digits may carry it or not.'),
             localize('Drop it inside a Purchase condition to buy the matching Over 1 / Under 8 contract when the whole setup is ready.'),
         ],
     },
@@ -72,12 +72,12 @@ const NEW_BLOCKS = [
         ],
     },
     {
-        name: localize('Two digits below a share'),
-        summary: localize('Two digits that are both running colder than a percentage of the window.'),
+        name: localize('Two digits at or below a share'),
+        summary: localize('Two digits that are both at or below a percentage of the window.'),
         steps: [
-            localize('Drag “Digits … + … both under … %, last … ticks” onto the canvas.'),
-            localize('Pick the two digits — 0 and 1 for the Over 1 setup — the share, 10.5%, and the window, 1000 ticks.'),
-            localize('Both digits must be strictly below that percentage; a digit sitting exactly on it fails.'),
+            localize('Drag “Digits … + … both at or below … %, last … ticks” onto the canvas.'),
+            localize('Pick the two digits — 0 and 1 for the Over 1 setup — the share, 10.2%, and the window, 1000 ticks.'),
+            localize('Both digits must be at or below that percentage; a digit sitting exactly on it passes.'),
             localize('Use it so the bot only buys Over 1 while the two lowest digits are genuinely cold.'),
         ],
     },
