@@ -263,8 +263,19 @@
               </block>
             </value>
             <statement name="DO0">
-              <block type="purchase" id="freebot-over1-purchase">
-                <field name="PURCHASE_LIST">DIGITOVER</field>
+              <block type="notify" id="freebot-over1-confirm-notify">
+                <field name="NOTIFICATION_TYPE">success</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="freebot-over1-confirm-notify-text">
+                    <field name="TEXT">Confirmed · digits 0 and 1 at or below 10.2% of the last 1000 ticks — buying Over 1</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="purchase" id="freebot-over1-purchase">
+                    <field name="PURCHASE_LIST">DIGITOVER</field>
+                  </block>
+                </next>
               </block>
             </statement>
             <statement name="ELSE"><block type="entry_check" id="freebot-over1-strategy-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-strategy-entry-entry-check-reason"><field name="TEXT">Over 1: digits 0 and 1 are above 10.2% of the last 1000 ticks</field></shadow></value><next><block type="notify" id="freebot-over1-strategy-wait-notify">

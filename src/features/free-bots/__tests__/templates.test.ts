@@ -387,7 +387,7 @@ describe('Free Bots templates', () => {
     });
 
     it('counts only the blocks Blockly will hold on the canvas', () => {
-        // The first (Under 8) template holds 122 blocks once the two neutral digit-bar
+        // The first (Under 8) template holds 124 blocks once the two neutral digit-bar
         // reads and their AND chain were dropped from its entry gate (10.2% and below,
         // red bar optional). Its take-profit and
         // stop-loss branches each carry a `sweet_alert` block with two shadows,
@@ -395,10 +395,12 @@ describe('Free Bots templates', () => {
         // multiplier, which the restart-trading branches then read instead of
         // repeating the numbers. Each entry branch also starts with an
         // `entry_check` block (block + its text shadow), which stops the run
-        // after 3 failed checks. This exact number is what the loader compares
-        // the live workspace against, so a stale canvas cannot look valid.
+        // after 3 failed checks, and the confirmed entry journals its line
+        // through a `notify` block before the purchase. This exact number is what
+        // the loader compares the live workspace against, so a stale canvas
+        // cannot look valid.
         const report = inspectFreeBotXml(assetOf(FREE_BOT_TEMPLATES[0]), FREE_BOT_TEMPLATES[0], isKnown);
-        expect(report.blockCount).toBe(122);
+        expect(report.blockCount).toBe(124);
     });
 
     it('stops every Free Bot after 3 failed entry checks', () => {
@@ -424,6 +426,28 @@ describe('Free Bots templates', () => {
             checks.forEach(check => {
                 expect(check.querySelector('value[name="REASON"] field[name="TEXT"]')?.textContent?.trim()).toBeTruthy();
             });
+        });
+    });
+
+    it('journals the digit confirmation before each entry-every-time purchase', () => {
+        // Once the share gate passes, the bot says so in the run journal — one line for the
+        // volatility it is trading — and only then buys.
+        const expected: Record<string, string> = {
+            under8_entry_every_time: 'Confirmed · digits 8 and 9 at or below 10.2%',
+            over1_entry_every_time: 'Confirmed · digits 0 and 1 at or below 10.2%',
+        };
+
+        Object.entries(expected).forEach(([id, line]) => {
+            const doc = new DOMParser().parseFromString(
+                assetOf(FREE_BOT_TEMPLATES.find(item => item.id === id)!),
+                'application/xml'
+            );
+            const notify = [...doc.querySelectorAll('block[type="notify"]')].find(block =>
+                block.querySelector('value[name="MESSAGE"] field[name="TEXT"]')?.textContent?.includes(line)
+            );
+
+            expect(notify).toBeDefined();
+            expect(notify?.querySelector('next block[type="purchase"]')).not.toBeNull();
         });
     });
 
