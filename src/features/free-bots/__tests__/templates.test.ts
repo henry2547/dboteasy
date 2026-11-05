@@ -75,13 +75,16 @@ const PALETTE_GROUPS = [
 
 /**
  * The block types each flat engine category of the palette lists, read from the palette source so a
- * block that moves category moves with the test instead of leaving a stale copy here.
+ * block that moves category moves with the test instead of leaving a stale copy here. The palette is
+ * split into one module per section under `toolbox/palette/`, so every file is read.
  */
 function enginePaletteGroups(): Map<string, Set<string>> {
-    const source = fs.readFileSync(
-        path.join(repo_root, 'src/pages/bot-builder/toolbox/toolbox-items.tsx'),
-        'utf8'
-    );
+    const paletteDir = path.join(repo_root, 'src/features/bot-builder/toolbox/palette');
+    const source = fs
+        .readdirSync(paletteDir)
+        .filter(file => file.endsWith('.tsx'))
+        .map(file => fs.readFileSync(path.join(paletteDir, file), 'utf8'))
+        .join('\n');
     const groups = new Map<string, Set<string>>();
 
     source

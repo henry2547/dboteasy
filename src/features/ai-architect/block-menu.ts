@@ -19,7 +19,7 @@
  */
 
 import { BLOCKS as OBSERVER_BLOCKS } from '@/external/bot-skeleton/scratch/blocks/Observer/observer-catalog';
-import { ToolboxItems } from '@/pages/bot-builder/toolbox/toolbox-items';
+import { ToolboxItems } from '@/features/bot-builder/toolbox/toolbox-items';
 import { CAPABILITY_CATALOG, CATEGORY_LABELS } from './registry';
 import type { MenuBlock } from './types';
 

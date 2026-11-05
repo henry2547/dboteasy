@@ -1,4 +1,4 @@
-import { matchFreeBotSetup } from '@/pages/free-bots/scanner-match';
+import { matchFreeBotSetup } from '@/features/free-bots/scanner-match';
 import {
     MIN_TREND_SAMPLE,
     combinedPercentage,

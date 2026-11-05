@@ -11,7 +11,7 @@
  */
 
 import { toast } from 'react-toastify';
-import { matchFreeBotSetups } from '@/pages/free-bots/scanner-match';
+import { matchFreeBotSetups } from '@/features/free-bots/scanner-match';
 import type { MarketScan } from './scan-markets';
 
 /** Alerts shown as individual toasts; the rest are rolled into one line. */

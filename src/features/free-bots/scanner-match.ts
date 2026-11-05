@@ -20,7 +20,7 @@ import {
     digitBarState,
     pairConfirmation,
 } from '@/external/bot-skeleton/services/tradeEngine/utils/digit-analysis';
-import { calculateStatisticsFromDigits } from '@/pages/digits/statistics';
+import { calculateStatisticsFromDigits } from '@/features/digits/statistics';
 import { FREE_BOT_TEMPLATES, freeBotById, type FreeBotId } from './templates';
 
 /** Below this many ticks the scan cannot judge a setup. */

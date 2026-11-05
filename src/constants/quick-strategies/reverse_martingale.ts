@@ -1,7 +1,7 @@
 import { getImageLocation } from '../../public-path';
 import { localizeReverseMartingale } from '@/utils/conditional-localize';
 import { localize } from '@deriv-com/translations';
-import { TDescriptionItem } from '../../pages/bot-builder/quick-strategy/types';
+import { TDescriptionItem } from '../../features/bot-builder/quick-strategy/types';
 
 export const REVERSE_MARTINGALE = (): TDescriptionItem[] => [
     {

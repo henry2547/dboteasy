@@ -3,8 +3,8 @@ import { action, makeObservable, observable, reaction } from 'mobx';
 import { ApiHelpers, config as qs_config, load } from '@/external/bot-skeleton';
 import { save_types } from '@/external/bot-skeleton/constants/save-type';
 import { addDynamicBlockToDOM } from '@/utils/xml-dom-quick-strategy';
-import { STRATEGIES } from '../pages/bot-builder/quick-strategy/config';
-import { TFormData } from '../pages/bot-builder/quick-strategy/types';
+import { STRATEGIES } from '../features/bot-builder/quick-strategy/config';
+import { TFormData } from '../features/bot-builder/quick-strategy/types';
 import { getSetting, storeSetting } from '../utils/settings';
 import RootStore from './root-store';
 

@@ -8,7 +8,7 @@
  * result row offers or weaken a qualifying condition.
  */
 
-import { matchFreeBotSetup } from '@/pages/free-bots/scanner-match';
+import { matchFreeBotSetup } from '@/features/free-bots/scanner-match';
 import { calculateStatisticsFromDigits } from './statistics';
 import type { DigitFrequency, DigitStatistics } from './types';
 

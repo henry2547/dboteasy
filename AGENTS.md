@@ -4,6 +4,20 @@
 Frontend-only Rsbuild + React Router SPA (Deriv Trading Bot / "dboteasy"). No backend, no database.
 MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties per theme.
 
+## Project structure (read this first)
+The codebase is divided into self-contained feature modules under `src/features/` — one folder per
+product area (dashboard, bot-builder, free-bots, digits, strategy-engine, ai-architect, ai-bot,
+chart, dtrader, statistics, tutorials), each with its own page, components, logic, styles and tests,
+and an `index.ts` that is its public entry point. The app shell (routing, the tab host, global
+modals) is `src/app/`, with the tab host in `src/app/main/`; shared UI is `src/components/`, vendored
+engines are `src/external/`, and cross-cutting code is in `stores/`, `hooks/`, `services/`, `utils/`,
+`constants/` and `types/`. Paths in this document follow that layout (`src/features/<module>/…`).
+
+- Full map, module table and the rules for adding code: `docs/PROJECT-STRUCTURE.md`.
+- The Blocks palette is split under `src/features/bot-builder/toolbox/palette/` (one module per
+  section); `toolbox-items.tsx` only composes them. A palette test reads that folder, not one file.
+- Jest maps `@/features/*` (there is no `@/pages/*` alias any more).
+
 ## Running in the Sandbox
 - `docker compose -f docker-compose.base44.yml up -d` starts the dev server.
 - Two services: the one-shot `install` service owns the `node_modules` volume, and `web` (the dev server) starts
@@ -27,7 +41,7 @@ MobX stores, `@deriv-com/quill-ui` components, SCSS with CSS custom properties p
   waits instead of serving a half-written `node_modules`.
 - **Never run `npm ci` / `npm install` inside the running `web` container** — it rewrites `node_modules` under the
   live dev server and kills it. Run tooling with `exec` and no install step, e.g.
-  `docker compose -f docker-compose.base44.yml exec web npx jest src/pages/free-bots`. If `web` is ever restarted
+  `docker compose -f docker-compose.base44.yml exec web npx jest src/features/free-bots`. If `web` is ever restarted
   mid-serve, `restart: on-failure` brings it back.
 - After a `package-lock.json` change, run `docker compose -f docker-compose.base44.yml up -d`: `install` re-syncs
   the volume and `web` starts against the finished install.
@@ -57,7 +71,7 @@ and compiling per request; hot updates after that are unchanged.
 - No external service credentials are required for local development.
 
 ## Digits Analysis Lab
-Read-only, public-market-data feature added as the 6th main tab (`#digits`). Lives entirely in `src/pages/digits/`:
+Read-only, public-market-data feature added as the 6th main tab (`#digits`). Lives entirely in `src/features/digits/`:
 - `deriv-public-ws.ts` — public WebSocket client. **Only public market-data messages are sent** (`active_symbols`, `ticks_history`, `ticks`, `ping`, `forget`). No login, no trading.
 - `precision.ts`, `statistics.ts`, `strategies.ts`, `backtest.ts` — pure calculations, no network. Round only for display.
 - `use-digits-lab.ts` — orchestration hook (market selection, 1000-tick FIFO, generation guards).
@@ -104,7 +118,7 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
   the modern console palette (`--general-main-1: #0b1017`, `--general-section-*` navy surfaces,
   `--text-general: #e6edf6`, borders, states) plus the page-neutral `--dash-*` surface/ink/tint tokens.
   Pages must consume those tokens — do not hardcode surface or text colours in a page stylesheet.
-- `src/pages/digits/digits-dashboard.scss` used to re-map the theme tokens on `.digits` to a dark-only
+- `src/features/digits/digits-dashboard.scss` used to re-map the theme tokens on `.digits` to a dark-only
   palette, which pinned the Digits and Statistics tabs to dark and made the hamburger theme switch do
   nothing there. That block is gone: those pages now follow the same global theme as every other tab.
 - `index.html` applies the stored theme in a tiny inline script before first paint (default dark), so
@@ -114,7 +128,7 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
   together. `docker compose exec web npx tsc --noEmit` remains clean.
 
 ## Layout notes
-- `.main` in `src/pages/main/main.scss` is a fixed-height, `overflow: hidden` flex box, so a tab page
+- `.main` in `src/app/main/main.scss` is a fixed-height, `overflow: hidden` flex box, so a tab page
   must own its own scrolling. `.digits` uses a viewport-based height with `overflow-y: auto`.
 - The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because seven tabs
   do not fit a narrow phone viewport.
@@ -152,7 +166,7 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
 The main tab bar has eight tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
 Strategy Engine, Deriv Chart, Digits, Statistics.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
-`src/pages/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
+`src/app/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
 **Bot Builder is index 3** (AI Builder, then Free Bots, sit right after Dashboard; both hand a bot straight
 to the builder). Code that switches on the active tab compares against `DBOT_TABS.BOT_BUILDER`, never a
@@ -174,7 +188,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   Digits page — the button must be styled while other tabs are open).
 
 - **Digits + Statistics share ONE feed.** `DigitsLabProvider`
-  (`src/pages/digits/digits-lab-context.tsx`) is mounted around `<Tabs>` in `main.tsx`; both pages read
+  (`src/features/digits/digits-lab-context.tsx`) is mounted around `<Tabs>` in `main.tsx`; both pages read
   it with `useDigitsLabContext()`. `useDigitsLab()` keeps the single public WebSocket, so the market
   picked on Digits is the market Statistics analyses. Children of the provider are passed as stable
   element props, so a tick does not re-render the whole shell.
@@ -186,7 +200,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (a row may show 1001 when one streamed tick lands before the `forget`), and the panel lists every
   ranked market with its own Load bot button.
 - **Scanner → Load Bot (bots 8 and 9):** every ranked row renders
-  `src/pages/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
+  `src/features/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
   templates through `matchFreeBotSetups` (`free-bots/scanner-match.ts`), which offers **bot 8**
   (`over1_cold_run_recovery`) when digits **0 and 1 are both under 10%** of the sample and **bot 9**
   (`under8_cold_run_recovery`) when digits **8 and 9 are both under** — both cards in one row when both
@@ -205,7 +219,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   Verify: press **Scan markets** (the floating button, visible on every tab), then **Load bot N …** on a row whose conditions are
   all ✓ — expect the Bot Builder tab to open with that symbol in `trade_definition_market` and the
   matching `DIGITOVER`/`DIGITUNDER` + prediction; rows with ✗ conditions have the button disabled.
-  `docker compose exec web npx jest src/pages/free-bots`.
+  `docker compose exec web npx jest src/features/free-bots`.
 - **Loaded-bot banner (Bot Builder):** `BotStatusBanner` (`free-bots/components/bot-status-banner.tsx`)
   renders as an overlay whenever the Bot Builder tab is active. It reads the live
   `botLoaderStore`, the header's authorized account (`useApiBase`) and `runPanel.is_running` — never a
@@ -414,7 +428,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
 - Known pre-existing console warning: `Failed to load image` (branding logo) — unrelated to this work.
 
 ## Observer blocks in the Bot Builder
-The former "Bots" tab is gone: `src/pages/bots/`, the `/bot-lab.html` Rsbuild entry and the isolated
+The former "Bots" tab is gone: `src/features/bots/`, the `/bot-lab.html` Rsbuild entry and the isolated
 observer workspace were removed, and the observational block language now ships in the ordinary Bot
 Builder palette. `rsbuild.config.ts` has a single `index` entry again.
 - `src/external/bot-skeleton/scratch/blocks/Observer/observer-catalog.js` is the single source of
@@ -438,7 +452,7 @@ Builder palette. `rsbuild.config.ts` has a single `index` entry again.
   `BotInterface.js` exposes those three calls next to `observerEntryPassed`. Without a generator for
   a block type `Run` failed with
   `JavaScript generator does not know how to generate code for block type "obs_…"`.
-- The palette entry point is `src/pages/bot-builder/toolbox/toolbox-items.tsx`: right after the
+- The palette entry point is `src/features/bot-builder/toolbox/toolbox-items.tsx`: right after the
   legacy `digits` category it maps `GROUPS` to four `<Category>` elements — **each group holds one
   nested `<Category>` per catalogue category** (`subcategoriesInGroup(group)`), so a group of
   forty-odd blocks is browsed a handful at a time instead of one long flyout. Nested category ids
@@ -706,8 +720,8 @@ never trade, size a stake or stop a session on their own initiative.
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
 `AiBotProvider` or lazy-loads `AiBotPage`, and `DBOT_TABS` / `TAB_IDS` / the `hash` array in
-`main.tsx` no longer carry an entry for it. `src/pages/ai-bot/` is unused but kept (same as
-`src/pages/dtrader/`), so the notes below still describe how it works; restoring the tab means
+`main.tsx` no longer carry an entry for it. `src/features/ai-bot/` is unused but kept (same as
+`src/features/dtrader/`), so the notes below still describe how it works; restoring the tab means
 putting those four places back, in the same tab order.
 - **Provider placement.** `AiBotProvider` wraps `<Tabs>` in `main.tsx` (inside `DigitsLabProvider`),
   so the engine — and a running session — survives tab switches. `useAiBot` seeds its state from
@@ -715,7 +729,7 @@ putting those four places back, in the same tab order.
   mount effect creates the engine, and an empty `{}` state made `DashboardPanel` throw on
   `session.realizedProfit`. Any new field on `BotEngineState` belongs in that factory too.
 - **The scanner owns its socket.** `scan.ts`/`scanner.ts` opens one short-lived
-  `DerivPublicWebSocketClient` per scan (`src/pages/digits/deriv-public-ws.ts`) over
+  `DerivPublicWebSocketClient` per scan (`src/features/digits/deriv-public-ws.ts`) over
   `filterDigitMarkets`, requests `ticks_history` with **`subscribe: 1`** and sends `forget`
   immediately (same v3 quirks as the Digits lab). It sends no authenticated messages and can be run
   while logged out. One scan returns ~13 volatility markets and takes a few seconds.
@@ -806,7 +820,7 @@ putting those four places back, in the same tab order.
 - `trade-ledger.ts` is covered by `__tests__/trade-ledger.test.ts`, the confirmation gate by
   `__tests__/execution-engine.test.ts` (quote-then-buy, cancel places nothing, stale re-quote,
   over-stake rejection — a fake message bus, no network) and the dialog's contents and buttons by
-  `__tests__/trade-confirmation.test.tsx`: `docker compose exec web npx jest src/pages/ai-bot`. The
+  `__tests__/trade-confirmation.test.tsx`: `docker compose exec web npx jest src/features/ai-bot`. The
   live position rows, their settlement results and the real-money dialog (it renders only for a real
   authorized account) are verified by hand.
 - "Scan now" is the anonymous-safe check: within a few seconds ~13 ranked rows appear, each with a
@@ -882,15 +896,15 @@ the current streak, sample size and feed freshness. Empty state prompts to
 
 ### DTrader → Deriv Chart
 The third tab (index 2, `#id-charts`) no longer embeds the DTrader iframe
-(`src/pages/dtrader/dtrader-tab.tsx` is unused but kept). It now renders the
-app's own SmartChart via `ChartWrapper` (`src/pages/chart/chart-wrapper.tsx`)
+(`src/features/dtrader/dtrader-tab.tsx` is unused but kept). It now renders the
+app's own SmartChart via `ChartWrapper` (`src/features/chart/chart-wrapper.tsx`)
 with `show_digits_stats={false}`. The tab label, loading message and
 ErrorBoundary label all say "Deriv Chart". The `derivDtrader` service domain in
 `routes.ts` is untouched — it powers standalone links (cashier, reports, etc.),
 not the tab.
 
 ## Strategy Engine tab (reactive digit-market evaluation)
-The seventh main tab, `#strategy_engine`, lives in `src/pages/strategy-engine/`
+The seventh main tab, `#strategy_engine`, lives in `src/features/strategy-engine/`
 and is lazy-loaded from `main.tsx` like the other pages. It sits **right after
 Bot Builder** (index 2), so `DBOT_TABS` / `TAB_IDS` / the `hash` array in
 `main.tsx` are now: Dashboard, Bot Builder, **Strategy Engine**, Deriv Chart,
@@ -925,8 +939,8 @@ second WebSocket and reads the same market the Digits/Statistics tabs show.
 ## Advanced analytics engines (Digits tab)
 Five quantitative engines render inside the Digits tab, after the existing walk-forward
 backtest panel, via `components/lab-engines-section.tsx`. They read the ONE shared public
-feed through `useLabEngines()` (`src/pages/digits/use-lab-engines.ts`) — no second WebSocket.
-Pure modules live in `src/pages/digits/engines/` with no React/network coupling, so they are
+feed through `useLabEngines()` (`src/features/digits/use-lab-engines.ts`) — no second WebSocket.
+Pure modules live in `src/features/digits/engines/` with no React/network coupling, so they are
 unit-tested in isolation (`engines/__tests__/lab-engines.test.ts`, 21 tests).
 - **Engine A** `velocity-matrix.ts` — Frequency % = Count / WindowSize × 100 over five
   concentric windows (20/50/100/500/1000). A digit is flagged PEAK/EXHAUSTED only when *every*
@@ -952,13 +966,13 @@ unit-tested in isolation (`engines/__tests__/lab-engines.test.ts`, 21 tests).
 - **Verifying:** open `#id-digits`; below the walk-forward backtest panel expect the
   "Advanced analytics engines" heading and five panels (matrix, entropy gauge, latency guard,
   scattergram, zero-lookahead walk-forward). Out-of-band matrix cells are tinted red (>12%) /
-  blue (<8%). Run `docker compose exec web npx jest src/pages/digits/engines`.
+  blue (<8%). Run `docker compose exec web npx jest src/features/digits/engines`.
   `npx tsc --noEmit` clean. No sideways scroll at 431px (the matrix scrolls inside its own panel).
 
 ## AI Builder tab (AI Bot Architect)
 Second tab (`#ai_architect`, `#id-ai-architect`, `DBOT_TABS.AI_ARCHITECT = 1`), lazy-loaded from
 `main.tsx` like the other pages. `DBOT_TABS`, `TAB_IDS` and the `hash` array must stay in the same order.
-The page is `src/pages/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss`, all `aa-*` classes).
+The page is `src/features/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss`, all `aa-*` classes).
 - It only ever uses blocks the capability registry says are registered; **Load into Bot Builder** goes through
   `use-architect-loader.ts`, which snapshots the canvas, loads, reads the live workspace back and restores the
   snapshot on any mismatch. Loading never starts the bot, and is refused while one is running.
@@ -966,7 +980,7 @@ The page is `src/pages/ai-architect/ai-architect-page.tsx` (+ `ai-architect.scss
   export breaks the whole dev build).
 - Verify: open the tab, press Generate on an example prompt (expect a "Validation Passed" card), then Load —
   the app switches to `#bot_builder` and the canvas holds the generated blocks.
-  `docker compose exec web npx jest src/pages/ai-architect` (116 tests); `npx tsc --noEmit` is clean.
+  `docker compose exec web npx jest src/features/ai-architect` (116 tests); `npx tsc --noEmit` is clean.
 
 ### Every condition the prompt states (planner + builder)
 The deterministic planner reads all of a request, not just the first match of each concept:
@@ -1009,7 +1023,7 @@ only when that markup cannot be parsed — jest maps `react-dom/server` to a stu
   reported instead of silently ignored.
 - `EXAMPLE_PROMPTS` ends with a prompt that names menu blocks, so the behaviour is reachable from the
   tab without knowing the menu by heart.
-- Verify: `docker compose exec web npx jest src/pages/ai-architect` and, on the tab, generate
+- Verify: `docker compose exec web npx jest src/features/ai-architect` and, on the tab, generate
   "Find eligible markets, then trade Over 1 when the last digit is over 1" — the request row reads
   "Blocks menu · Find eligible markets (Market Intelligence) — the generated bot uses this block."
 
@@ -1084,7 +1098,7 @@ builds exactly the workspace it did.
 - The result UI shows all of it in `components/strategy-plan-panel.tsx` ("Strategies, indicators &
   analysis"): each rule's family, entry digits, filters and indicators, then the analysis tools and
   the pacing.
-- Verify: `docker compose exec web npx jest src/pages/ai-architect` (133 tests) and
+- Verify: `docker compose exec web npx jest src/features/ai-architect` (133 tests) and
   `npx tsc --noEmit`. In the preview browser a scratch `Blockly.Workspace` loading
   `timeout → purchase` generates `sleep((2 + Math.random())); Bot.purchase('DIGITEVEN');` and
   `report_journal(learn_report)` generates `Bot.sessionJournal(Bot.learnReport(), "info")`.
@@ -1135,7 +1149,7 @@ inside one asset). Tests: `templates.test.ts` ("every Over/Under template keeps 
 digits") and `multi-market-xml.test.ts` ("gives every preset an entry rule, not just a contract").
 
 ## Multi-Market Digit Entry Hunter (Free Bots, section 3)
-`src/pages/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;
+`src/features/free-bots/multi-market.ts` generates the workspace from a `MultiMarketConfig`;
 `MULTI_MARKET_PRESETS` holds the nine shipped variants, and every one carries an entry rule:
 - **Over 1** — entry digits 5/6 · bar-neutral 5/6 · digits 0/1 below 10.3%
 - **Over 2** — entry digits 0/2 · bar-neutral 0/1/2 · digits 0/1/2 below 10.3%
@@ -1281,7 +1295,7 @@ only thing that changes is the purchase path.
     `isStrayTopBlock` (`scratch/utils/index.js`), which keeps every `obs_*` root enabled.
     `scratch/utils/__tests__/stray-blocks.test.js` pins it (observer roots and main/independent
     blocks stay, an unconnected `notify` is still disabled).
-  - Verify: `npx jest src/pages/free-bots src/external/bot-skeleton/services/observer` (the
+  - Verify: `npx jest src/features/free-bots src/external/bot-skeleton/services/observer` (the
     templates load through the same inspection) and, in the Free Bots tab, load
     "Observe Over 1 — Signal Watch": the Bot Builder opens with the `obs_*` observer program
     (`obs_on_start`, `obs_on_tick`, `obs_entry`, `obs_detect_run`, `obs_freq_below`) plus the

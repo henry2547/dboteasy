@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/hooks/useStore';
-import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
+import ScannerBotResult from '@/features/free-bots/components/scanner-bot-result';
 import { formatCount, formatDuration, formatPercent } from '../format';
 import type { MarketScan, MarketScanFailure, ScanProgress, ScanSummary } from '../scan-markets';
 import { collectTradeAlerts } from '../scan-alerts';

@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import ScannerBotResult from '@/pages/free-bots/components/scanner-bot-result';
+import ScannerBotResult from '@/features/free-bots/components/scanner-bot-result';
 import { formatAge, formatClock, formatCount, formatPercent } from '../format';
 import type { MarketScan, MarketScanFailure, ScanSummary } from '../scan-markets';
 import type { MarketSymbol } from '../types';

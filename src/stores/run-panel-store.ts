@@ -11,7 +11,7 @@ import {
     loadObservationMode,
     setObservationMode as applyObservationMode,
 } from '@/external/bot-skeleton/services/observation-mode';
-import { botLoaderStore } from '@/pages/free-bots/bot-loader-store';
+import { botLoaderStore } from '@/features/free-bots/bot-loader-store';
 import { resolveSessionLimitHit, TSessionLimitKind } from '@/utils/session-limits';
 import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';

@@ -11,7 +11,7 @@
  * The state/order vocabulary and the pacing constants live in `market-scan-states.js` so the block
  * definition can read them without importing the API services.
  */
-import { filterDigitMarkets, normalizeActiveSymbols } from '@/pages/digits/markets';
+import { filterDigitMarkets, normalizeActiveSymbols } from '@/features/digits/markets';
 import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import ApiHelpers from '../../api/api-helpers';
 import { DISCOVERY_TIMEOUT_MS } from './market-scan-states';

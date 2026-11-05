@@ -8,7 +8,7 @@
  * the authoritative answer stays with Deriv's own contract list.
  */
 
-import type { MarketSymbol } from '@/pages/digits/types';
+import type { MarketSymbol } from '@/features/digits/types';
 
 export interface MarketSupport {
     supported: boolean;

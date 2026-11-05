@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useApiBase } from '@/hooks/useApiBase';
-import { useDigitsLabContext } from '@/pages/digits/digits-lab-context';
-import MarketSelector from '@/pages/digits/components/market-selector';
+import { useDigitsLabContext } from '@/features/digits/digits-lab-context';
+import MarketSelector from '@/features/digits/components/market-selector';
 import BotStatusBanner from './components/bot-status-banner';
 import FreeBotCard from './components/free-bot-card';
 import { supportsDigitContracts } from './market-support';

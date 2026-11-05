@@ -5,7 +5,7 @@ import { botNotification } from '@/components/bot-notification/bot-notification'
 import { notification_message, NOTIFICATION_TYPE } from '@/components/bot-notification/bot-notification-utils';
 import { TStores } from '@deriv/stores/types';
 import * as strategy_description from '../constants/quick-strategies';
-import { TDescriptionItem } from '../pages/bot-builder/quick-strategy/types';
+import { TDescriptionItem } from '../features/bot-builder/quick-strategy/types';
 import {
     faq_content,
     guide_content,
@@ -13,14 +13,14 @@ import {
     USER_GUIDE,
     user_guide_content,
     VIDEOS,
-} from '../pages/tutorials/constants';
-import { setTourSettings, tour_type, TTourType } from '../pages/tutorials/dbot-tours/utils';
+} from '../features/tutorials/constants';
+import { setTourSettings, tour_type, TTourType } from '../features/tutorials/dbot-tours/utils';
 import {
     TFaqContent,
     TGuideContent,
     TQuickStrategyContent,
     TUserGuideContent,
-} from '../pages/tutorials/tutorials.types';
+} from '../features/tutorials/tutorials.types';
 import RootStore from './root-store';
 
 type TDialogOptions = {

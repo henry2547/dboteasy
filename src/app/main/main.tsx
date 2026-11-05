@@ -45,19 +45,19 @@ import {
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import RunPanel from '../../components/run-panel';
-import ChartModal from '../chart/chart-modal';
-import Dashboard from '../dashboard';
-import RunStrategy from '../dashboard/run-strategy';
-import { DigitsLabProvider } from '../digits/digits-lab-context';
+import ChartModal from '../../features/chart/chart-modal';
+import Dashboard from '../../features/dashboard';
+import RunStrategy from '../../features/dashboard/run-strategy';
+import { DigitsLabProvider } from '../../features/digits/digits-lab-context';
 import './main.scss';
 
-const DerivChart = lazy(() => import('../chart/chart-wrapper'));
-const DigitsPage = lazy(() => import('../digits'));
-const StatisticsPage = lazy(() => import('../statistics'));
-const StrategyEnginePage = lazy(() => import('../strategy-engine'));
-const AiArchitectPage = lazy(() => import('../ai-architect'));
-const FreeBotsPage = lazy(() => import('../free-bots'));
-const GlobalScanButton = lazy(() => import('../digits/components/global-scan-button'));
+const DerivChart = lazy(() => import('../../features/chart/chart-wrapper'));
+const DigitsPage = lazy(() => import('../../features/digits'));
+const StatisticsPage = lazy(() => import('../../features/statistics'));
+const StrategyEnginePage = lazy(() => import('../../features/strategy-engine'));
+const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
+const FreeBotsPage = lazy(() => import('../../features/free-bots'));
+const GlobalScanButton = lazy(() => import('../../features/digits/components/global-scan-button'));
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();

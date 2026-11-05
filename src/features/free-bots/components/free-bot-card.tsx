@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import type { MarketSymbol } from '@/pages/digits/types';
+import type { MarketSymbol } from '@/features/digits/types';
 import type { MarketSupport } from '../market-support';
 import type { FreeBotTemplate } from '../templates';
 

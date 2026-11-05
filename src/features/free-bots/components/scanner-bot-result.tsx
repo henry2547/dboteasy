@@ -13,8 +13,8 @@
 
 import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { formatPercent } from '@/pages/digits/format';
-import type { MarketScan } from '@/pages/digits/scan-markets';
+import { formatPercent } from '@/features/digits/format';
+import type { MarketScan } from '@/features/digits/scan-markets';
 import { backtestColdRunBot, type BotBacktestResult } from '../bot-backtest';
 import { botLoaderStore } from '../bot-loader-store';
 import { supportsDigitContracts } from '../market-support';
