@@ -1140,7 +1140,8 @@ entry rule taken from the published Deriv digit setups, not a bare "trade on thi
     (`utils/digit-analysis.js`) reads where the newest (confirmation) digit sits against the nearest
     adjacent pair behind it and reports `{ confirmed, pairEnd, confirmation, gap }`; `gap` is how many
     ticks separate the pair from its confirmation. Any digits may fill that gap, **including digits
-    from the pair itself** — `0,1,5,4,1` and `0,0,5,1,0` are both confirmed 0/1 pairs. A pair further
+    from the pair itself** — `0,1,0` and `0,1,3,5,7,1` are confirmed 0/1 pairs, and `8,9,9` and
+    `9,8,6,7,5,8` are confirmed 8/9 pairs (the gap limit is 3, so those are the widest cases). A pair further
     back than `CONFIRMATION_MAX_GAP` (3 ticks) is stale and `pairConfirmation` answers false, so the
     gate cannot fire on a pair the market has already moved past. `Bot.isPairConfirmed(set)` is the
     engine read over the same function (`Ticks.js`), and the `digits_pair_confirmation` block,

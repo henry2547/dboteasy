@@ -47,11 +47,11 @@ window.Blockly.Blocks.digits_cold_pair_entry = digitBlock({
     ],
     output: 'Boolean',
     tooltip: localize(
-        'True when the last two digits were a 0/1 pair (or 8/9) and a later tick confirmed it, and both losing digits are at or below the percentage you set. The red (coldest) bar is ignored — the digits may carry it or not.'
+        'True when a 0/1 pair (or 8/9) is confirmed by a later tick — 0, 1 then 0, 0, 1 then 3, 5, 7 then 1, 8, 9 then 9 and 9, 8 then 6, 7, 5 then 8 all count, with up to 3 digits in between — and both losing digits are at or below the percentage you set. The red (coldest) bar is ignored — the digits may carry it or not.'
     ),
     displayName: localize('Cold pair setup ready'),
     description: localize(
-        'The Over 1 / Under 8 entry in one condition: the pair is confirmed (other digits may pass before the confirmation) and both losing digits — 0 and 1 for Over 1, 8 and 9 for Under 8 — are at or below the percentage you set. The red (coldest) bar plays no part. Join it to a Purchase block inside “before purchase”.'
+        'The Over 1 / Under 8 entry in one condition: the pair is confirmed — 0, 1 then 0 and 0, 1 then 3, 5, 7 then 1 for Over 1, 8, 9 then 9 and 9, 8 then 6, 7, 5 then 8 for Under 8, with up to 3 digits in between — and both losing digits are at or below the percentage you set. The red (coldest) bar plays no part. Join it to a Purchase block inside “before purchase”.'
     ),
     keyWords: localize('over 1 under 8 cold pair confirmed frequency entry ready'),
 });

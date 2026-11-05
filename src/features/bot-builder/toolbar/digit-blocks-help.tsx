@@ -15,26 +15,26 @@ const NEW_BLOCKS = [
             'The whole observed setup in one block: the losing pair is confirmed, then a loss reverses on Even/Odd.'
         ),
         steps: [
-            localize('Drag “Trade Over 1 when the last 2 digits pair, then a confirmation digit …” from Blocks menu → Digits onto the canvas.'),
-            localize('Pick the leg — Over 1 waits on digits 0 and 1, Under 8 on 8 and 9: the last two digits must be a pair (0,0 · 0,1 · 1,1 · 1,0 or 8,8 · 8,9 · 9,9 · 9,8) and a later tick then confirms it by ending in the same pair.'),
-            localize('Other digits may pass between the pair and its confirmation, so 0, 1, 5, 4, 1 counts as confirmed — but a 0 or 1 inside that gap uses the pattern up and the block waits for the next pair.'),
-            localize('Set the cold share to 10.2% of the last 100 ticks: both losing digits must sit under it and neither may carry the red (coldest) bar.'),
+            localize('Drag “Trade Over 1 when its losing pair is confirmed by a later digit …” from Blocks menu → Digits onto the canvas.'),
+            localize('Pick the leg — Over 1 waits on digits 0 and 1, Under 8 on 8 and 9: a pair (0,0 · 0,1 · 1,1 · 1,0 or 8,8 · 8,9 · 9,9 · 9,8) must appear and a later tick then confirms it by ending in the same pair.'),
+            localize('Other digits may pass between the pair and its confirmation — up to 3 of them, digits from the pair included: 0, 1 then 0 is confirmed, and so are 0, 1 then 3, 5, 7 then 1 and 8, 9 then 9, 9, 8 then 6, 7, 5 then 8. A pair further back than that is stale and the block waits for the next one.'),
+            localize('Set the cold share to 10.2% and the window to 1000 ticks: both losing digits must sit at or below it, and the ceiling tightens itself from the live window. The red (coldest) bar plays no part — the digits may carry it or not.'),
             localize('After a settled loss it buys the opposite parity of the last 2 digits — both even → ODD, both odd → EVEN — and buys nothing on a mixed pair.'),
         ],
     },
     {
         name: localize('Pair, then a confirmation digit'),
-        summary: localize('The last 2 digits are a 0/1 (or 8/9) pair and a later tick confirms it.'),
+        summary: localize('A 0/1 (or 8/9) pair appears and a later tick confirms it by ending in the same pair.'),
         steps: [
             localize('Drag “A 0 or 1 pair, then a confirmation digit” from Blocks menu → Digits onto the canvas.'),
             localize('Pick the pair: 0 or 1 for Over 1, 8 or 9 for Under 8.'),
-            localize('Other digits may pass before the confirmation — 0, 1, 5, 4, 1 is confirmed — while a digit from the pair inside that gap uses the pattern up.'),
+            localize('Up to 3 digits may pass before the confirmation, digits from the pair included: 0, 1 then 0, 0, 1 then 3, 5, 7 then 1, 8, 9 then 9 and 9, 8 then 6, 7, 5 then 8 all count.'),
             localize('It buys nothing on its own; join it to the share and no-red-bar reads inside a Purchase condition.'),
         ],
     },
     {
         name: localize('Cold pair setup ready'),
-        summary: localize('The whole Over 1 / Under 8 entry — pair confirmed and both digits at or below the share — in one Boolean.'),
+        summary: localize('The whole Over 1 / Under 8 entry — pair confirmed (0,1,0 · 0,1,3,5,7,1 · 8,9,9 · 9,8,6,7,5,8) and both digits at or below the share — in one Boolean.'),
         steps: [
             localize('Drag “Over 1 setup: pair confirmed, both digits at or below … %” from Blocks menu → Digits onto the canvas.'),
             localize('Pick the leg and the cold share — 10.2% keeps the losing digits at or below the fair 10% share — and set the window to 100 ticks.'),

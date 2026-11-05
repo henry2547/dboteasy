@@ -182,6 +182,15 @@ describe('pair confirmation', () => {
         expect(pairConfirmation([9, 8, 3, 9, 2, 8], '8_9')).toBe(true);
     });
 
+    it('confirms the observed Over 1 / Under 8 examples', () => {
+        // Over 1: the pair is confirmed immediately, or with three digits in between.
+        expect(pairConfirmation([0, 1, 0], '0_1')).toBe(true);
+        expect(pairConfirmation([0, 1, 3, 5, 7, 1], '0_1')).toBe(true);
+        // Under 8: the bot trades on the confirmation digit the same way.
+        expect(pairConfirmation([8, 9, 9], '8_9')).toBe(true);
+        expect(pairConfirmation([9, 8, 6, 7, 5, 8], '8_9')).toBe(true);
+    });
+
     it('reports where the confirmation digit sits relative to the pair', () => {
         expect(pairConfirmationPosition([0, 0, 1], '0_1')).toEqual({
             confirmed: true,
