@@ -151,7 +151,63 @@
   </block>
   <block type="before_purchase" id="freebot-pr-before-purchase" x="0" y="900">
     <statement name="BEFOREPURCHASE_STACK">
-      <block type="controls_if" id="freebot-pr-session-guard"><mutation else="1"></mutation>
+      <block type="controls_if" id="freebot-pr-frequency-limit"><mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_operation" id="freebot-pr-frequency-limit-any">
+            <field name="OP">OR</field>
+            <value name="A">
+              <block type="logic_compare" id="freebot-pr-frequency-limit-0">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="digits_frequency" id="freebot-pr-frequency-0">
+            <field name="DIGIT">0</field>
+            <value name="SAMPLE">
+              <shadow type="math_number" id="freebot-pr-frequency-0-sample">
+                <field name="NUM">1000</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="freebot-pr-frequency-limit-0-max">
+            <field name="NUM">10.2</field>
+          </shadow>
+        </value>
+      </block>
+            </value>
+            <value name="B">
+              <block type="logic_compare" id="freebot-pr-frequency-limit-1">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="digits_frequency" id="freebot-pr-frequency-1">
+            <field name="DIGIT">1</field>
+            <value name="SAMPLE">
+              <shadow type="math_number" id="freebot-pr-frequency-1-sample">
+                <field name="NUM">1000</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="freebot-pr-frequency-limit-1-max">
+            <field name="NUM">10.2</field>
+          </shadow>
+        </value>
+      </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="bot_stop" id="freebot-pr-frequency-stop">
+            <value name="REASON">
+              <shadow type="text" id="freebot-pr-frequency-stop-reason">
+                <field name="TEXT">Over 1 stopped: digit 0 or 1 is above 10.2% of the last 1000 ticks</field>
+              </shadow>
+            </value>
+          </block>
+        </statement>
+      <statement name="ELSE">
+<block type="controls_if" id="freebot-pr-session-guard"><mutation else="1"></mutation>
             <value name="IF0">
               <block type="logic_operation" id="freebot-pr-session-guard-and">
                 <field name="OP">AND</field>
@@ -241,7 +297,7 @@
                 <field name="RUN">2</field>
               </block>
                 </statement>
-                <statement name="ELSE"><block type="entry_check" id="freebot-pr-observer-gate-entry-check"><value name="REASON"><shadow type="text" id="freebot-pr-observer-gate-entry-check-reason"><field name="TEXT">Over 1: the observer conditions are not met (parity, freshness or sample)</field></shadow></value><next><block type="notify" id="freebot-pr-observer-wait-notify">
+                <statement name="ELSE"><block type="notify" id="freebot-pr-observer-wait-notify">
                     <field name="NOTIFICATION_TYPE">info</field>
                     <field name="NOTIFICATION_SOUND">silent</field>
                     <value name="MESSAGE">
@@ -249,7 +305,7 @@
                         <field name="TEXT">Waiting · observer gate</field>
                       </shadow>
                     </value>
-                  </block></next></block></statement>
+                  </block></statement>
               </block>
             </statement>
             <statement name="ELSE">
@@ -264,6 +320,8 @@
               </block>
             </statement>
           </block>
+      </statement>
+      </block>
         
     </statement>
   </block>

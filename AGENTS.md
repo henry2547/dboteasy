@@ -229,15 +229,17 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   The banner never claims "Running" until `runPanel.is_running` is true.
 - **Block-count guard:** `inspectFreeBotXml().blockCount` is the number Blockly will hold on the canvas
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
-  **128** for the first (Under 8) template and **130** for `over1_entry_every_time` — the two
-  `*_entry_every_time` templates carry one `digits_frequency` "losing digit stays cold" compare per losing
-  digit (see "Researched entries" below) plus a `logic_compare` `OP=EQ` per entry digit — **132** for each
-  `*_two_*_digits` template (their observer gate adds the blocks), **133** for `even_odd_window`, **92** for
-  each `*_cold_run_recovery` template, **108** for `over1_parity_recovery` and **179** for the two-leg
-  `over1_under6_recovery`. Every entry failure branch also opens with an `entry_check` block (block + its
-  text shadow): the bot stops itself after 3 failed entry checks in a row, with the branch's own reason in
-  the run log (see "Bot Control" below), and the two block-driven templates (`digits_cold_run_recovery`,
-  `digits_parity_recovery`) report the same check from their generators. Every template's
+  **132** for each `*_entry_every_time` template (one `digits_frequency` "losing digit stays cold"
+  compare per losing digit, see "Researched entries" below, plus a `logic_compare` `OP=EQ` per entry
+  digit) — **137** for each `*_two_*_digits` template (their observer gate adds the blocks), **129** for
+  `even_odd_window`, **104** for each `*_cold_run_recovery` template, **118** for
+  `over1_parity_recovery` and **177** for the two-leg `over1_under6_recovery`. Every Over/Under
+  template opens its `before_purchase` stack with the **frequency-limit stop guard**: one `controls_if`
+  whose `IF0` is an OR of the two losing digits' `digits_frequency` above 10.2% (sample 1000), whose
+  `DO0` is a `bot_stop` with the reason, and whose `ELSE` holds the template's own entry gate (12
+  blocks). That is the only stop rule the bots carry — no template holds an `entry_check` any more, so
+  a missed entry digit is a wait, never a stop; the run ends with a reason the moment digit 0 or 1
+  (Over 1) or 8 or 9 (Under 8) rises above the ceiling. Every template's
   take-profit and stop-loss branch opens with a `sweet_alert` block (1 block + 2 shadows each), which is
   the six elements the counts grew by; the run-once block also seeds take profit, stop loss, the reset
   stake and the multiplier (four `variables_set` + `math_number` pairs, 8 blocks), and the
@@ -370,9 +372,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
 - **The bot journals its own confirmation.** Once the two `*_entry_every_time` digit gates pass, the
   strategy branch writes a green (silent) `notify` line — `Confirmed · digits 0 and 1 at or below
   10.2% … — buying Over 1`, and the Under 8 equivalent — into the run journal before the purchase, so
-  the market it is actually trading shows the passing check. The same branch's `entry_check` stop rule
-  is unchanged: a third consecutive failed digit check raises the sweet alert and stops the session.
-  `templates.test.ts` pins both the line and that the purchase follows it.
+  the market it is actually trading shows the passing check. The stop rule no longer counts entry
+  misses: every Over/Under template opens `before_purchase` with its frequency-limit guard (see
+  "Block-count guard"), which stops the run with a reason the moment digit 0 or 1 (Over 1) or 8 or 9
+  (Under 8) rises above 10.2% of the last 1000 ticks, and no template carries an `entry_check` any
+  more. `templates.test.ts` pins both the line and that the purchase follows it.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
   card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.
@@ -688,17 +692,17 @@ never trade, size a stake or stop a session on their own initiative.
 - Twelve blocks: `exec_last_result`, `exec_last_profit`, `exec_session_profit`, `exec_session_trades`,
   `exec_open_contracts`, `exec_has_open_contract`, `exec_wait_settlement` (the only statement with a
   promise), `bot_stop`, `bot_trade_limit_reached`, `entry_check`, `report_session` and `report_journal`.
-- **`entry_check` is the Free Bots stop rule.** It records one entry check that came back invalid
-  (`Bot.entryCheckFailed(reason)` → `trade/SessionControl.js`); the third consecutive failure stops the
-  session through the same `bot.stop_button_click` path as the Stop button, with
-  `Entry invalid — <reason> (3 failed checks)` in the journal. A real entry (the engine's own
-  `recordSessionEntry`) restarts the count, and `ENTRY_CHECK_LIMIT` in
-  `services/tradeEngine/utils/session-control.js` is the one place the limit lives. Every Free Bots
-  template reports it from each entry failure branch, so a market that no longer meets the bot's
-  percentage/frequency or condition gates ends the run instead of waiting forever. The stop is also
-  announced with the run panel's own **Sweet alert** popup (`utils/sweet-alert.js` `showSweetAlert`,
-  the same call the Utility → Sweet alert block makes): warning icon, "Bot stopped", and the entry
-  reason, raised once, right before `stopBotWithReason`.
+- **`bot_stop` is the Free Bots stop rule.** Every Over/Under template opens its `before_purchase`
+  stack with a frequency-limit `controls_if` whose `IF0` is an OR of the two losing digits'
+  `digits_frequency` above 10.2% (sample 1000) and whose `DO0` is a `bot_stop` carrying the reason
+  (`Over 1 stopped: digit 0 or 1 is above 10.2% of the last 1000 ticks`, and the Under 8 equivalent);
+  the template's own entry gate sits in that IF's `ELSE`, so a breached loop never reaches the
+  purchase. The stop goes through the same `bot.stop_button_click` path as the Stop button and writes
+  the reason to the run log. Nothing stops the bot for a missed entry any more: the templates carry no
+  `entry_check`, and the `digits_cold_run_recovery` / `digits_parity_recovery` generators journal their
+  waits without calling `Bot.entryCheckFailed`. `ENTRY_CHECK_LIMIT` and the `entry_check` block remain
+  available for hand-built bots. The stop is also announced with the run panel's own **Sweet alert**
+  popup when `entry_check` is used, but the frequency guard stops quietly through the run log.
 - Rules are pure functions in `services/tradeEngine/utils/session-control.js` (tested by
   `utils/__tests__/session-control.test.js`). A contract is counted when the engine bought it; a
   result exists only after settlement, and flat contracts (`profit === 0`) count as losses — the same
@@ -1247,8 +1251,9 @@ rule is the pure `resolveSessionLimitHit` in
 `Bot.sweetAlert({ icon, title, message })`; `MiscInterface.js` forwards it to
 `services/tradeEngine/utils/sweet-alert.js` `showSweetAlert`, which lazily imports `sweetalert2` and
 opens `Swal.fire({ … })`, so the engine never imports UI at module load and a bot can announce its own
-take profit / stop loss. The engine raises the same popup itself when the bot stops on its own
-(three failed entry checks in a row — see "Bot Control"), so both paths always look identical. `sweetalert2` is a real dependency (`package.json` +
+take profit / stop loss. The engine raises the same popup itself only for the `entry_check` block
+(three failed entry checks in a row — see "Bot Control"); the Free Bots templates no longer place it,
+so their frequency-limit stop is reported through the run log alone. `sweetalert2` is a real dependency (`package.json` +
 lockfile) and its stylesheet is imported once in `app-root.tsx`. Every Free Bots asset calls it in the
 `DO0` of its take-profit and stop-loss `controls_if` (before the stop flag is set), and each card's
 "Trades again when" line names that alert. Adding or removing one changes a template's pinned
