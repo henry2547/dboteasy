@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">45.59% </span>
+                <span class="strong">43.41% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>88/193</span>
+                <span class='fraction'>89/205</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">45.59% </span>
+                <span class="strong">43.41% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>88/193</span>
+                <span class='fraction'>89/205</span>
             </div>
         
             
@@ -256,7 +256,20 @@
 <a name='L191'></a><a href='#L191'>191</a>
 <a name='L192'></a><a href='#L192'>192</a>
 <a name='L193'></a><a href='#L193'>193</a>
-<a name='L194'></a><a href='#L194'>194</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -375,6 +388,17 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -455,6 +479,7 @@ import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import { createError } from '../../../utils/error';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
+import { isObservationMode, journalObservation } from '../../observation-mode';
 import { checkBlocksForProposalRequest, doUntilDone } from '../utils/helpers';
 import { expectInitArg } from '../utils/sanitize';
 import { proposalsReady, start } from './state/actions';
@@ -580,6 +605,17 @@ export default class TradeEngine extends EvenOdd(
 <span class="cstat-no" title="statement not covered" >        this.store.dispatch(start());</span>
 <span class="cstat-no" title="statement not covered" >        this.checkLimits(validated_trade_options);</span>
 <span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >        // Said once per run (start() runs once per trade loop), so the journal explains why no</span>
+<span class="cstat-no" title="statement not covered" >        // contract ever appears.</span>
+<span class="cstat-no" title="statement not covered" >        if (isObservationMode()) {</span>
+<span class="cstat-no" title="statement not covered" >            if (!this.observation_announced) {</span>
+<span class="cstat-no" title="statement not covered" >                this.observation_announced = true;</span>
+<span class="cstat-no" title="statement not covered" >                journalObservation('Observation mode: the blocks on the canvas run, and no contract is purchased.');</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" >        } else {</span>
+<span class="cstat-no" title="statement not covered" >            this.observation_announced = false;</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >        this.makeDirectPurchaseDecision();</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
@@ -649,7 +685,7 @@ export default class TradeEngine extends EvenOdd(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-11-02T10:03:31.297Z
+                at 2026-11-05T21:10:33.400Z
             </div>
         <script src="../../../../../../prettify.js"></script>
         <script>

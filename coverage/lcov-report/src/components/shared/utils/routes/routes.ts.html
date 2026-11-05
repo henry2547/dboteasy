@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.3% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>116/118</span>
+                <span class='fraction'>118/118</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">61.53% </span>
+                <span class="strong">83.33% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/13</span>
+                <span class='fraction'>15/18</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.3% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>116/118</span>
+                <span class='fraction'>118/118</span>
             </div>
         
             
@@ -237,36 +237,36 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">35x</span>
-<span class="cline-any cline-yes">35x</span>
-<span class="cline-any cline-yes">133x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-yes">84x</span>
-<span class="cline-any cline-yes">84x</span>
-<span class="cline-any cline-yes">49x</span>
-<span class="cline-any cline-yes">168x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">49x</span>
-<span class="cline-any cline-yes">49x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">121x</span>
+<span class="cline-any cline-yes">121x</span>
+<span class="cline-any cline-yes">462x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">289x</span>
+<span class="cline-any cline-yes">289x</span>
+<span class="cline-any cline-yes">173x</span>
+<span class="cline-any cline-yes">583x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">170x</span>
+<span class="cline-any cline-yes">170x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -366,8 +366,8 @@ export const getDerivDomain = (service: Service): string =&gt; {
     const isStagingEnv = env === 'preview' || env === 'staging';
     const isDev =
         !env &amp;&amp;
-        (hostname.includes('dev-') || hostname.includes('localhost')<span class="branch-0 cbranch-no" title="branch not covered" > || hostname.includes('127.0.0.1'))</span>;
-    const isStaging = isStagingEnv || (!isProductionEnv &amp;&amp; !isDev<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; hostname.includes('staging'))</span>;
+        (hostname.includes('dev-') || hostname.includes('localhost') || hostname.includes('127.0.0.1'));
+    const isStaging = isStagingEnv || (!isProductionEnv &amp;&amp; !isDev &amp;&amp; hostname.includes('staging'));
 &nbsp;
     const serviceConfig = domains[service];
 &nbsp;
@@ -380,9 +380,9 @@ export const getDerivDomain = (service: Service): string =&gt; {
         return 'https://dev-dtrader.deriv.com';
     }
 &nbsp;
-    if (isStaging) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
-<span class="cstat-no" title="statement not covered" >        return typeof serviceConfig.staging === 'string' ? serviceConfig.staging : serviceConfig.staging[domainType];</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
+    if (isStaging) {
+        return typeof serviceConfig.staging === 'string' ? serviceConfig.staging <span class="branch-0 cbranch-no" title="branch not covered" >: serviceConfig.staging[domainType];</span>
+    }
     return serviceConfig.production[domainType];
 };
 &nbsp;
@@ -424,7 +424,7 @@ export const standalone_routes = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-11-02T10:03:31.297Z
+                at 2026-11-05T21:10:33.400Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">47.88% </span>
+                <span class="strong">58.45% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>68/142</span>
+                <span class='fraction'>83/142</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">80% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>8/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">28.57% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/7</span>
+                <span class='fraction'>2/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">47.88% </span>
+                <span class="strong">58.45% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>68/142</span>
+                <span class='fraction'>83/142</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -230,6 +230,15 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -241,19 +250,10 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -336,8 +336,8 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -371,16 +371,16 @@ export interface ApiErrorResponse {
  * @param error - The error object from backend
  * @returns Localized error message
  */
-export const handleBackendError = <span class="fstat-no" title="function not covered" >(error: BackendError): string =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (!error?.code) {</span>
-<span class="cstat-no" title="statement not covered" >        return getLocalizedErrorMessage('GeneralError');</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >    // Handle code_args format specifically for parameter replacement</span>
-<span class="cstat-no" title="statement not covered" >    // The API's own message travels with the lookup so a code this build has no wording for still</span>
-<span class="cstat-no" title="statement not covered" >    // reports what the API said, instead of the generic "An error occurred. Please try again.".</span>
-<span class="cstat-no" title="statement not covered" >    let details = error.message ? { ...error.details, message: error.message } : error.details;</span>
-<span class="cstat-no" title="statement not covered" >    if (error.details?.code_args &amp;&amp; Array.isArray(error.details.code_args)) {</span>
+export const handleBackendError = (error: BackendError): string =&gt; {
+    if (!error?.code) {
+        return getLocalizedErrorMessage('GeneralError');
+    }
+&nbsp;
+    // Handle code_args format specifically for parameter replacement
+    // The API's own message travels with the lookup so a code this build has no wording for still
+    // reports what the API said, instead of the generic "An error occurred. Please try again.".
+    let details = error.message ? { ...error.details, message: error.message } : error.details;
+    if (error.details?.code_args<span class="branch-0 cbranch-no" title="branch not covered" > &amp;&amp; Array.isArray(error.details.code_args))</span> <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >        // Convert code_args array to parameter object for easier processing</span>
 <span class="cstat-no" title="statement not covered" >        const code_args = error.details.code_args;</span>
 <span class="cstat-no" title="statement not covered" >        details = {</span>
@@ -392,10 +392,10 @@ export const handleBackendError = <span class="fstat-no" title="function not cov
 <span class="cstat-no" title="statement not covered" >            param5: code_args[4],</span>
 <span class="cstat-no" title="statement not covered" >        };</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >    // Get localized message for the specific error code with details</span>
-<span class="cstat-no" title="statement not covered" >    return getLocalizedErrorMessage(error.code, details);</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+&nbsp;
+    // Get localized message for the specific error code with details
+    return getLocalizedErrorMessage(error.code, details);
+};
 &nbsp;
 /**
  * Handles API response errors
@@ -477,9 +477,9 @@ export const getErrorSeverity = <span class="fstat-no" title="function not cover
  * @param obj - Object to check
  * @returns Boolean indicating if object is a backend error
  */
-export const isBackendError = <span class="fstat-no" title="function not covered" >(obj: any): obj is BackendError =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    return obj &amp;&amp; typeof obj === 'object' &amp;&amp; typeof obj.code === 'string';</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+export const isBackendError = (obj: any): obj is BackendError =&gt; {
+    return obj &amp;&amp; typeof obj === 'object' &amp;&amp; typeof obj.code === 'string';
+};
 &nbsp;
 /**
  * Type guard to check if an object is an API error response
@@ -496,7 +496,7 @@ export const isApiErrorResponse = <span class="fstat-no" title="function not cov
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-11-02T10:03:31.297Z
+                at 2026-11-05T21:10:33.400Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
