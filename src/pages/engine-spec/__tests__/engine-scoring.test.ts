@@ -1,165 +1,365 @@
 import {
-    ALIGN_MIN_PP,
-    COOLDOWN_TICKS,
-    ENTRY_MASTER_PP,
+    DEFAULT_SETTINGS,
     MACRO_WINDOW,
     MICRO_WINDOW,
-    WINDOW_WEIGHTS,
+    classifyAlignment,
     countDigits,
+    detectMicroShift,
+    digitComparisonRows,
     entropyBits,
     evaluateConfluence,
     expectedShare,
+    normalizeSettings,
+    oppositeStrategy,
     resolveStrategy,
-    resolveTargetDigit,
     windowSnapshot,
+    winningDigits,
     type EvaluateOptions,
+    type StrategyFamily,
+    type WindowSnapshot,
 } from '../engine-scoring';
 
 /** 0–9 repeated: every digit at exactly 10%, the neutral baseline. */
-const neutral = (length = MACRO_WINDOW) => Array.from({ length }, (_, i) => i % 10);
-/** Digits 0–6 only: an Under 7 share of 100% (and a broken baseline). */
-const allLow = (length = MACRO_WINDOW) => Array.from({ length }, (_, i) => i % 7);
-const low = (n: number) => Array.from({ length: n }, (_, i) => i % 7);
-const high = (n: number) => Array.from({ length: n }, (_, i) => 7 + (i % 3));
-/** 19 of every 25 ticks low: a 76% Under 7 share in every window, regime intact. */
-const balancedLow = (length = MACRO_WINDOW) =>
-    Array.from({ length }, (_, i) => (i % 25 < 6 ? 7 + (i % 3) : i % 7));
+const neutral = (length = MACRO_WINDOW) => Array.from({ length }, (_, index) => index % 10);
 
-const baseOptions = (digits: number[]): EvaluateOptions => ({
+/**
+ * A block of `total` digits holding exactly `lowCount` digits from 0–6 and the
+ * rest from 7–9, dealt round-robin so the distribution stays evenly spread
+ * (no regime break from clustering).
+ */
+const block = (total: number, lowCount: number): number[] => {
+    const low = [0, 1, 2, 3, 4, 5, 6];
+    const high = [7, 8, 9];
+    const counts = new Array(10).fill(0);
+    const lowBase = Math.floor(lowCount / 7);
+    const lowExtra = lowCount % 7;
+    low.forEach((digit, index) => (counts[digit] = lowBase + (index < lowExtra ? 1 : 0)));
+    const highCount = total - lowCount;
+    const highBase = Math.floor(highCount / 3);
+    const highExtra = highCount % 3;
+    high.forEach((digit, index) => (counts[digit] = highBase + (index < highExtra ? 1 : 0)));
+
+    const out: number[] = [];
+    let remaining = total;
+    while (remaining > 0) {
+        for (let digit = 0; digit < 10; digit++) {
+            if (counts[digit] > 0) {
+                out.push(digit);
+                counts[digit]--;
+                remaining--;
+            }
+        }
+    }
+    return out;
+};
+
+/** Interleaved even / odd digits with exact segment counts. */
+const paritySegment = (evenCount: number, oddCount: number): number[] => {
+    const even = [0, 2, 4, 6, 8];
+    const odd = [1, 3, 5, 7, 9];
+    const out: number[] = [];
+    let e = 0;
+    let o = 0;
+    while (e < evenCount || o < oddCount) {
+        if (e < evenCount) out.push(even[e++ % 5]);
+        if (o < oddCount) out.push(odd[o++ % 5]);
+    }
+    return out;
+};
+
+/**
+ * 60% even / 40% odd in every window, each digit between 8% and 12% so the
+ * macro baseline stays digit-neutral.
+ */
+const evenBias = (): number[] => [
+    ...paritySegment(240, 160),
+    ...paritySegment(45, 30),
+    ...paritySegment(15, 10),
+];
+
+/** All three windows sit +4 pp for Under 7: a floor-clearing score with no significance. */
+const weakEdge = (): number[] => [...block(400, 296), ...block(75, 55), ...block(25, 19)];
+
+/** Micro and mid support Under 7 while the macro baseline opposes it. */
+const microOnly = (): number[] => [...block(400, 240), ...block(75, 50), ...block(25, 25)];
+
+const baseOptions = (digits: number[], family: StrategyFamily = 'under', target = 7): EvaluateOptions => ({
     digits,
-    strategyId: 'UNDER_7',
+    selection: { family, target },
+    settings: DEFAULT_SETTINGS,
     tickIndex: 100,
     previousMicroDelta: null,
+    previousAlignment: null,
     cooldownUntilTick: 0,
 });
 
-describe('multi-window confluence scoring', () => {
-    it('uses the mathematical fair share as each strategy baseline', () => {
+const snapshot = (
+    label: WindowSnapshot['label'],
+    deltaPp: number,
+    overrides: Partial<WindowSnapshot> = {}
+): WindowSnapshot => ({
+    label,
+    size: label === 'Micro' ? MICRO_WINDOW : label === 'Mid' ? 100 : MACRO_WINDOW,
+    sample: label === 'Micro' ? MICRO_WINDOW : label === 'Mid' ? 100 : MACRO_WINDOW,
+    counts: new Array(10).fill(0),
+    percentages: new Array(10).fill(10),
+    wins: 0,
+    actual: 0.5,
+    expected: 0.5,
+    deltaPp,
+    standardErrorPp: 1,
+    ciLowPct: 40,
+    ciHighPct: 60,
+    zScore: deltaPp,
+    significant: false,
+    reliability: 'limited',
+    weight: 0.3,
+    aligned: deltaPp >= DEFAULT_SETTINGS.alignMinPp,
+    opposing: deltaPp <= -DEFAULT_SETTINGS.conflictPp,
+    ...overrides,
+});
+
+describe('strategy baselines', () => {
+    it('computes winning digits for every contract family', () => {
+        expect(winningDigits('under', 1)).toEqual([0]);
+        expect(winningDigits('under', 7)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+        expect(winningDigits('under', 9)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        expect(winningDigits('over', 1)).toEqual([2, 3, 4, 5, 6, 7, 8, 9]);
+        expect(winningDigits('over', 8)).toEqual([9]);
+        expect(winningDigits('even', 0)).toEqual([0, 2, 4, 6, 8]);
+        expect(winningDigits('odd', 0)).toEqual([1, 3, 5, 7, 9]);
+        expect(winningDigits('matches', 4)).toEqual([4]);
+        expect(winningDigits('differs', 4)).toEqual([0, 1, 2, 3, 5, 6, 7, 8, 9]);
+    });
+
+    it('uses the mathematical fair share as each baseline', () => {
+        expect(expectedShare('under', 1)).toBeCloseTo(0.1);
         expect(expectedShare('under', 7)).toBeCloseTo(0.7);
-        expect(expectedShare('under', 8)).toBeCloseTo(0.8);
+        expect(expectedShare('under', 9)).toBeCloseTo(0.9);
         expect(expectedShare('over', 1)).toBeCloseTo(0.8);
-        expect(expectedShare('over', 2)).toBeCloseTo(0.7);
+        expect(expectedShare('over', 8)).toBeCloseTo(0.1);
         expect(expectedShare('even', 0)).toBeCloseTo(0.5);
         expect(expectedShare('odd', 0)).toBeCloseTo(0.5);
         expect(expectedShare('matches', 4)).toBeCloseTo(0.1);
         expect(expectedShare('differs', 4)).toBeCloseTo(0.9);
     });
 
-    it('reads a window share and delta against that baseline', () => {
-        const strategy = resolveStrategy('UNDER_7', neutral());
-        const window = windowSnapshot(allLow(100), 100, 'Mid', strategy, WINDOW_WEIGHTS.mid);
-        expect(window.sample).toBe(100);
-        expect(window.actual).toBe(1);
-        expect(window.expected).toBeCloseTo(0.7);
-        expect(window.deltaPp).toBeCloseTo(30);
+    it('labels the resolved strategy and clamps out-of-range barriers', () => {
+        expect(resolveStrategy('under', 7).label).toBe('Under 7');
+        expect(resolveStrategy('over', 2).contractType).toBe('DIGITOVER');
+        expect(resolveStrategy('matches', 4).label).toBe('Matches 4');
+        expect(resolveStrategy('differs', 4).label).toBe('Differs 4');
+        expect(resolveStrategy('under', 12).target).toBe(9);
+        expect(resolveStrategy('over', 0).target).toBe(1);
+        expect(resolveStrategy('matches', 11).target).toBe(9);
     });
 
+    it('maps each strategy to its complementary contract', () => {
+        expect(oppositeStrategy('under', 7).label).toBe('Over 6');
+        expect(oppositeStrategy('over', 2).label).toBe('Under 3');
+        expect(oppositeStrategy('even', 0).label).toBe('Odd');
+        expect(oppositeStrategy('odd', 0).label).toBe('Even');
+        expect(oppositeStrategy('matches', 5).label).toBe('Differs 5');
+        expect(oppositeStrategy('differs', 5).label).toBe('Matches 5');
+    });
+});
+
+describe('window statistics', () => {
     it('counts digits and computes entropy in bits', () => {
         const { counts, percentages, total } = countDigits(neutral());
         expect(total).toBe(500);
-        expect(counts.every(c => c === 50)).toBe(true);
-        expect(percentages.every(p => p === 10)).toBe(true);
+        expect(counts.every(count => count === 50)).toBe(true);
+        expect(percentages.every(pct => pct === 10)).toBe(true);
         expect(entropyBits(percentages)).toBeCloseTo(Math.log2(10), 6);
     });
 
-    it('holds on a neutral market (no window clears the entry floor)', () => {
-        const result = evaluateConfluence(baseOptions(neutral()));
-        expect(result.complete).toBe(true);
-        // The mid and macro windows sit exactly on fair value; a 25-tick slice
-        // can only be near it, so the blended score stays well inside the floor.
-        expect(Math.abs(result.masterScore)).toBeLessThan(ENTRY_MASTER_PP);
-        expect(result.windows.mid.deltaPp).toBeCloseTo(0, 6);
-        expect(result.windows.macro.deltaPp).toBeCloseTo(0, 6);
-        expect(result.alignment).toBe(0);
-        expect(result.verdict).toBe('hold');
+    it('reports share, delta, standard error, interval and z-score', () => {
+        const strategy = resolveStrategy('under', 7);
+        const window = windowSnapshot(block(100, 74), 100, 'Mid', strategy, DEFAULT_SETTINGS, 0.3);
+        expect(window.sample).toBe(100);
+        expect(window.actual).toBeCloseTo(0.74);
+        expect(window.expected).toBeCloseTo(0.7);
+        expect(window.deltaPp).toBeCloseTo(4, 6);
+        // SE = sqrt(0.7 * 0.3 / 100) = 0.0458 -> 4.58 pp
+        expect(window.standardErrorPp).toBeCloseTo(4.5826, 3);
+        expect(window.zScore).toBeCloseTo(0.8729, 3);
+        expect(window.ciLowPct).toBeCloseTo(65.02, 1);
+        expect(window.ciHighPct).toBeCloseTo(82.98, 1);
+        expect(window.reliability).toBe('insufficient');
     });
 
-    it('blends the three deltas with 0.50 / 0.30 / 0.20 weights', () => {
-        // Last 25 ticks all low, the rest neutral: only the micro window moves.
-        const digits = [...neutral(MACRO_WINDOW - MICRO_WINDOW), ...allLow(MICRO_WINDOW)];
-        const result = evaluateConfluence(baseOptions(digits));
+    it('classifies reliability from the z-score of a complete window', () => {
+        const strategy = resolveStrategy('even', 0);
+        const weak = windowSnapshot(neutral(100), 100, 'Mid', strategy, DEFAULT_SETTINGS, 0.3);
+        const strong = windowSnapshot(paritySegment(62, 38), 100, 'Mid', strategy, DEFAULT_SETTINGS, 0.3);
+        expect(weak.reliability).toBe('insufficient');
+        expect(strong.reliability).toBe('reliable');
+    });
+});
+
+describe('alignment validation', () => {
+    it('classifies strong, moderate, conflict and none', () => {
+        expect(
+            classifyAlignment(snapshot('Micro', 2), snapshot('Mid', 2), snapshot('Macro', 2), DEFAULT_SETTINGS)
+        ).toBe('strong');
+        expect(
+            classifyAlignment(snapshot('Micro', 2), snapshot('Mid', 2), snapshot('Macro', 0.5), DEFAULT_SETTINGS)
+        ).toBe('moderate');
+        expect(
+            classifyAlignment(snapshot('Micro', 2), snapshot('Mid', 2), snapshot('Macro', -3), DEFAULT_SETTINGS)
+        ).toBe('conflict');
+        expect(
+            classifyAlignment(snapshot('Micro', 0.5), snapshot('Mid', 0), snapshot('Macro', 0), DEFAULT_SETTINGS)
+        ).toBe('none');
+    });
+});
+
+describe('master score and verdicts', () => {
+    it('blends the three deltas with the configured weights', () => {
+        const result = evaluateConfluence(baseOptions(evenBias(), 'even', 0));
         const { micro, mid, macro } = result.windows;
-        const weighted =
-            micro.deltaPp * WINDOW_WEIGHTS.micro +
-            mid.deltaPp * WINDOW_WEIGHTS.mid +
-            macro.deltaPp * WINDOW_WEIGHTS.macro;
-        expect(result.masterScore).toBeCloseTo(weighted, 10);
-        expect(micro.deltaPp).toBeCloseTo(30);
-        expect(macro.deltaPp).toBeLessThan(micro.deltaPp);
+        expect(micro.deltaPp).toBeCloseTo(10, 6);
+        expect(mid.deltaPp).toBeCloseTo(10, 6);
+        expect(macro.deltaPp).toBeCloseTo(10, 6);
+        expect(result.masterScore).toBeCloseTo(
+            micro.deltaPp * 0.5 + mid.deltaPp * 0.3 + macro.deltaPp * 0.2,
+            10
+        );
+        expect(result.masterScore).toBeCloseTo(10, 6);
     });
 
-    it('executes when all three windows align on a strong, regime-safe score', () => {
-        const result = evaluateConfluence(baseOptions(balancedLow()));
+    it('normalises configured weights before scoring', () => {
+        const settings = normalizeSettings({ weights: { micro: 60, mid: 30, macro: 10 } });
+        expect(settings.weights.micro).toBeCloseTo(0.6);
+        expect(settings.weights.mid).toBeCloseTo(0.3);
+        expect(settings.weights.macro).toBeCloseTo(0.1);
+
+        const fallback = normalizeSettings({ weights: { micro: 0, mid: 0, macro: 0 } });
+        expect(fallback.weights).toEqual(DEFAULT_SETTINGS.weights);
+    });
+
+    it('executes only when the score, alignment and reliability gates all pass', () => {
+        const result = evaluateConfluence(baseOptions(evenBias(), 'even', 0));
         expect(result.complete).toBe(true);
         expect(result.regime.broken).toBe(false);
-        expect(result.windows.micro.deltaPp).toBeCloseTo(6);
-        expect(result.masterScore).toBeCloseTo(6);
-        expect(result.alignment).toBe(3);
+        expect(result.alignment).toBe('strong');
+        expect(result.reliability).toBe('reliable');
         expect(result.verdict).toBe('execute');
         expect(result.verdictLabel).toBe('EXECUTE TRADE');
-        expect(result.confidence).toBeCloseTo(67.5);
-        expect(result.headline).toContain('All 3 windows');
+        expect(result.summary).toContain('no order is placed');
     });
 
-    it('keeps the verdict on HOLD while the macro baseline fills', () => {
-        const result = evaluateConfluence(baseOptions(allLow(120)));
+    it('holds neutral when the score sits inside the band', () => {
+        const result = evaluateConfluence(baseOptions(neutral(), 'even', 0));
+        expect(result.complete).toBe(true);
+        expect(Math.abs(result.masterScore)).toBeLessThan(DEFAULT_SETTINGS.entryMasterPp);
+        expect(result.verdict).toBe('neutral');
+        expect(result.verdictLabel).toBe('HOLD — NEUTRAL');
+    });
+
+    it('blocks a floor-clearing score whose evidence is not significant', () => {
+        const result = evaluateConfluence(baseOptions(weakEdge()));
+        expect(result.masterScore).toBeGreaterThanOrEqual(DEFAULT_SETTINGS.entryMasterPp);
+        expect(result.reliability).toBe('insufficient');
+        expect(result.verdict).toBe('blocked');
+        expect(result.reason).toContain('reliability');
+    });
+
+    it('fades to the opposite contract only when that side qualifies', () => {
+        const odd = evaluateConfluence(baseOptions(evenBias(), 'odd', 0));
+        expect(odd.masterScore).toBeLessThanOrEqual(-DEFAULT_SETTINGS.entryMasterPp);
+        expect(odd.alignment).toBe('conflict');
+        expect(odd.verdict).toBe('fade');
+        expect(odd.opposite.label).toBe('Even');
+        expect(odd.summary).toContain('Even');
+    });
+
+    it('reports conflict when micro and mid support a side the macro baseline opposes', () => {
+        const result = evaluateConfluence(baseOptions(microOnly()));
+        expect(result.masterScore).toBeGreaterThanOrEqual(DEFAULT_SETTINGS.entryMasterPp);
+        expect(result.alignment).toBe('conflict');
+        expect(result.verdict).toBe('conflict');
+        expect(result.verdictLabel).toBe('HOLD — CONFLICT');
+    });
+
+    it('blocks while the macro window is still filling', () => {
+        const result = evaluateConfluence(baseOptions(block(120, 80)));
         expect(result.complete).toBe(false);
-        expect(result.sample).toBe(120);
-        expect(result.verdict).toBe('hold');
-        expect(result.reason).toContain('Warming up');
+        expect(result.verdict).toBe('blocked');
+        expect(result.reason).toContain('Collecting history');
     });
 
-    it('vetoes a strong score when the macro distribution is broken', () => {
+    it('blocks a broken macro regime even on a strong score', () => {
         const result = evaluateConfluence(baseOptions(new Array(MACRO_WINDOW).fill(0)));
-        expect(result.masterScore).toBeGreaterThan(ENTRY_MASTER_PP);
+        expect(result.masterScore).toBeGreaterThan(DEFAULT_SETTINGS.entryMasterPp);
         expect(result.regime.broken).toBe(true);
-        expect(result.verdict).toBe('hold');
+        expect(result.verdict).toBe('blocked');
         expect(result.reason).toMatch(/regime|entropy/i);
     });
 
-    it('arms the auto-cooldown on a hard micro flip and holds', () => {
+    it('blocks when the data feed reports a problem', () => {
         const result = evaluateConfluence({
-            ...baseOptions(balancedLow()),
+            ...baseOptions(evenBias(), 'even', 0),
+            dataBlock: 'The market-data stream is not connected — signals are suspended.',
+        });
+        expect(result.verdict).toBe('blocked');
+        expect(result.reason).toContain('not connected');
+    });
+});
+
+describe('cooldown and micro shift', () => {
+    it('arms the cooldown on a hard micro flip and blocks new signals', () => {
+        const result = evaluateConfluence({
+            ...baseOptions(evenBias(), 'even', 0),
             previousMicroDelta: -10,
         });
-        expect(result.microFlip).toBe(true);
-        expect(result.cooling).toBe(true);
-        expect(result.cooldownUntilTick).toBe(100 + COOLDOWN_TICKS);
-        expect(result.verdict).toBe('hold');
-        expect(result.reason).toContain('Auto-cooldown');
+        expect(result.microShift.flipped).toBe(true);
+        expect(result.cooldown.active).toBe(true);
+        expect(result.cooldown.reason).toContain('CONFLUENCE_BROKEN');
+        expect(result.cooldown.untilTick).toBe(100 + DEFAULT_SETTINGS.cooldownTicks);
+        expect(result.verdict).toBe('blocked');
+        expect(result.reason).toContain('ticks of stability');
     });
 
-    it('fades a micro burst that fights a negative macro baseline', () => {
-        // Macro sits at 68.8% Under 7 (-1.2 pp), the last 100 ticks at 75% (+5.0 pp)
-        // and the last 25 at 88% (+18.0 pp): micro only, with the baseline against it.
-        const digits = [...low(268), ...high(132), ...low(53), ...high(25), ...low(22)];
-        const result = evaluateConfluence(baseOptions(digits));
-        expect(result.complete).toBe(true);
-        expect(result.windows.micro.deltaPp).toBeGreaterThanOrEqual(ENTRY_MASTER_PP);
-        expect(result.windows.macro.deltaPp).toBeLessThan(-ALIGN_MIN_PP);
-        expect(result.alignment).toBe(2);
-        expect(result.masterScore).toBeGreaterThanOrEqual(ENTRY_MASTER_PP);
-        expect(result.verdict).toBe('fade');
-        expect(result.verdictLabel).toBe('FADE');
+    it('measures the micro delta change and its velocity per tick', () => {
+        const micro = snapshot('Micro', 10);
+        const shift = detectMicroShift(micro, 4, 3, 'strong', 'strong', DEFAULT_SETTINGS);
+        expect(shift.deltaChangePp).toBeCloseTo(6);
+        expect(shift.velocityPpPerTick).toBeCloseTo(2);
+        expect(shift.flipped).toBe(false);
     });
 
-    it('resolves the Matches / Differs target from the macro window', () => {
-        const digits = [...neutral(490), 7, 7, 7, 7, 7, 7, 7, 7, 7, 8];
-        const hottest = resolveTargetDigit(digits, 'matches');
-        const coldest = resolveTargetDigit(digits, 'differs');
-        expect(hottest).toBe(7);
-        expect(coldest).toBe(0);
+    it('arms the cooldown when previously aligned windows break into conflict', () => {
+        const micro = snapshot('Micro', 0.5);
+        const shift = detectMicroShift(micro, 2, 1, 'strong', 'conflict', DEFAULT_SETTINGS);
+        expect(shift.brokeConfluence).toBe(true);
+        expect(shift.reason).toContain('CONFLUENCE_BROKEN');
+    });
+});
 
-        const matches = evaluateConfluence({ ...baseOptions(digits), strategyId: 'MATCHES' });
-        expect(matches.strategy.target).toBe(hottest);
-        expect(matches.strategy.label).toBe(`Matches ${hottest}`);
+describe('digit comparison', () => {
+    it('reports every digit against the 10% baseline with its strategy membership', () => {
+        const strategy = resolveStrategy('under', 7);
+        const micro = windowSnapshot(neutral(), MICRO_WINDOW, 'Micro', strategy, DEFAULT_SETTINGS, 0.5);
+        const mid = windowSnapshot(neutral(), 100, 'Mid', strategy, DEFAULT_SETTINGS, 0.3);
+        const macro = windowSnapshot(neutral(), MACRO_WINDOW, 'Macro', strategy, DEFAULT_SETTINGS, 0.2);
+        const rows = digitComparisonRows(micro, mid, macro, strategy);
+
+        expect(rows).toHaveLength(10);
+        expect(rows[0]).toMatchObject({ digit: 0, baselinePct: 10, inStrategy: true });
+        expect(rows[7]).toMatchObject({ digit: 7, inStrategy: false });
+        expect(rows.every(row => Math.abs(row.deviationPp) < 0.001)).toBe(true);
+        expect(rows.every(row => Math.abs(row.trendPp - (row.microPct - row.macroPct)) < 1e-9)).toBe(true);
     });
 
-    it('keeps confidence inside 0–100', () => {
-        const strong = evaluateConfluence(baseOptions(balancedLow()));
-        const neutralResult = evaluateConfluence(baseOptions(neutral()));
-        expect(strong.confidence).toBeLessThanOrEqual(100);
-        expect(neutralResult.confidence).toBeGreaterThanOrEqual(0);
-        expect(neutralResult.confidence).toBeLessThan(strong.confidence);
+    it('marks a digit hotter in micro than macro as rising', () => {
+        const strategy = resolveStrategy('even', 0);
+        const digits = [...neutral(475), ...new Array(25).fill(2)];
+        const micro = windowSnapshot(digits, MICRO_WINDOW, 'Micro', strategy, DEFAULT_SETTINGS, 0.5);
+        const mid = windowSnapshot(digits, 100, 'Mid', strategy, DEFAULT_SETTINGS, 0.3);
+        const macro = windowSnapshot(digits, MACRO_WINDOW, 'Macro', strategy, DEFAULT_SETTINGS, 0.2);
+        const rows = digitComparisonRows(micro, mid, macro, strategy);
+        expect(rows[2].trend).toBe('rising');
+        expect(rows[2].inStrategy).toBe(true);
     });
 });

@@ -1,28 +1,44 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useDigitsLabContext } from '../digits/digits-lab-context';
 import ConsolidatedSignal from './consolidated-signal';
-import { STRATEGY_LABELS, type StrategyId } from './engine-scoring';
+import DigitDistribution from './digit-distribution';
+import EngineSettingsPanel from './engine-settings';
 import {
-    SPEC_METRICS,
-    SPEC_SECTIONS,
-    type SpecSectionData,
-    type SpecTableData,
-} from './engine-spec-content';
+    BARRIER_BOUNDS,
+    DEFAULT_SETTINGS,
+    STRATEGY_FAMILIES,
+    clampTarget,
+    normalizeSettings,
+    type EngineSettings,
+    type StrategyFamily,
+    type StrategySelection,
+} from './engine-scoring';
+import { SPEC_METRICS, SPEC_SECTIONS, type SpecSectionData, type SpecTableData } from './engine-spec-content';
+import SignalJournal from './signal-journal';
 import { useConfluenceEngine } from './use-confluence-engine';
+import WindowComparison from './window-comparison';
 import './engine-spec-page.scss';
 
+/** Editable settings start at the documented defaults, weights as percentages. */
+const DEFAULT_DRAFT: EngineSettings = { ...DEFAULT_SETTINGS, weights: { micro: 50, mid: 30, macro: 20 } };
+
 /**
- * Engine tab — the weighted multi-window confluence engine.
+ * Engine tab — the real-time multi-window confluence engine.
  *
- * The top block is live: it reads the shared Digits feed, scores the micro (25),
- * mid (100) and macro (500) windows against their fair baselines and prints ONE
- * consolidated verdict. Everything below it is the written specification of the
- * same rules. Read-only analysis: the page never sends a trade.
+ * The top blocks are live: the shared Digits feed fills the micro (25), mid
+ * (100) and macro (500) windows, the engine scores the selected strategy
+ * against its fair baseline, validates alignment and statistical reliability,
+ * and prints ONE consolidated verdict. Everything below is the written
+ * specification of the same rules plus the session's virtual signal journal.
+ *
+ * Read-only analysis: the page never sends a trade.
  */
 export default function EngineSpecPage() {
     const lab = useDigitsLabContext();
-    const [strategyId, setStrategyId] = useState<StrategyId>('UNDER_7');
-    const engine = useConfluenceEngine(lab.ticks, strategyId);
+    const [selection, setSelection] = useState<StrategySelection>({ family: 'under', target: 7 });
+    const [draft, setDraft] = useState<EngineSettings>(DEFAULT_DRAFT);
+
+    const settings = useMemo(() => normalizeSettings(draft), [draft]);
 
     const markets = useMemo(
         () => [...lab.markets].sort((a, b) => a.displayName.localeCompare(b.displayName)),
@@ -31,6 +47,21 @@ export default function EngineSpecPage() {
 
     const marketName = lab.selectedMarket?.displayName ?? 'No market selected';
     const connected = lab.connection.status === 'connected';
+    const precisionReady = lab.precision.resolvedDecimalPlaces !== null;
+
+    const engine = useConfluenceEngine({
+        ticks: lab.ticks,
+        selection,
+        settings,
+        marketName,
+        connectionStatus: lab.connection.status,
+        precisionReady,
+    });
+
+    const bounds = BARRIER_BOUNDS[selection.family];
+    const barrierOptions = bounds
+        ? Array.from({ length: bounds.max - bounds.min + 1 }, (_, index) => bounds.min + index)
+        : [];
 
     const jumpTo = useCallback((id: string) => {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -41,10 +72,11 @@ export default function EngineSpecPage() {
             <header className='espec-hero'>
                 <div>
                     <span className='espec-hero__kicker'>Live engine</span>
-                    <h2 className='espec-hero__title'>Multi-Window Confluence Engine</h2>
+                    <h2 className='espec-hero__title'>Multi-Window Digit Confluence Engine</h2>
                     <p className='espec-hero__subtitle'>
-                        25 / 100 / 500-tick weighted confluence for Over / Under, Even / Odd and Matches / Differs on
-                        Deriv volatility indices. Three windows, one Master Score, one verdict.
+                        25 / 100 / 500-tick weighted confluence for Under, Over, Even, Odd, Matches and Differs on
+                        Deriv volatility indices. Three windows, one Master Score, one verdict — analysis only, it
+                        never places an order.
                     </p>
                 </div>
             </header>
@@ -53,10 +85,11 @@ export default function EngineSpecPage() {
                 <label className='espec-control'>
                     <span className='espec-control__label'>Volatility index</span>
                     <select
+                        id='espec-market'
                         className='espec-control__select'
                         value={lab.selectedMarket?.apiSymbol ?? ''}
                         onChange={event => {
-                            const market = markets.find(m => m.apiSymbol === event.target.value);
+                            const market = markets.find(item => item.apiSymbol === event.target.value);
                             if (market) lab.selectMarket(market);
                         }}
                         disabled={!connected || markets.length === 0}
@@ -71,18 +104,44 @@ export default function EngineSpecPage() {
                 </label>
 
                 <label className='espec-control'>
-                    <span className='espec-control__label'>Strategy</span>
+                    <span className='espec-control__label'>Strategy family</span>
                     <select
+                        id='espec-family'
                         className='espec-control__select'
-                        value={strategyId}
-                        onChange={event => setStrategyId(event.target.value as StrategyId)}
+                        value={selection.family}
+                        onChange={event => {
+                            const family = event.target.value as StrategyFamily;
+                            setSelection({ family, target: clampTarget(family, selection.target) });
+                        }}
                     >
-                        {(Object.keys(STRATEGY_LABELS) as StrategyId[]).map(id => (
-                            <option key={id} value={id}>
-                                {STRATEGY_LABELS[id]}
+                        {STRATEGY_FAMILIES.map(family => (
+                            <option key={family.id} value={family.id}>
+                                {family.label}
                             </option>
                         ))}
                     </select>
+                </label>
+
+                <label className='espec-control'>
+                    <span className='espec-control__label'>{bounds?.label ?? 'Contract'}</span>
+                    {bounds ? (
+                        <select
+                            id='espec-target'
+                            className='espec-control__select'
+                            value={selection.target}
+                            onChange={event => setSelection({ ...selection, target: Number(event.target.value) })}
+                        >
+                            {barrierOptions.map(digit => (
+                                <option key={digit} value={digit}>
+                                    {digit}
+                                </option>
+                            ))}
+                        </select>
+                    ) : (
+                        <span className='espec-control__static'>
+                            {selection.family === 'even' ? 'Even digits 0,2,4,6,8' : 'Odd digits 1,3,5,7,9'}
+                        </span>
+                    )}
                 </label>
             </section>
 
@@ -91,9 +150,22 @@ export default function EngineSpecPage() {
                 marketName={marketName}
                 sample={engine.sample}
                 connected={connected}
+                precisionReady={precisionReady}
                 isLoading={lab.isLoadingHistory}
                 errorMessage={lab.errorMessage}
             />
+
+            <WindowComparison result={engine.result} />
+            <DigitDistribution result={engine.result} />
+
+            <EngineSettingsPanel
+                draft={draft}
+                effectiveWeights={settings.weights}
+                onChange={setDraft}
+                onReset={() => setDraft(DEFAULT_DRAFT)}
+            />
+
+            <SignalJournal journal={engine.journal} onReset={engine.resetJournal} />
 
             <div className='espec-metrics'>
                 {SPEC_METRICS.map(metric => (
@@ -107,12 +179,7 @@ export default function EngineSpecPage() {
 
             <nav className='espec-nav' aria-label='Specification sections'>
                 {SPEC_SECTIONS.map(section => (
-                    <button
-                        type='button'
-                        key={section.id}
-                        className='espec-nav__item'
-                        onClick={() => jumpTo(section.id)}
-                    >
+                    <button type='button' key={section.id} className='espec-nav__item' onClick={() => jumpTo(section.id)}>
                         {section.kicker}
                     </button>
                 ))}
@@ -123,8 +190,9 @@ export default function EngineSpecPage() {
             ))}
 
             <p className='espec-footnote'>
-                Educational reference only. Past digit shares describe the ticks already seen, not the next one;
-                test every rule on a Demo account before risking a real balance.
+                Educational analysis only. Past digit shares describe the ticks already seen, not the next one; no
+                verdict here is a profit guarantee, and no order is placed from this page. Test every rule on a Demo
+                account before risking a real balance.
             </p>
         </div>
     );

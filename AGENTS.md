@@ -1303,29 +1303,52 @@ authorised socket for `balance` so the header figure and the balance stream show
   `src/services/__tests__/derivws-accounts-reset.test.ts` (endpoint, method, headers, error text);
   the live reset needs a signed-in Demo session, so it is verified by hand.
 
-## Engine Spec tab (weighted multi-window confluence)
+## Engine Spec tab (multi-window digit confluence engine)
 The ninth tab (`#engine_spec`, `DBOT_TABS.ENGINE_SPEC = 8`) lives in `src/pages/engine-spec/`. It is
 read-only analysis: no socket of its own (it reads the shared Digits feed through
 `useDigitsLabContext`), no trading, and nothing persisted.
 - `engine-scoring.ts` is the pure engine. Three windows — micro 25, mid 100, macro 500 ticks — each
-  measure the strategy's winning share against its mathematical baseline (`Under N: N/10`,
-  `Over N: (9-N)/10`, parity `0.50`, Matches `0.10`, Differs `0.90`) and report the delta in
-  percentage points. `Master = 0.50*micro + 0.30*mid + 0.20*macro`; alignment counts windows with
-  `delta >= +1.0 pp`; confidence is
-  `100 * (0.65 * min(|Master|/12, 1) + 0.35 * aligned/3)`.
-- Verdict gates, in order: incomplete samples -> regime break (macro spread > 7 pp or entropy
-  < 2.95 bits) -> auto-cooldown -> `|Master| < 4.0 pp` -> EXECUTE (3/3 aligned) -> FADE (micro
-  `>= +4 pp` while macro `<= -1 pp`) -> HOLD. The cooldown arms when the micro delta flips sign by
-  `>= 6 pp` and lasts 25 ticks; it is counted in ticks, never seconds.
-- `use-confluence-engine.ts` keeps only the per-tick state (tick counter, previous micro delta,
-  cooldown deadline) and re-evaluates on each new tick or strategy change; a strategy switch resets
-  flip detection so it never fakes a cooldown.
-- `consolidated-signal.tsx` renders the ONE output block (market | strategy, verdict, confidence,
-  alignment line, three evidence rows). `engine-spec-content.ts` is the written spec below it and
-  must stay in step with the engine's numbers. `engine-spec-page.tsx` owns the two selectors
-  (volatility index + strategy) and feeds the shared lab market.
-- Verify: `docker compose exec web npx jest src/pages/engine-spec --coverage=false` (12 tests) and
-  `npx tsc --noEmit`. In the preview open `/#engine_spec`: the live block shows the shared feed's
-  market, one verdict and three 25/100/500 evidence rows, and switching the strategy select updates
-  the market line and the verdict without a reload. No sideways scroll at 375–431px (wide tables and
-  code scroll inside their own boxes).
+  measure the selected contract's winning share against its mathematical baseline and report the
+  delta in percentage points. `winningDigits(family, target)` is the single source for every
+  contract: Under `b` = 0..b-1, Over `b` = b+1..9, Even, Odd, Matches `d` = [d], Differs `d` = the
+  other nine. The UI offers Under 1–9, Over 1–8 and a 0–9 prediction digit for Matches/Differs, so
+  the old eight fixed strategies are gone.
+- `Master = micro*w_micro + mid*w_mid + macro*w_macro` with configurable weights (defaults
+  50/30/20, normalised to sum to 1). The Master Score is a weighted deviation in percentage points,
+  never a win probability — do not add a confidence/probability figure.
+- **Alignment** (`classifyAlignment`): Strong = all three `delta >= alignMinPp` (1 pp); Moderate =
+  micro+mid aligned and `|macro| < alignMinPp`; Conflict = any window `delta <= -conflictPp`
+  (3 pp); otherwise None. The 3 pp conflicting floor exists because a 25-tick delta moves by chance
+  easily; a 1 pp floor made almost every calm market read "Conflict".
+- **Reliability** (`windowSnapshot` + `overallReliability`): per window `SE = sqrt(p(1-p)/n)`,
+  `z = (share - p)/SE`, a two-sided 95% interval (`confidenceZ` 1.96) and a classification —
+  incomplete or `|z| < 1.0` = insufficient, `|z| >= 1.96` = reliable, else limited. Overall is
+  reliable with two significant windows, limited with two usable ones, otherwise insufficient.
+  The approximation assumes independent ticks; the panel says so and must not claim profitability.
+- **Verdict gates, in order**: incomplete windows / `dataBlock` / regime break (macro spread > 7 pp
+  or entropy < 2.95 bits) / cooldown -> HOLD — BLOCKED; `|Master| < entryMasterPp` (4 pp) ->
+  NEUTRAL (CONFLICT instead when a window materially opposes); above the floor -> BLOCKED if
+  reliability is insufficient, EXECUTE when the required alignment passes, else CONFLICT; below
+  `-entryMasterPp` -> FADE only when all three windows oppose (the opposite contract independently
+  qualifies) and reliability is not insufficient, else CONFLICT. `VERDICT_LABELS` holds the five
+  display strings.
+- **Cooldown** (`detectMicroShift`): the micro delta change and its velocity per tick are published;
+  a sign change of `>= microFlipPp` (6 pp) or previously aligned windows breaking into conflict arms
+  it for `cooldownTicks` (25), reason `CONFLUENCE_BROKEN`. The `dataBlock` path is separate and is
+  only cleared when the macro window refills with post-gap ticks — a timer never clears it.
+- `use-confluence-engine.ts` owns the per-tick state (tick counter, previous micro delta, previous
+  alignment, cooldown deadline, last epoch for gap detection, pending signal). A market switch
+  resets every window-derived value; a strategy/settings change re-scores without faking a flip.
+- **Signal journal (virtual hook)**: an EXECUTE/FADE verdict is recorded once per 25 ticks with its
+  windows, Master Score, alignment and reliability, then resolved against the next genuine tick.
+  It is labelled virtual everywhere — never mix it with settled contract results.
+- Components: `consolidated-signal.tsx` (the ONE verdict card), `window-comparison.tsx` (10 metric
+  rows + baseline bar chart), `digit-distribution.tsx` (all ten digits in all three windows + chart),
+  `engine-settings.tsx` (weights/thresholds/cooldown), `signal-journal.tsx`. `engine-spec-content.ts`
+  is the written spec below them and must stay in step with the engine. `engine-spec-page.tsx` owns
+  the three selectors (market, family, barrier — ids `#espec-market`, `#espec-family`,
+  `#espec-target`) and feeds the shared lab market.
+- Verify: `docker compose exec web npx jest src/pages/engine-spec --coverage=false` (23 tests) and
+  `npx tsc --noEmit`. In the preview click `#id-engine-spec`: the verdict card fills from the shared
+  feed, the window table has 10 metric rows, the digit table 10 rows (seven marked ● for Under 7),
+  and the settings weights read 50/30/20. No sideways scroll at 431px.
