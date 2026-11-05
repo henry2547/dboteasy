@@ -60,11 +60,6 @@ const DESTINATIONS: TDestination[] = [
         name: 'Statistics',
         hint: 'The numbers behind the market you analysed on the Digits tab.',
     },
-    {
-        tab: DBOT_TABS.ENGINE_SPEC,
-        name: 'Engine Spec',
-        hint: 'The two-window design: gates, confirmation rules, timing and risk limits.',
-    },
 ];
 
 const TIPS = [
