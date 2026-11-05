@@ -1,9 +1,9 @@
 /**
- * Written specification for the multi-window digit engine.
+ * Written specification for the weighted multi-window confluence engine.
  *
- * This file is content only: the tab renders it, nothing here trades or
- * evaluates a market. Every rule is stated once so the page, and anyone
- * building the equivalent Bot Builder blocks, read the same numbers.
+ * This file is content only. The live verdict block renders from
+ * `engine-scoring.ts`; every number, formula and threshold below describes
+ * exactly what that module does, so the page cannot drift from the engine.
  */
 
 export interface SpecMetric {
@@ -38,275 +38,467 @@ export interface SpecSectionData {
 }
 
 export const SPEC_METRICS: SpecMetric[] = [
-    { label: 'Micro window', value: '30', hint: 'ticks - momentum and clustering' },
-    { label: 'Macro window', value: '750', hint: 'ticks - long-run distribution' },
-    { label: 'Deviation trigger', value: '3.5 pp', hint: 'from the 10% baseline' },
-    { label: 'Minimum z-score', value: '1.5', hint: 'one-sided significance' },
-    { label: 'Cooldown', value: '3 / 9 / 21', hint: 'ticks after win / loss / 2 losses' },
+    { label: 'Micro window', value: '25', hint: 'ticks · weight 0.50 · momentum' },
+    { label: 'Mid window', value: '100', hint: 'ticks · weight 0.30 · validation' },
+    { label: 'Macro window', value: '500', hint: 'ticks · weight 0.20 · baseline' },
+    { label: 'Entry floor', value: '+4.0 pp', hint: 'Master Score to execute' },
+    { label: 'Alignment', value: '3 / 3', hint: 'windows must agree' },
+    { label: 'Auto-cooldown', value: '25 ticks', hint: 'after a micro flip' },
 ];
 
 export const SPEC_SECTIONS: SpecSectionData[] = [
     {
         id: 'windows',
         kicker: '1. Architecture',
-        title: 'Dual-window architecture',
+        title: 'Three simultaneous tick windows',
         intro:
-            'Two rolling windows are read on every tick: a fast window for the move that is happening now, and a slow window for what the market has actually been paying. A trade needs both to agree - the fast window supplies the dislocation, the slow window vetoes it when the long-run distribution has drifted away from fair.',
+            'One streaming feed, one rolling digit array, three read horizons. The micro window describes the move happening now, the mid window validates that it is a trend rather than a blip, and the macro window says what the index has actually been paying. The engine re-reads all three on every tick; none of them ever resets, they slide.',
         tables: [
             {
-                title: 'The two windows',
-                columns: ['Layer', 'Window', 'Refresh', 'Job in the decision', 'Reads'],
-                minWidth: 860,
+                title: 'The three windows',
+                columns: ['Layer', 'Window', 'Weight', 'Job in the decision', 'Evidence it contributes'],
+                minWidth: 900,
                 rows: [
                     [
-                        'Micro (fast)',
-                        'Last 30 ticks',
-                        'Every tick',
-                        'Detect the immediate dislocation, clustering and short-term skew that creates the edge',
-                        'p_m(d), delta(d), gamma(d), z(d), digit streak, parity share',
+                        'Micro',
+                        'Last 25 ticks',
+                        '0.50',
+                        'Immediate momentum: is the strategy’s winning share above its fair baseline right now?',
+                        'share, baseline, delta, digit clustering, momentum direction',
                     ],
                     [
-                        'Macro (baseline)',
-                        'Last 750 ticks',
-                        'Every tick (rolling)',
-                        'Establish the true distribution and refuse a trade when the market is not behaving like a 10% digit market',
-                        'p_M(d), entropy H, chi-square band, max-min share spread',
+                        'Mid',
+                        'Last 100 ticks',
+                        '0.30',
+                        'Trend validation: does the momentum survive a full minute-scale window, or is it a three-tick burst?',
+                        'share, baseline, delta, parity split, repeat rate',
+                    ],
+                    [
+                        'Macro',
+                        'Last 500 ticks',
+                        '0.20',
+                        'Statistical baseline: is the index still digit-neutral, and what is each digit’s true long-run share?',
+                        'share, baseline, delta, entropy, max-min spread',
                     ],
                 ],
             },
         ],
         formulas: [
             {
-                label: 'Micro share',
-                expression: 'p_m(d) = n_m(d) / 30',
-                note: 'Share of the last 30 ticks that ended in digit d.',
+                label: 'Window share',
+                expression: 'share_w = wins_w / n_w',
+                note: 'Fraction of the window’s ticks that satisfy the strategy (digit > barrier, digit < barrier, parity, match or differ).',
             },
             {
-                label: 'Macro share',
-                expression: 'p_M(d) = n_M(d) / 750',
-                note: 'Share of the last 750 ticks. A fair market holds every digit near 10%.',
+                label: 'Expected baseline',
+                expression: 'Under N: N/10 · Over N: (9-N)/10 · Even/Odd: 0.50 · Matches: 0.10 · Differs: 0.90',
+                note: 'The mathematical fair share of the winning digits. A neutral market sits exactly here.',
             },
             {
-                label: 'Baseline deviation',
-                expression: 'delta(d) = (p_m(d) - 0.10) x 100',
-                note: 'Percentage points away from the 10% baseline. The entry threshold is |delta| >= 3.5.',
+                label: 'Window delta',
+                expression: 'delta_w = (share_w - baseline) x 100',
+                note: 'Percentage points of edge above fair value for that window. Sign is the direction the distribution leans.',
             },
             {
-                label: 'Macro-relative deviation',
-                expression: 'gamma(d) = (p_m(d) - p_M(d)) x 100',
-                note: 'Percentage points away from what this market has actually been paying, not from theory.',
+                label: 'Baseline example',
+                expression: 'Under 7 at 74 of 100 ticks => (0.74 - 0.70) x 100 = +4.0 pp',
+                note: 'A 74% Under 7 share is only four points above the 70% fair share — large in tick counts, modest in edge.',
             },
-            {
-                label: 'Significance',
-                expression: 'z(d) = (p_m(d) - p_M(d)) / sqrt( p_M(d) x (1 - p_M(d)) / 30 )',
-                note: 'How large the micro move is compared with binomial noise. A 30-tick window needs z >= 1.5.',
-            },
-            {
-                label: 'Macro entropy',
-                expression: 'H = -sum p_M(d) x log2 p_M(d)',
-                note: 'Uniformity of the baseline in bits. Ceiling log2(10) = 3.3219; below 2.95 bits the market is structurally clustered, not digit-neutral.',
-            },
-            {
-                label: 'Micro uniformity',
-                expression: 'chi2_m = sum (n_m(d) - 3)^2 / 3',
-                note: 'Expected count per digit in 30 ticks is 3, with 9 degrees of freedom. Large values mean a real skew, not sampling noise.',
-            },
+        ],
+        bullets: [
+            'One feed, no second socket: the engine reads the market already selected on the Digits tab.',
+            'Windows complete before they vote: 25 / 100 / 500 samples are required, so the verdict is HOLD while the macro baseline fills.',
+            'Refresh is per tick and O(1) per window: fixed weights, no re-tuning mid-session, so the same ticks always produce the same verdict.',
         ],
     },
     {
         id: 'confluence',
         kicker: '2. Confluence',
-        title: 'Filtering rules - when a trade may fire',
+        title: 'Master Score and alignment',
         intro:
-            'Every gate below must pass on the same tick. A gate that fails does not degrade the entry, it cancels it: the engine waits, journals the reason, and re-reads the windows on the next tick.',
+            'The three deltas become one weighted number, then a set of hard gates decides whether that number is tradable. High alignment is what separates a real distribution shift from a micro burst: a large Master Score with only one supporting window is refused.',
+        formulas: [
+            {
+                label: 'Master Score',
+                expression: 'Master = (delta_micro x 0.50) + (delta_mid x 0.30) + (delta_macro x 0.20)',
+                note: 'Single weighted synthesis, in percentage points. Positive favours the strategy; negative leans against it.',
+            },
+            {
+                label: 'Alignment',
+                expression: 'aligned = count( delta_w >= +1.0 pp )',
+                note: 'How many windows independently confirm the edge, 0 to 3. Execution requires 3.',
+            },
+            {
+                label: 'Confluence confidence',
+                expression: 'confidence = 100 x (0.65 x min(|Master| / 12, 1) + 0.35 x aligned/3)',
+                note: 'A 0–100% score blending magnitude with agreement. 12 pp is the practical saturation point on a 10-digit wheel.',
+            },
+            {
+                label: 'Macro entropy',
+                expression: 'H = -sum p_d x log2 p_d',
+                note: 'Uniform ceiling is log2(10) = 3.3219 bits. Below 2.95 bits the baseline is structurally clustered and no digit contract is taken.',
+            },
+            {
+                label: 'Macro spread',
+                expression: 'spread = max(share_d) - min(share_d)',
+                note: 'A spread above 7 pp means the index is not paying anything close to 10% a digit — regime break.',
+            },
+            {
+                label: 'Micro flip',
+                expression: 'flip = sign(delta_micro) changed AND |delta_micro - previous| >= 6.0 pp',
+                note: 'Rapid volatility shift out of confluence. Arms the automatic 25-tick cooldown.',
+            },
+        ],
         tables: [
             {
-                title: 'Gate stack (all ANDed)',
-                columns: ['Gate', 'Condition', 'If it fails'],
-                minWidth: 820,
+                title: 'Verdict gate stack (evaluated in order)',
+                columns: ['Order', 'Condition', 'Result'],
+                minWidth: 760,
                 rows: [
-                    ['G1 Sample integrity', 'n_m = 30, n_M = 750, newest tick age <= 2 s, no gap > 5 s', 'Wait for data'],
-                    ['G2 Regime intact', 'Every p_M(d) in [7.0%, 13.0%] and H >= 2.95 bits', 'Skip - regime break'],
-                    ['G3 Baseline agreement', '|p_M(target) - 10| <= 2.5 pp', 'Skip - market already biased'],
-                    ['G4 Micro dislocation', 'delta(target) >= +3.5 pp (hot) or <= -3.5 pp (cold)', 'Wait - no edge'],
-                    ['G5 Significance', 'z(target) >= 1.5 in the traded direction', 'Wait - noise'],
-                    ['G6 Persistence', 'Same-sign gamma in both 15-tick halves, or digit streak >= 2', 'Wait - no persistence'],
-                    ['G7 Non-conflict', 'No second digit within 0.5 pp of the target in the same direction', 'Wait - ambiguous'],
-                    ['G8 Execution clearance', 'No open contract, risk guard true, trade count below cap', 'Wait - blocked'],
-                    ['G9 Cooldown clear', 'Ticks since settlement >= 3 (win) / 9 (loss) / 21 (two losses)', 'Wait - cooling'],
+                    ['1', 'Any window incomplete (25 / 100 / 500)', 'HOLD — warming up'],
+                    ['2', 'Macro spread > 7.0 pp or macro entropy < 2.95 bits', 'HOLD — regime break'],
+                    ['3', 'Cooldown active (micro flipped >= 6.0 pp)', 'HOLD — cooling'],
+                    ['4', '|Master Score| < 4.0 pp', 'HOLD — neutral'],
+                    ['5', 'Master >= +4.0 pp and 3 of 3 windows aligned', 'EXECUTE TRADE'],
+                    ['6', 'Micro >= +4.0 pp and macro <= -1.0 pp', 'FADE — false breakout'],
+                    ['7', 'Everything else (2 or fewer windows aligned)', 'HOLD — conflict'],
                 ],
             },
         ],
         bullets: [
-            'Noise veto: |delta| > 8 pp on the target with z < 1.5 is a single cluster, not a distribution - wait 5 ticks before reading again.',
-            'Parity veto: an even/odd split between 45% and 55% on the micro window is a coin flip - no Even/Odd contract may fire.',
-            'Ambiguity veto: two digits within 0.5 pp in the same direction means the market has not chosen a skew - skip the tick.',
-            'Regime veto: a macro max-min share spread above 7 pp means the index is no longer paying anything close to 10% a digit - no digit contract at all.',
-            'Directional veto: the micro window must deviate in the same direction as the contract loses to. A hot losing digit blocks an Over/Under entry even when the entry digit itself looks good.',
+            'The macro window carries the least weight but holds the veto: a broken baseline cancels the verdict regardless of how loud the micro window is.',
+            'Alignment is measured on the same side as the strategy. A window sitting at baseline contributes nothing to the count, even when the weighted total clears the floor.',
+            'FADE is not an opposite trade: it says the micro burst is exhaustion, so the named side is stood down until the windows realign.',
         ],
     },
     {
-        id: 'triggers',
-        kicker: '3. Confirmation',
-        title: 'Strategy confirmation triggers',
+        id: 'output',
+        kicker: '3. Output',
+        title: 'One consolidated verdict block',
         intro:
-            'Each contract family has its own confirmation, but they share the same gate stack. The trigger decides which contract is bought; the gates decide whether it may be bought at all.',
+            'Every window, filter and gate collapses into a single block. The user never reconciles three signals — the block states the market, the strategy, the verdict, the confidence and one line explaining the alignment.',
         tables: [
             {
-                title: 'Per-strategy entry rules',
-                columns: ['Strategy', 'Contract', 'Share condition', 'Confirmation', 'Veto'],
-                minWidth: 900,
+                title: 'The output contract',
+                columns: ['Field', 'Content', 'Example'],
+                minWidth: 820,
                 rows: [
-                    [
-                        'Over 2 bias',
-                        'DIGITOVER 2',
-                        'Losing digits 0,1,2 take <= 6 of 30 micro ticks and each macro share <= 10.5%',
-                        'Last 2 ticks both > 2',
-                        'A 0/1/2 streak of 2+, or the micro losing share >= 26.7%',
-                    ],
-                    [
-                        'Under 7 bias',
-                        'DIGITUNDER 7',
-                        'Losing digits 7,8,9 take <= 6 of 30 micro ticks and each macro share <= 10.5%',
-                        'Last 2 ticks both < 7',
-                        'A high run of 3+ digits at or above 7',
-                    ],
-                    [
-                        'Even/Odd dominance',
-                        'DIGITEVEN / DIGITODD',
-                        'Parity share delta >= +5.0 pp on the micro window; macro parity between 45% and 55%',
-                        'Two digits of the opposite parity, then a switch - buy the reversal',
-                        'Micro parity between 45% and 55%, or a mixed pair (no signal)',
-                    ],
-                    [
-                        'Matches continuation',
-                        'DIGITMATCHES d',
-                        'p_m(d) >= 16.7% (5 of 30) with a macro share between 9% and 12%',
-                        'The same digit twice within the last 3 ticks',
-                        'p_m(d) > 25% - chasing an exhausted cluster',
-                    ],
-                    [
-                        'Differs exhaustion',
-                        'DIGITDIFFERS d',
-                        'p_m(d) = 0 of 30 and macro share <= 8%',
-                        '10 ticks with no d, z >= 1.5 against the macro share',
-                        'Macro share > 12% - the digit is not genuinely cold',
-                    ],
+                    ['Target market', 'Selected volatility index', 'Volatility 75 (1s)'],
+                    ['Strategy', 'Contract family plus barrier / parity / digit', 'Under 7 Strategy'],
+                    ['Final verdict', 'EXECUTE TRADE · FADE · HOLD — NEUTRAL', 'EXECUTE TRADE'],
+                    ['Confidence', 'Master Confluence Confidence, 0–100%', '68.4%'],
+                    ['Alignment line', 'One sentence naming the windows that agree or conflict', 'All 3 windows show strong momentum for Under 7.'],
+                    ['Evidence row', 'Per window: share, fair baseline, delta and weight', '25t 76.0% vs 70% · +6.0 pp · ×0.50'],
+                    ['Master Score', 'Weighted total in percentage points', '+5.21 pp'],
                 ],
             },
         ],
-    },
-    {
-        id: 'timing',
-        kicker: '4. Timing',
-        title: 'Dynamic entry, streaks and cooldowns',
-        intro:
-            'Thresholds are fixed per engine run, not tuned mid-session. Cooldowns scale with the outcome so a losing stretch cannot turn into a rate race, and every wait is measured in ticks rather than seconds so a 1s index behaves like a 1s index.',
-        tables: [
-            {
-                title: 'Entry and timing parameters',
-                columns: ['Parameter', 'Default', 'Rule'],
-                minWidth: 720,
-                rows: [
-                    ['MICRO_WINDOW', '30 ticks', 'Fast window. Never shortened to force an entry.'],
-                    ['MACRO_WINDOW', '750 ticks', 'Baseline window. A full 750-tick history is required before any entry.'],
-                    ['DELTA_TRIGGER', '3.5 pp', 'Minimum deviation of the target digit from 10% on the micro window.'],
-                    ['PARITY_TRIGGER', '5.0 pp', 'Minimum micro deviation for an Even/Odd contract.'],
-                    ['Z_MIN', '1.5', 'One-sided significance of the micro move against the macro share.'],
-                    ['PERSISTENCE', '2 of 2 halves', 'Both 15-tick halves must deviate in the same direction, or streak >= 2.'],
-                    ['TICK_GAP_MAX', '5 s', 'A longer gap suspends entries until the windows refill.'],
-                    ['SETTLE_BLACKOUT', '2 ticks', 'No entry in the two ticks after a contract settles.'],
-                    ['MAX_ENTRIES_100', '10', 'Hard cap on entries per rolling 100 ticks, whatever the gates say.'],
-                ],
-            },
-            {
-                title: 'Outcome, stake and cooldown',
-                columns: ['Last outcome', 'Next stake', 'Cooldown', 'Re-entry requires'],
-                minWidth: 700,
-                rows: [
-                    ['Win', 'Base stake', '3 ticks', 'The full gate stack, re-confirmed'],
-                    ['1 loss', 'Base x 1.25', '9 ticks', 'The full gate stack plus a fresh confirmation'],
-                    ['2 losses', 'Base x 1.5625', '21 ticks', 'The full gate stack plus a fresh confirmation'],
-                    ['3 losses', 'Stopped', 'Session end', 'Manual restart - the session does not resume itself'],
-                ],
-            },
+        bullets: [
+            'Exactly one verdict is shown. The three window rows are evidence behind it, never three separate calls to action.',
+            'The verdict is a pure function of the visible numbers, so a user can recompute the Master Score by hand from the rows.',
+            'The reason line always explains a HOLD or FADE: warming up, regime break, cooldown, below floor, or insufficient alignment.',
         ],
     },
     {
         id: 'risk',
-        kicker: '5. Execution',
-        title: 'Risk management and volatility filtering',
+        kicker: '4. Execution',
+        title: 'Risk and execution rules',
         intro:
-            'Position size is a share of the balance, never a fixed number, and the loss step is capped. Volatility indices are filtered before any contract is considered: a 1s index that is too choppy is skipped rather than traded harder.',
+            'The verdict says whether an edge exists; these rules decide whether it may be taken. Thresholds are fixed per session and every wait is measured in ticks, so a 1-second index behaves like a 1-second index.',
         tables: [
             {
-                title: 'Session risk controls',
+                title: 'Entry thresholds',
+                columns: ['Parameter', 'Value', 'Rule'],
+                minWidth: 760,
+                rows: [
+                    ['ENTRY_MASTER_PP', '+4.0 pp', 'Minimum Master Score for any entry, and the minimum micro delta for a fade.'],
+                    ['ALIGN_MIN_PP', '+1.0 pp', 'A window only counts as aligned above this floor.'],
+                    ['REQUIRED_ALIGNMENT', '3 of 3', 'EXECUTE needs every window on side; two is a wait.'],
+                    ['SATURATION_MASTER_PP', '12.0 pp', 'Master Score mapped to full magnitude in the confidence score.'],
+                    ['REGIME_SPREAD_MAX_PP', '7.0 pp', 'Macro max-min share spread that ends digit trading.'],
+                    ['ENTROPY_FLOOR_BITS', '2.95', 'Macro entropy below this is a structural cluster.'],
+                    ['COOLDOWN_TICKS', '25', 'One full micro window of stability after a flip.'],
+                    ['MICRO_FLIP_PP', '6.0 pp', 'Direction change plus swing that arms the cooldown.'],
+                ],
+            },
+            {
+                title: 'Session controls',
                 columns: ['Control', 'Default', 'Detail'],
                 minWidth: 720,
                 rows: [
                     ['Base stake', '1.0% of balance', 'Recomputed when the session starts, held flat for the run.'],
-                    ['Loss step', 'x1.25, max 2 steps', 'Never above 1.5625x the base stake. No unbounded martingale.'],
-                    ['Per-trade exposure', '<= 1.5% of balance', 'A trade is skipped when the stepped stake breaches it.'],
+                    ['Staking', 'Flat — 1.0x', 'No martingale step: the edge is statistical, not recoverable by size.'],
+                    ['Open contracts', '1 maximum', 'No averaging into a position.'],
+                    ['Entries per 100 ticks', '10 maximum', 'Hard cap whatever the verdicts say.'],
                     ['Session take profit', '+2.5% of start balance', 'Stops the run and announces the target.'],
                     ['Session stop loss', '-4.0% of start balance', 'Stops the run and announces the stop.'],
-                    ['Open contracts', '1 maximum', 'No averaging into a losing position.'],
-                    ['Trade cap', '250 contracts per run', 'Bot control limit; the run stops at the cap.'],
                     ['Daily loss stop', '-8.0% of balance', 'Across sessions; requires a manual resumption.'],
+                    ['Failed entry checks', '3 in a row', 'The bot stops and journals the reason instead of waiting forever.'],
                 ],
             },
             {
-                title: 'Index filter - when a market is tradable',
-                columns: ['Index', 'Macro spread', 'Entropy floor', 'Choppiness ceiling', 'Extra condition'],
-                minWidth: 860,
+                title: 'Verdict behaviour',
+                columns: ['Verdict', 'Meaning', 'Action'],
+                minWidth: 720,
                 rows: [
-                    ['Volatility 10 / 25', '<= 4.0 pp', '>= 3.05 bits', 'CHOP <= 61.8', 'Symmetric digit shares'],
-                    ['Volatility 50 / 75', '<= 5.5 pp', '>= 3.00 bits', 'CHOP <= 65', 'No single digit above 13%'],
-                    ['Volatility 100', '<= 6.0 pp', '>= 2.95 bits', 'CHOP <= 68', 'No single digit above 13%'],
-                    ['1s Volatility indices', '<= 4.0 pp', '>= 3.05 bits', 'CHOP <= 61.8', 'Tick-interval coefficient of variation <= 25%'],
-                    ['Any index in a crisis', '> 7.0 pp', 'any', 'CHOP > 70', 'Skip all digit contracts'],
+                    ['EXECUTE TRADE', 'Master >= +4.0 pp, all three windows aligned, regime intact', 'One entry on the named contract, flat stake.'],
+                    ['FADE', 'Micro burst contradicted by the macro baseline', 'Stand aside from the named side; no opposite entry without its own signal.'],
+                    ['HOLD — NEUTRAL', 'Any gate failed: warming up, regime, cooling, floor or conflict', 'Wait for the next tick and re-read all three windows.'],
                 ],
             },
         ],
         formulas: [
             {
-                label: 'Choppiness index',
-                expression: 'CHOP = 100 x log10( sum TR(1..n) / (maxHigh - minLow) ) / log10(n)',
-                note: 'Above 70 the index is choppy; below 61.8 it is directional enough for a digit edge to persist.',
+                label: 'Cooldown clock',
+                expression: 'cooldownUntil = tickIndex + 25 when a micro flip is detected',
+                note: 'The engine counts ticks, not seconds, so a 1s index and a 2s index cool for the same amount of market data.',
             },
+        ],
+        bullets: [
+            'A verdict can change on any tick; execution requires it to be EXECUTE when the contract is bought, not when the page was last read.',
+            'The auto-cooldown is applied before the score gates, so a violent micro flip cannot be traded on the same tick that produced it.',
+            'Risk controls never resize to recover a loss. Three failed entry checks in a row stop the session and journal why.',
         ],
     },
     {
-        id: 'pseudocode',
-        kicker: '6. Logic',
-        title: 'Gate pseudo-code',
+        id: 'javascript',
+        kicker: '5. JavaScript',
+        title: 'Aggregation logic — JavaScript',
         intro:
-            'The evaluation is a pure function of the two windows: same ticks in, same decision out. It returns a plan or a wait reason, never a position size of its own.',
+            'The complete pure aggregation: three window reads, the weighted Master Score, the gates and one returned verdict object. This is the shape `engine-scoring.ts` ships in the app.',
         code: {
-            language: 'pseudo-code',
-            text: `features = readWindows()            // 30 micro + 750 macro ticks
+            language: 'javascript',
+            text: `const WINDOWS = [
+    { layer: 'Micro', size: 25,  weight: 0.50 },
+    { layer: 'Mid',   size: 100, weight: 0.30 },
+    { layer: 'Macro', size: 500, weight: 0.20 },
+];
 
-if !features.complete:                 return WAIT("sample")
-if features.macroSpread > 7.0:         return SKIP("regime bias")
-if features.entropy < H_FLOOR:         return SKIP("structural cluster")
+const FAIR = {
+    over:    n => (9 - n) / 10,
+    under:   n => n / 10,
+    even:    () => 0.50,
+    odd:     () => 0.50,
+    matches: () => 0.10,
+    differs: () => 0.90,
+};
 
-candidates = []
-for d in 0..9:
-    delta = (features.micro[d] - 0.10) * 100
-    gamma = (features.micro[d] - features.macro[d]) * 100
-    z     = gamma / (100 * sqrt(features.macro[d] * (1 - features.macro[d]) / 30))
-    if abs(delta) >= 3.5 and abs(z) >= 1.5 and persists(d, features):
-        candidates.push({ d, delta, gamma, z })
+function wins(digit, side) {
+    if (side.family === 'over')    return digit > side.target;
+    if (side.family === 'under')   return digit < side.target;
+    if (side.family === 'even')    return digit % 2 === 0;
+    if (side.family === 'odd')     return digit % 2 === 1;
+    if (side.family === 'matches') return digit === side.target;
+    return digit !== side.target;                       // differs
+}
 
-if candidates.length == 0:             return WAIT("no dislocation")
-if crowded(candidates, 0.5):           return WAIT("ambiguous")
+function shares(slice) {
+    const counts = new Array(10).fill(0);
+    for (const d of slice) counts[d]++;
+    return counts.map(c => (slice.length ? (c / slice.length) * 100 : 0));
+}
 
-plan = pickStrategy(candidates, features)   // Over/Under, Even/Odd, Matches/Differs
-if plan == null:                       return WAIT("no contract edge")
-if !risk.allows(plan):                 return WAIT("risk guard")
-if ticksSinceSettle < cooldown(lastOutcome):
-                                       return WAIT("cooldown")
+function readWindow(digits, size, side) {
+    const slice = digits.slice(-size);
+    const hits = slice.filter(d => wins(d, side)).length;
+    const actual = slice.length ? hits / slice.length : 0;
+    const expected = FAIR[side.family](side.target);
+    return {
+        size,
+        sample: slice.length,
+        percentages: shares(slice),
+        actual,
+        expected,
+        deltaPp: (actual - expected) * 100,
+    };
+}
 
-return ENTER(plan)`,
+function entropy(percentages) {
+    return percentages.reduce((h, pct) => {
+        const p = pct / 100;
+        return p > 0 ? h - p * Math.log2(p) : h;
+    }, 0);
+}
+
+function evaluate(digits, side, previousMicroDelta, tickIndex, cooldownUntil) {
+    const windows = WINDOWS.map(w => ({ ...w, ...readWindow(digits, w.size, side) }));
+    const [micro, mid, macro] = windows;
+    const complete = windows.every(w => w.sample === w.size);
+
+    // Master Score = 0.50 micro + 0.30 mid + 0.20 macro
+    const master = windows.reduce((sum, w) => sum + w.deltaPp * w.weight, 0);
+    const aligned = windows.filter(w => w.deltaPp >= 1.0).length;
+
+    const spread = Math.max(...macro.percentages) - Math.min(...macro.percentages);
+    const regimeBroken = spread > 7.0 || entropy(macro.percentages) < 2.95;
+
+    const flipped = previousMicroDelta !== null &&
+        Math.sign(previousMicroDelta) !== Math.sign(micro.deltaPp) &&
+        Math.abs(micro.deltaPp - previousMicroDelta) >= 6.0;
+    const nextCooldown = flipped ? tickIndex + 25 : cooldownUntil;
+    const cooling = tickIndex < nextCooldown;
+
+    const confidence = 100 * Math.min(1,
+        0.65 * Math.min(Math.abs(master) / 12, 1) + 0.35 * aligned / 3);
+
+    let verdict = 'HOLD';
+    let reason = 'Windows conflict — confluence too weak to execute.';
+
+    if (!complete) {
+        reason = 'Warming up: macro baseline has ' + macro.sample + '/500 ticks.';
+    } else if (regimeBroken) {
+        reason = 'Regime break: the macro distribution is no longer digit-neutral.';
+    } else if (cooling) {
+        reason = 'Auto-cooldown after a micro-window flip.';
+    } else if (Math.abs(master) < 4.0) {
+        reason = 'Master Score below the +4.0 pp entry floor.';
+    } else if (aligned === 3) {
+        verdict = 'EXECUTE';
+        reason = 'All three windows agree.';
+    } else if (micro.deltaPp >= 4.0 && macro.deltaPp <= -1.0) {
+        verdict = 'FADE';
+        reason = 'Micro burst contradicts the macro baseline.';
+    }
+
+    return {
+        market: side.market,
+        strategy: side.label,
+        verdict,                              // EXECUTE | FADE | HOLD
+        confidence: Number(confidence.toFixed(1)),
+        masterScore: Number(master.toFixed(2)),
+        alignment: aligned,
+        reason,
+        headline: aligned === 3 && master >= 4.0
+            ? 'All 3 windows show strong momentum for ' + side.label + '.'
+            : aligned + ' of 3 windows aligned for ' + side.label + '.',
+        windows,                              // the evidence behind the verdict
+        cooldownUntil: nextCooldown,
+    };
+}`,
+        },
+    },
+    {
+        id: 'python',
+        kicker: '6. Python',
+        title: 'Aggregation logic — Python',
+        intro:
+            'The same engine for a Python writer or a bot backend. Same windows, same weights, same gates — only the returned payload differs.',
+        code: {
+            language: 'python',
+            text: `import math
+from dataclasses import dataclass, field
+
+WINDOWS = [
+    ("Micro", 25, 0.50),
+    ("Mid", 100, 0.30),
+    ("Macro", 500, 0.20),
+]
+
+FAIR = {
+    "over":    lambda n: (9 - n) / 10,
+    "under":   lambda n: n / 10,
+    "even":    lambda n: 0.50,
+    "odd":     lambda n: 0.50,
+    "matches": lambda n: 0.10,
+    "differs": lambda n: 0.90,
+}
+
+
+def wins(digit, family, target):
+    if family == "over":    return digit > target
+    if family == "under":   return digit < target
+    if family == "even":    return digit % 2 == 0
+    if family == "odd":     return digit % 2 == 1
+    if family == "matches": return digit == target
+    return digit != target                      # differs
+
+
+def shares(slice_):
+    counts = [0] * 10
+    for d in slice_:
+        counts[d] += 1
+    total = len(slice_) or 1
+    return [c / total * 100 for c in counts]
+
+
+def entropy(percentages):
+    h = 0.0
+    for pct in percentages:
+        p = pct / 100
+        if p > 0:
+            h -= p * math.log2(p)
+    return h
+
+
+def read_window(digits, size, family, target):
+    slice_ = digits[-size:]
+    hits = sum(1 for d in slice_ if wins(d, family, target))
+    actual = hits / len(slice_) if slice_ else 0.0
+    expected = FAIR[family](target)
+    return {
+        "size": size,
+        "sample": len(slice_),
+        "percentages": shares(slice_),
+        "actual": actual,
+        "expected": expected,
+        "delta_pp": (actual - expected) * 100,
+    }
+
+
+def evaluate(digits, market, label, family, target,
+             previous_micro_delta=None, tick_index=0, cooldown_until=0):
+    windows = [
+        {"layer": layer, "weight": weight,
+         **read_window(digits, size, family, target)}
+        for layer, size, weight in WINDOWS
+    ]
+    micro, mid, macro = windows
+    complete = all(w["sample"] == w["size"] for w in windows)
+
+    # Master Score = 0.50 micro + 0.30 mid + 0.20 macro
+    master = sum(w["delta_pp"] * w["weight"] for w in windows)
+    aligned = sum(1 for w in windows if w["delta_pp"] >= 1.0)
+
+    spread = max(macro["percentages"]) - min(macro["percentages"])
+    regime_broken = spread > 7.0 or entropy(macro["percentages"]) < 2.95
+
+    flipped = (
+        previous_micro_delta is not None
+        and math.copysign(1, previous_micro_delta) != math.copysign(1, micro["delta_pp"])
+        and abs(micro["delta_pp"] - previous_micro_delta) >= 6.0
+    )
+    next_cooldown = tick_index + 25 if flipped else cooldown_until
+    cooling = tick_index < next_cooldown
+
+    confidence = 100 * min(
+        1.0, 0.65 * min(abs(master) / 12, 1.0) + 0.35 * aligned / 3
+    )
+
+    verdict, reason = "HOLD", "Windows conflict."
+    if not complete:
+        reason = f"Warming up: {macro['sample']}/500 ticks."
+    elif regime_broken:
+        reason = "Regime break: macro distribution is not digit-neutral."
+    elif cooling:
+        reason = "Auto-cooldown after a micro-window flip."
+    elif abs(master) < 4.0:
+        reason = "Master Score below the +4.0 pp entry floor."
+    elif aligned == 3:
+        verdict, reason = "EXECUTE", "All three windows agree."
+    elif micro["delta_pp"] >= 4.0 and macro["delta_pp"] <= -1.0:
+        verdict, reason = "FADE", "Micro burst contradicts the macro baseline."
+
+    return {
+        "market": market,
+        "strategy": label,
+        "verdict": verdict,
+        "confidence": round(confidence, 1),
+        "master_score": round(master, 2),
+        "alignment": aligned,
+        "reason": reason,
+        "windows": windows,
+        "cooldown_until": next_cooldown,
+    }`,
         },
     },
     {
@@ -314,32 +506,33 @@ return ENTER(plan)`,
         kicker: '7. Blocks',
         title: 'Bot Builder equivalents',
         intro:
-            'Every rule above already has a block in the Bot Builder palette, so the specification can be built without new code. The last column is the generated engine call.',
+            'The same rules are readable from the Bot Builder without new code: three digit-frequency reads per layer, the weighted compare, and the existing risk and session blocks.',
         tables: [
             {
                 title: 'Rule to block mapping',
                 columns: ['Rule', 'Palette path', 'Block', 'Generated call'],
                 minWidth: 900,
                 rows: [
-                    ['Micro share (30 ticks)', 'Digits', 'Digit frequency', 'Bot.getDigitFrequency(d, 30)'],
-                    ['Macro share (750 ticks)', 'Digits', 'Digit frequency', 'Bot.getDigitFrequency(d, 750)'],
-                    ['Cold losing digits at or below a ceiling', 'Digits', 'Two digits at or below a share', 'Bot.areDigitSharesAtOrBelow([0,1], 10.2, 1000)'],
+                    ['Micro share (25 ticks)', 'Digits', 'Digit frequency', 'Bot.getDigitFrequency(d, 25)'],
+                    ['Mid share (100 ticks)', 'Digits', 'Digit frequency', 'Bot.getDigitFrequency(d, 100)'],
+                    ['Macro share (500 ticks)', 'Digits', 'Digit frequency', 'Bot.getDigitFrequency(d, 500)'],
+                    ['Losing digits stay cold', 'Digits', 'Two digits at or below a share', 'Bot.areDigitSharesAtOrBelow([0,1], 10.2, 500)'],
+                    ['Hot / cold concentration', 'Digits', 'Hot / cold digit', 'Bot.getHotColdDigit("hottest", 500)'],
                     ['Streak / persistence', 'Digits', 'Digit streak', 'Bot.getDigitStreak()'],
                     ['High or low run', 'Digits', 'High run', "Bot.areLastDigitsHigh(7, 2, 'at_or_above')"],
+                    ['Regime entropy', 'Observer', 'Entropy', 'Bot.observerValue(block_id, 0)'],
                     ['Data freshness', 'Observer control', 'Check market data freshness', 'Bot.observerCondition(block_id)'],
                     ['Minimum sample', 'Entry & monitoring', 'Require minimum sample size', 'Bot.observerCondition(block_id)'],
-                    ['After-loss cooldown', 'Entry & monitoring', 'Cool down after a loss', 'Bot.observerCondition(block_id)'],
-                    ['Market ranking', 'Market intelligence', 'Rank markets', 'Bot.rankMarkets()'],
+                    ['Cooldown after a flip', 'Entry & monitoring', 'Cool down after a loss', 'Bot.observerCondition(block_id)'],
                     ['Risk guard', 'Risk management', 'Risk guard allows trade', 'Bot.riskCanTrade()'],
-                    ['Trade cap', 'Bot control', 'Trade limit reached', 'Bot.sessionTradeLimitReached(250)'],
-                    ['Entry check log', 'Bot control', 'Entry check', 'Bot.entryCheckFailed(reason)'],
+                    ['Trade cap', 'Bot control', 'Trade limit reached', 'Bot.sessionTradeLimitReached(10)'],
                     ['Session stop', 'Bot control', 'Stop the bot', 'Bot.sessionStop(reason)'],
                 ],
             },
         ],
         bullets: [
-            'Observation first: load a bot, run it on Demo with Observation mode on, and confirm the journal shows the same reason this page lists for a wait.',
-            'The Free Bots templates already encode the Over 1 / Under 8 share gate at 10.2% and below; this page generalises the same gate to the two-window framework.',
+            'Observation first: run the bot on Demo with Observation mode on and confirm the journal explains every wait the page shows.',
+            'The Free Bots templates already encode the 10.2% cold-digit pairs; this engine generalises them to a weighted three-window score.',
         ],
     },
 ];

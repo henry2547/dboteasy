@@ -1,19 +1,37 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useDigitsLabContext } from '../digits/digits-lab-context';
+import ConsolidatedSignal from './consolidated-signal';
+import { STRATEGY_LABELS, type StrategyId } from './engine-scoring';
 import {
     SPEC_METRICS,
     SPEC_SECTIONS,
     type SpecSectionData,
     type SpecTableData,
 } from './engine-spec-content';
+import { useConfluenceEngine } from './use-confluence-engine';
 import './engine-spec-page.scss';
 
 /**
- * Engine Spec tab - the written multi-window design: 30-tick micro window,
- * 750-tick macro baseline, confluence gates, confirmation triggers, timing and
- * risk controls. It is documentation only: the page never evaluates a market,
- * loads a bot or sends a trade.
+ * Engine tab — the weighted multi-window confluence engine.
+ *
+ * The top block is live: it reads the shared Digits feed, scores the micro (25),
+ * mid (100) and macro (500) windows against their fair baselines and prints ONE
+ * consolidated verdict. Everything below it is the written specification of the
+ * same rules. Read-only analysis: the page never sends a trade.
  */
 export default function EngineSpecPage() {
+    const lab = useDigitsLabContext();
+    const [strategyId, setStrategyId] = useState<StrategyId>('UNDER_7');
+    const engine = useConfluenceEngine(lab.ticks, strategyId);
+
+    const markets = useMemo(
+        () => [...lab.markets].sort((a, b) => a.displayName.localeCompare(b.displayName)),
+        [lab.markets]
+    );
+
+    const marketName = lab.selectedMarket?.displayName ?? 'No market selected';
+    const connected = lab.connection.status === 'connected';
+
     const jumpTo = useCallback((id: string) => {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, []);
@@ -22,14 +40,60 @@ export default function EngineSpecPage() {
         <div className='espec'>
             <header className='espec-hero'>
                 <div>
-                    <span className='espec-hero__kicker'>Design reference</span>
-                    <h2 className='espec-hero__title'>Multi-Window Digit Engine</h2>
+                    <span className='espec-hero__kicker'>Live engine</span>
+                    <h2 className='espec-hero__title'>Multi-Window Confluence Engine</h2>
                     <p className='espec-hero__subtitle'>
-                        30 / 750-tick confluence framework for Over / Under, Even / Odd and Matches / Differs on
-                        Deriv volatility indices. Rules only - this tab never trades.
+                        25 / 100 / 500-tick weighted confluence for Over / Under, Even / Odd and Matches / Differs on
+                        Deriv volatility indices. Three windows, one Master Score, one verdict.
                     </p>
                 </div>
             </header>
+
+            <section className='espec-controls'>
+                <label className='espec-control'>
+                    <span className='espec-control__label'>Volatility index</span>
+                    <select
+                        className='espec-control__select'
+                        value={lab.selectedMarket?.apiSymbol ?? ''}
+                        onChange={event => {
+                            const market = markets.find(m => m.apiSymbol === event.target.value);
+                            if (market) lab.selectMarket(market);
+                        }}
+                        disabled={!connected || markets.length === 0}
+                    >
+                        {markets.length === 0 && <option value=''>Loading markets…</option>}
+                        {markets.map(market => (
+                            <option key={market.apiSymbol} value={market.apiSymbol}>
+                                {market.displayName}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <label className='espec-control'>
+                    <span className='espec-control__label'>Strategy</span>
+                    <select
+                        className='espec-control__select'
+                        value={strategyId}
+                        onChange={event => setStrategyId(event.target.value as StrategyId)}
+                    >
+                        {(Object.keys(STRATEGY_LABELS) as StrategyId[]).map(id => (
+                            <option key={id} value={id}>
+                                {STRATEGY_LABELS[id]}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            </section>
+
+            <ConsolidatedSignal
+                result={engine.result}
+                marketName={marketName}
+                sample={engine.sample}
+                connected={connected}
+                isLoading={lab.isLoadingHistory}
+                errorMessage={lab.errorMessage}
+            />
 
             <div className='espec-metrics'>
                 {SPEC_METRICS.map(metric => (

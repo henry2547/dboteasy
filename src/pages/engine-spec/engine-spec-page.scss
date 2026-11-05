@@ -351,3 +351,305 @@
     line-height: 1.55;
     color: var(--text-less-prominent);
 }
+
+/* ---------------------------------------------------------------- controls */
+
+.espec-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+
+    @media (min-width: 768px) {
+        grid-template-columns: 1.6fr 1fr;
+    }
+}
+
+.espec-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    &__label {
+        font-size: 1.05rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-less-prominent);
+    }
+
+    &__select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.8rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+        color: var(--text-general);
+        font-size: 1.2rem;
+        font-weight: 600;
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+}
+
+/* --------------------------------------------------- consolidated verdict */
+
+.espec-sig {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.4rem;
+    border-radius: 12px;
+    border: 1px solid var(--general-main-3);
+    background: var(--general-main-2, var(--general-section-1));
+
+    @media (min-width: 768px) {
+        padding: 1.8rem;
+    }
+
+    &__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+    }
+
+    &__kicker {
+        font-size: 1.05rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-less-prominent);
+    }
+
+    &__live {
+        padding: 0.2rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid var(--general-main-3);
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text-less-prominent);
+
+        &--on {
+            color: var(--brand-success);
+            border-color: var(--brand-success);
+        }
+    }
+
+    &__market {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    &__divider {
+        color: var(--text-less-prominent);
+    }
+
+    &__strategy {
+        color: var(--text-less-prominent);
+        font-weight: 600;
+    }
+
+    &__verdict {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 1.1rem 1.2rem;
+        border-radius: 10px;
+        border: 1px solid var(--general-main-3);
+        border-left: 4px solid var(--text-less-prominent);
+        background: var(--general-section-1);
+
+        &--execute {
+            border-left-color: var(--brand-success);
+        }
+
+        &--fade {
+            border-left-color: var(--brand-warning);
+        }
+    }
+
+    &__verdict-label {
+        font-size: 1.8rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        line-height: 1.15;
+
+        .espec-sig__verdict--execute & {
+            color: var(--brand-success);
+        }
+
+        .espec-sig__verdict--fade & {
+            color: var(--brand-warning);
+        }
+    }
+
+    &__verdict-reason {
+        font-size: 1.15rem;
+        line-height: 1.5;
+        color: var(--text-less-prominent);
+    }
+
+    &__confidence {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    &__confidence-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.8rem;
+    }
+
+    &__confidence-label {
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__confidence-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    &__bar {
+        height: 0.8rem;
+        border-radius: 999px;
+        background: var(--general-main-3);
+        overflow: hidden;
+    }
+
+    &__bar-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--text-less-prominent);
+        transition: width 0.25s ease;
+
+        &--execute {
+            background: var(--brand-success);
+        }
+
+        &--fade {
+            background: var(--brand-warning);
+        }
+    }
+
+    &__confidence-meta {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.3rem 0.8rem;
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+
+        strong.is-up,
+        .is-up {
+            color: var(--brand-success);
+        }
+
+        strong.is-down,
+        .is-down {
+            color: var(--status-danger);
+        }
+    }
+
+    &__headline {
+        margin: 0;
+        padding: 0.8rem 1rem;
+        border-radius: 8px;
+        border: 1px dashed var(--general-main-3);
+        font-size: 1.2rem;
+        font-weight: 600;
+        line-height: 1.5;
+    }
+
+    &__windows {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    &__window {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.3rem 0.8rem;
+        padding: 0.7rem 0.9rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-main-3);
+        background: var(--general-section-1);
+    }
+
+    &__window-name {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        min-width: 8rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+
+        em {
+            font-style: normal;
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text-less-prominent);
+        }
+    }
+
+    &__window-nums {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.2rem 0.8rem;
+        font-size: 1.15rem;
+    }
+
+    &__window-share {
+        font-weight: 700;
+    }
+
+    &__window-base,
+    &__window-weight {
+        color: var(--text-less-prominent);
+    }
+
+    &__window-delta {
+        font-weight: 700;
+
+        &.is-up {
+            color: var(--brand-success);
+        }
+
+        &.is-down {
+            color: var(--status-danger);
+        }
+    }
+
+    &__notice {
+        margin: 0;
+        padding: 0.7rem 0.9rem;
+        border-radius: 8px;
+        background: var(--general-section-1);
+        border: 1px solid var(--general-main-3);
+        font-size: 1.1rem;
+        line-height: 1.5;
+        color: var(--text-less-prominent);
+
+        &--warn {
+            border-color: var(--brand-warning);
+            color: var(--text-general);
+        }
+    }
+}
