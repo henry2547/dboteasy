@@ -357,6 +357,16 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   a failing digit filter and a failing observer filter both show up. Every template therefore declares
   the `freebot:notice` variable, and `over1_under6_recovery` carries one `ELSE` per leg (Over 1 and the
   Under 6 recovery) so a waiting leg is always visible in the journal.
+- **Confirmation notices in the journal.** While the Free Bots tab is open,
+  `use-confirmation-journal.ts` reads the selected market's live digits (last 1000, at least 30 ticks)
+  and, when a bot's own entry conditions are met, writes one line per bot through
+  `confirmation-notices.ts`: bots 8 and 9 on their cold losing pair (0/1 or 8/9 at or below 10.2%, the
+  red bar is irrelevant), every other bot only when its share gate and its entry digits/run both hold.
+  The line reads `Confirmation needed — Bot N (name) on <market>: … Load the bot and press Run to
+  confirm.` and carries `journal__text--confirmation` (amber `--status-warning`, bold) so it stands out
+  from ordinary journal text. A bot is re-announced only after its conditions cleared and 60 s passed,
+  so a flickering condition cannot flood the journal. Covered by
+  `__tests__/confirmation-notices.test.ts`.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
   card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.

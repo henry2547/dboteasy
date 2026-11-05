@@ -2,11 +2,13 @@ import { useCallback, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useApiBase } from '@/hooks/useApiBase';
 import { useDigitsLabContext } from '@/features/digits/digits-lab-context';
+import { digitSequence } from '@/features/digits/statistics';
 import MarketSelector from '@/features/digits/components/market-selector';
 import BotStatusBanner from './components/bot-status-banner';
 import FreeBotCard from './components/free-bot-card';
 import { supportsDigitContracts } from './market-support';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from './templates';
+import { useConfirmationJournal } from './use-confirmation-journal';
 import { useFreeBotLoader } from './use-free-bot-loader';
 import './free-bots.scss';
 
@@ -28,6 +30,15 @@ const FreeBotsPage = observer(() => {
     const support = useMemo(() => supportsDigitContracts(selectedMarket), [selectedMarket]);
     const feedDown = lab.connection.status !== 'connected';
     const accountLabel = activeLoginid ? (activeLoginid.startsWith('VR') ? 'Demo' : 'Real') : 'Not signed in';
+
+    // Every bot that meets its entry conditions is announced in the journal — in its own colour —
+    // so the user knows a setup is live and that starting it is the confirmation.
+    const digits = useMemo(() => digitSequence(lab.ticks), [lab.ticks]);
+    useConfirmationJournal(
+        digits,
+        selectedMarket?.displayName ?? null,
+        lab.connection.status === 'connected'
+    );
 
     const { loadBot } = loader;
     const handleLoad = useCallback(
