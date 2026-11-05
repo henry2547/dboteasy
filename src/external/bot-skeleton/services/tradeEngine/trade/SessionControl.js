@@ -7,7 +7,9 @@
  * run panel's Stop button emits, so a program that decides to stop is indistinguishable from a user
  * clicking Stop. Nothing here places a trade or sizes a stake on its own.
  */
+import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
+import { showSweetAlert } from '../utils/sweet-alert';
 import * as constants from './state/constants';
 import {
     createSessionState,
@@ -129,6 +131,16 @@ export default Engine =>
             this.session_control = recordFailedEntryCheck(this.getSessionControl());
             if (!entryCheckLimitReached(this.getSessionControl())) return;
             const text = normalizeStopReason(reason);
+            // The run panel's own "Sweet alert" popup, so the stop is announced to the user the same
+            // way the block announces a take profit or a stop loss — then the session stops once.
+            showSweetAlert({
+                icon: 'warning',
+                title: localize('Bot stopped'),
+                message: localize(
+                    'Entry conditions are no longer valid: {{ reason }}. The bot stopped after {{ limit }} failed entry checks in a row.',
+                    { reason: text, limit: ENTRY_CHECK_LIMIT }
+                ),
+            });
             this.stopBotWithReason(`Entry invalid — ${text} (${ENTRY_CHECK_LIMIT} failed checks)`);
         }
 

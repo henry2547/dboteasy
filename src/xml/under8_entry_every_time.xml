@@ -193,7 +193,7 @@
                             <field name="DIGIT">8</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-freq-8-sample">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -213,7 +213,7 @@
                             <field name="DIGIT">9</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-freq-9-sample">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -238,7 +238,7 @@
                             <field name="DIGIT">8</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-digit-bar-sample">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>
@@ -248,7 +248,7 @@
                             <field name="DIGIT">9</field>
                             <value name="SAMPLE">
                               <shadow type="math_number" id="freebot-under8-digit-bar-sample-nine">
-                                <field name="NUM">100</field>
+                                <field name="NUM">1000</field>
                               </shadow>
                             </value>
                           </block>

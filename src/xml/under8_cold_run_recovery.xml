@@ -189,7 +189,7 @@
           <block type="digits_cold_run_recovery" id="freebot-u8cr-cold-run-recovery">
             <field name="PRIMARY">under_8</field>
             <field name="PERCENT">10.2</field>
-            <field name="SAMPLE">100</field>
+            <field name="SAMPLE">1000</field>
             <field name="PARITY">both</field>
             <field name="REVERSAL">2</field>
           </block>

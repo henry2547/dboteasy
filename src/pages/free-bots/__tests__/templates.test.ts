@@ -140,6 +140,33 @@ describe('Free Bots templates', () => {
         }
     });
 
+    it('analyses every entry over the last 1000 ticks', () => {
+        let windows = 0;
+
+        FREE_BOT_TEMPLATES.forEach(template => {
+            const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
+            const read = (selector: string) =>
+                Array.from(doc.querySelectorAll(selector), node => node.textContent ?? '');
+
+            const samples = [
+                ...read('value[name="SAMPLE"] > shadow > field[name="NUM"]'),
+                ...read('block[type="digits_cold_run_recovery"] > field[name="SAMPLE"]'),
+                ...read('block[type="eo_configure"] > field[name="TICKS"]'),
+                ...read('block[type="eo_monitor_ticks"] > value[name="TICKS"] > shadow > field[name="NUM"]'),
+                ...read('block[type="switch_best_parity_market"] > value[name="TICKS"] > shadow > field[name="NUM"]'),
+            ];
+
+            windows += samples.length;
+            samples.forEach(sample =>
+                expect({ template: template.id, sample }).toEqual({ template: template.id, sample: '1000' })
+            );
+        });
+
+        // Eight of the nine assets carry an explicit window; the parity bot reads parity and
+        // freshness instead of a frequency window.
+        expect(windows).toBe(22);
+    });
+
     it.each(FREE_BOT_TEMPLATES)('$name states its purchase and restart conditions', template => {
         expect(template.buyCondition.length).toBeGreaterThan(20);
         expect(template.restartCondition.length).toBeGreaterThan(20);
@@ -182,7 +209,7 @@ describe('Free Bots templates', () => {
         // The confirmed pair, its share and the recovery are all fields of the one block.
         expect(block!.querySelector('field[name="PRIMARY"]')?.textContent).toBe(primary);
         expect(block!.querySelector('field[name="PERCENT"]')?.textContent).toBe('10.2');
-        expect(block!.querySelector('field[name="SAMPLE"]')?.textContent).toBe('100');
+        expect(block!.querySelector('field[name="SAMPLE"]')?.textContent).toBe('1000');
         expect(block!.querySelector('field[name="PARITY"]')?.textContent).toBe('both');
         expect(block!.querySelector('field[name="REVERSAL"]')?.textContent).toBe('2');
         // A two-leg template carries no barrier in its trade options: both legs read theirs from

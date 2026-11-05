@@ -93,14 +93,14 @@
                           <block type="variables_set" id="freebot-eo-set-take-profit"><field name="VAR" id="freebot-take-profit" variabletype="">freebot:take-profit</field><value name="VALUE"><block type="math_number" id="freebot-eo-num-take-profit"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-eo-set-stop-loss"><field name="VAR" id="freebot-stop-loss" variabletype="">freebot:stop-loss</field><value name="VALUE"><block type="math_number" id="freebot-eo-num-stop-loss"><field name="NUM">-20</field></block></value><next><block type="variables_set" id="freebot-eo-set-reset-stake"><field name="VAR" id="freebot-reset-stake" variabletype="">freebot:reset-stake</field><value name="VALUE"><block type="math_number" id="freebot-eo-num-reset-stake"><field name="NUM">10</field></block></value><next><block type="variables_set" id="freebot-eo-set-multiplier"><field name="VAR" id="freebot-multiplier" variabletype="">freebot:multiplier</field><value name="VALUE"><block type="math_number" id="freebot-eo-num-multiplier"><field name="NUM">1.5</field></block></value><next><block type="variables_set" id="freebot-eo-set-market-scanned"><field name="VAR" id="freebot-market-scanned" variabletype="">freebot:market-scanned</field><value name="VALUE"><block type="logic_boolean" id="freebot-eo-market-scanned-value"><field name="BOOL">FALSE</field></block></value><next><block type="eo_configure" id="freebot-eo-configure">
                             <field name="RULE">reversal</field>
                             <field name="RUN">2</field>
-                            <field name="TICKS">20</field>
+                            <field name="TICKS">1000</field>
                             <field name="PERCENT">65</field>
                             <field name="DIRECTION">both</field>
                             <next>
                               <block type="eo_monitor_ticks" id="freebot-eo-monitor">
                                 <value name="TICKS">
                                   <shadow type="math_number" id="freebot-eo-monitor-window">
-                                    <field name="NUM">20</field>
+                                    <field name="NUM">1000</field>
                                   </shadow>
                                 </value>
                                 <next>
@@ -195,7 +195,7 @@
               <block type="switch_best_parity_market" id="freebot-eo-market-pick-scan">
                 <value name="TICKS">
                   <shadow type="math_number" id="freebot-eo-market-pick-ticks">
-                    <field name="NUM">100</field>
+                    <field name="NUM">1000</field>
                   </shadow>
                 </value>
               </block>

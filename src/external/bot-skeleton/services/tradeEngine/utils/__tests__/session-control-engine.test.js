@@ -5,6 +5,9 @@
  */
 import { observer as globalObserver } from '../../../../utils/observer';
 import SessionControl from '../../trade/SessionControl';
+import { showSweetAlert } from '../../utils/sweet-alert';
+
+jest.mock('../../utils/sweet-alert', () => ({ showSweetAlert: jest.fn() }));
 
 const createStore = () => {
     let listeners = [];
@@ -92,6 +95,32 @@ describe('session control runtime', () => {
 
         expect(stops).toBe(1);
         expect(engine.sessionSnapshot().stopped_reason).toBe('Target reached');
+    });
+
+    it('announces the stop with the sweet alert once the third check in a row fails', () => {
+        const engine = createEngine();
+        let stops = 0;
+        const onStop = () => {
+            stops += 1;
+        };
+        globalObserver.register('bot.stop_button_click', onStop);
+        showSweetAlert.mockClear();
+
+        engine.entryCheckFailed('digit 8 is no longer cold');
+        engine.entryCheckFailed('digit 8 is no longer cold');
+        expect(showSweetAlert).not.toHaveBeenCalled();
+        expect(stops).toBe(0);
+
+        engine.entryCheckFailed('digit 8 is no longer cold');
+        globalObserver.unregister('bot.stop_button_click', onStop);
+
+        expect(stops).toBe(1);
+        expect(showSweetAlert).toHaveBeenCalledTimes(1);
+        expect(showSweetAlert).toHaveBeenCalledWith(expect.objectContaining({ icon: 'warning', title: 'Bot stopped' }));
+        // The popup carries the stop copy; the reason itself is pinned on the session snapshot below
+        // (jest replaces localize with the un-interpolated template, so only the text is asserted).
+        expect(showSweetAlert.mock.calls[0][0].message).toContain('Entry conditions are no longer valid');
+        expect(engine.sessionSnapshot().stopped_reason).toContain('3 failed checks');
     });
 
     it('waits for the settlement the engine really recorded', async () => {
