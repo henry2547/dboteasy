@@ -4,9 +4,12 @@
  */
 import {
     createSessionState,
+    ENTRY_CHECK_LIMIT,
+    entryCheckLimitReached,
     journalLevel,
     lastTradeResult,
     normalizeStopReason,
+    recordFailedEntryCheck,
     recordSessionEntry,
     recordSessionSettlement,
     sessionSummary,
@@ -61,6 +64,21 @@ describe('session control rules', () => {
         expect(tradeLimitReached(state, 0)).toBe(false);
         expect(tradeLimitReached(state, 2)).toBe(true);
         expect(tradeLimitReached(state, 3)).toBe(false);
+    });
+
+    it('counts failed entry checks and stops on the third one in a row', () => {
+        let state = createSessionState();
+
+        expect(entryCheckLimitReached(state)).toBe(false);
+        state = recordFailedEntryCheck(state);
+        state = recordFailedEntryCheck(state);
+        expect(entryCheckLimitReached(state)).toBe(false);
+        state = recordFailedEntryCheck(state);
+        expect(entryCheckLimitReached(state)).toBe(true);
+        expect(ENTRY_CHECK_LIMIT).toBe(3);
+
+        // A real entry restarts the run, so only consecutive failures count.
+        expect(entryCheckLimitReached(recordSessionEntry(state))).toBe(false);
     });
 
     it('always has a readable stop reason and a known journal level', () => {

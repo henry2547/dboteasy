@@ -71,6 +71,7 @@ describe('parity recovery program after a settled loss', () => {
         eoParityReversal: jest.fn(() => reversal),
         getLastDigit: jest.fn(() => digit),
         riskCanTrade: jest.fn(() => true),
+        entryCheckFailed: jest.fn(),
         purchase: jest.fn(),
     });
 
@@ -93,6 +94,8 @@ describe('parity recovery program after a settled loss', () => {
         const bot = createBot({ reversal: 'NO SIGNAL' });
         run(fields, bot);
         expect(bot.purchase).not.toHaveBeenCalled();
+        // A mixed run is a failed entry check, so the run ends after 3 of them in a row.
+        expect(bot.entryCheckFailed).toHaveBeenCalled();
     });
 
     it('never trades the recovery leg while a contract is open', () => {

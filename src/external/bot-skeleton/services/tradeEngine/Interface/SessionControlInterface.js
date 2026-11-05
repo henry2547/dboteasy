@@ -14,6 +14,7 @@ const getSessionControlInterface = tradeEngine => ({
     sessionHasOpenContract: () => tradeEngine.sessionHasOpenContract(),
     sessionTradeLimitReached: limit => tradeEngine.sessionTradeLimitReached(limit),
     sessionStop: reason => tradeEngine.stopBotWithReason(reason),
+    entryCheckFailed: reason => tradeEngine.entryCheckFailed(reason),
     sessionJournal: (message, level) => tradeEngine.journalNote(message, level),
     sessionReport: () => tradeEngine.sessionReport(),
 });

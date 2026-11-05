@@ -435,8 +435,7 @@
                 </statement>
               </block>
             </statement>
-            <statement name="ELSE">
-              <block type="text_join" id="freebot-o1u6-entry-wait-notice">
+            <statement name="ELSE"><block type="entry_check" id="freebot-o1u6-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-o1u6-entry-entry-check-reason"><field name="TEXT">Over 1: last digit is not 5 or 6</field></shadow></value><next><block type="text_join" id="freebot-o1u6-entry-wait-notice">
                 <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
                 <statement name="STACK">
                   <block type="text_statement" id="freebot-o1u6-entry-wait-notice-label">
@@ -471,8 +470,7 @@
                     </value>
                   </block>
                 </next>
-              </block>
-            </statement>
+              </block></next></block></statement>
           </block>
         </statement>
         <value name="IF1">
@@ -507,8 +505,7 @@
                 <field name="PURCHASE_LIST">DIGITUNDER</field>
               </block>
             </statement>
-            <statement name="ELSE">
-              <block type="text_join" id="freebot-o1u6-rec-notice">
+            <statement name="ELSE"><block type="entry_check" id="freebot-o1u6-rec-ready-entry-check"><value name="REASON"><shadow type="text" id="freebot-o1u6-rec-ready-entry-check-reason"><field name="TEXT">Under 6 recovery: the last 3 digits are not all above 6</field></shadow></value><next><block type="text_join" id="freebot-o1u6-rec-notice">
                 <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
                 <statement name="STACK">
                   <block type="text_statement" id="freebot-o1u6-rec-notice-label">
@@ -544,14 +541,12 @@
                     </value>
                   </block>
                 </next>
-              </block>
-            </statement>
+              </block></next></block></statement>
           </block>
         </statement>
       </block>
             </statement>
-            <statement name="ELSE">
-              <block type="notify" id="freebot-o1u6-observer-wait-notify">
+            <statement name="ELSE"><block type="entry_check" id="freebot-o1u6-observer-gate-entry-check"><value name="REASON"><shadow type="text" id="freebot-o1u6-observer-gate-entry-check-reason"><field name="TEXT">Over 1: the observer conditions are not met (freshness, parity or sample)</field></shadow></value><next><block type="notify" id="freebot-o1u6-observer-wait-notify">
                 <field name="NOTIFICATION_TYPE">info</field>
                 <field name="NOTIFICATION_SOUND">silent</field>
                 <value name="MESSAGE">
@@ -559,8 +554,7 @@
                     <field name="TEXT">Waiting · observer gate</field>
                   </shadow>
                 </value>
-              </block>
-            </statement>
+              </block></next></block></statement>
           </block>
         </statement>
         <statement name="ELSE">

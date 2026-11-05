@@ -11,9 +11,12 @@ import { observer as globalObserver } from '../../../utils/observer';
 import * as constants from './state/constants';
 import {
     createSessionState,
+    ENTRY_CHECK_LIMIT,
+    entryCheckLimitReached,
     journalLevel,
     lastTradeResult,
     normalizeStopReason,
+    recordFailedEntryCheck,
     recordSessionEntry,
     recordSessionSettlement,
     sessionSummary,
@@ -114,6 +117,19 @@ export default Engine =>
             this.session_control = { ...this.getSessionControl(), stopped_reason: text };
             notify(`Bot control: stopping — ${text}`, 'warn');
             globalObserver.emit('bot.stop_button_click');
+        }
+
+        /**
+         * One entry check came back invalid. The bot stops itself on the third consecutive failure,
+         * with this reason in the run log, so a market that no longer meets the entry conditions
+         * ends the run instead of leaving the bot waiting forever. A real entry restarts the count.
+         */
+        entryCheckFailed(reason) {
+            if (this.session_stop_requested) return;
+            this.session_control = recordFailedEntryCheck(this.getSessionControl());
+            if (!entryCheckLimitReached(this.getSessionControl())) return;
+            const text = normalizeStopReason(reason);
+            this.stopBotWithReason(`Entry invalid — ${text} (${ENTRY_CHECK_LIMIT} failed checks)`);
         }
 
         /** Writes one line into the run journal at the requested level. */

@@ -241,8 +241,7 @@
                 <field name="RUN">2</field>
               </block>
                 </statement>
-                <statement name="ELSE">
-                  <block type="notify" id="freebot-pr-observer-wait-notify">
+                <statement name="ELSE"><block type="entry_check" id="freebot-pr-observer-gate-entry-check"><value name="REASON"><shadow type="text" id="freebot-pr-observer-gate-entry-check-reason"><field name="TEXT">Over 1: the observer conditions are not met (parity, freshness or sample)</field></shadow></value><next><block type="notify" id="freebot-pr-observer-wait-notify">
                     <field name="NOTIFICATION_TYPE">info</field>
                     <field name="NOTIFICATION_SOUND">silent</field>
                     <value name="MESSAGE">
@@ -250,8 +249,7 @@
                         <field name="TEXT">Waiting · observer gate</field>
                       </shadow>
                     </value>
-                  </block>
-                </statement>
+                  </block></next></block></statement>
               </block>
             </statement>
             <statement name="ELSE">

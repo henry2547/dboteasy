@@ -183,8 +183,7 @@
                 <field name="PURCHASE_LIST">DIGITOVER</field>
               </block>
   </statement>
-            <statement name="ELSE">
-              <block type="text_join" id="freebot-over1-observer-entry-wait-notice">
+            <statement name="ELSE"><block type="entry_check" id="freebot-over1-observer-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-observer-entry-entry-check-reason"><field name="TEXT">Over 1: the observer conditions are not met (frequency, parity, freshness or sample)</field></shadow></value><next><block type="text_join" id="freebot-over1-observer-entry-wait-notice">
                 <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
                 <statement name="STACK">
                   <block type="text_statement" id="freebot-over1-observer-entry-wait-notice-label">
@@ -219,12 +218,10 @@
                     </value>
                   </block>
                 </next>
-              </block>
-            </statement>
+              </block></next></block></statement>
 </block>
         </statement>
-        <statement name="ELSE">
-          <block type="text_join" id="freebot-over1-entry-wait-notice">
+        <statement name="ELSE"><block type="entry_check" id="freebot-over1-entry-entry-check"><value name="REASON"><shadow type="text" id="freebot-over1-entry-entry-check-reason"><field name="TEXT">Over 1: last digit is not 2, 5 or 6</field></shadow></value><next><block type="text_join" id="freebot-over1-entry-wait-notice">
             <field name="VARIABLE" id="freebot-notice" variabletype="">freebot:notice</field>
             <statement name="STACK">
               <block type="text_statement" id="freebot-over1-entry-wait-notice-label">
@@ -259,8 +256,7 @@
                 </value>
               </block>
             </next>
-          </block>
-        </statement>
+          </block></next></block></statement>
       </block>
     </statement>
   </block>
