@@ -25,6 +25,20 @@ export function stakeFor(
     return roundMoney(Math.min(raw, config.maxStake));
 }
 
+/**
+ * The loss counts the staking policy reads.
+ *
+ * Both legs share ONE progression: the losses counted here are the session's
+ * consecutive losses, which include a settled recovery loss. With separate
+ * counters the first recovery trade after a primary loss always bought at the
+ * base stake (its own counter was 0), so the multiplier looked broken on
+ * exactly the trade that is supposed to carry it.
+ */
+export function progressionLosses(session: SessionMetrics): { primaryLosses: number; recoveryLosses: number } {
+    const losses = Math.max(0, session.consecutiveLosses, session.recoveryConsecutiveLosses);
+    return { primaryLosses: losses, recoveryLosses: losses };
+}
+
 export function stakePreview(
     config: EngineConfig,
     counts: { primaryLosses: number; recoveryLosses: number },

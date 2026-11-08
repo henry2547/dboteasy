@@ -1,8 +1,10 @@
 import { DEFAULT_CONFIG } from '../config';
 import {
+    abortRecoveryAttempt,
     activateRecovery,
     createRecoveryRuntime,
     evaluateRecoveryTick,
+    markRecoveryPurchasePending,
     recoveryFrequency,
     settleRecovery,
 } from '../recovery';
@@ -127,6 +129,23 @@ describe('recovery frequency filter', () => {
         expect(signal?.pattern).toBe('even_even');
         expect(signal?.frequency.eligible).toBe(false);
         expect(signal?.frequency.reason).toBeTruthy();
+    });
+});
+
+describe('a recovery entry that never reaches a purchase', () => {
+    it('records why it did not buy and keeps the leg monitoring', () => {
+        const pending = markRecoveryPurchasePending(activated());
+        expect(pending.state).toBe('RECOVERY_PURCHASE_PENDING');
+
+        // A blocked purchase (open contract, stake cap, disconnect) has to clear the
+        // pending state at once, with its reason visible in the recovery monitor.
+        const released = abortRecoveryAttempt(pending, 'Open-contract limit reached (1/1).');
+        expect(released.state).toBe('WAITING_FOR_EVEN_ODD_PATTERN');
+        expect(released.active).toBe(true);
+        expect(released.lastReason).toBe('Open-contract limit reached (1/1).');
+        expect(released.previousDigit).toBeNull();
+        // The next two parity digits can still enter.
+        expect(feed(released, [2, 4]).signal?.direction).toBe('ODD');
     });
 });
 

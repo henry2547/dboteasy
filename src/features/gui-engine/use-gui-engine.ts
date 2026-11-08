@@ -41,11 +41,14 @@ import {
     createPrimaryRuntime,
     evaluatePrimaryTick,
     frequencyPermission,
+    pausePrimaryForRecovery,
     resumePrimaryRuntime,
     setPrimaryState,
     stopPrimaryRuntime,
 } from './primary-strategy';
+import { subscribeGuiEngineRequests, consumeGuiEngineRequest, peekGuiEngineRequest } from './open-request';
 import {
+    abortRecoveryAttempt,
     activateRecovery,
     createRecoveryRuntime,
     evaluateRecoveryTick,
@@ -54,7 +57,7 @@ import {
     settleRecovery,
     stopRecoveryRuntime,
 } from './recovery';
-import { emptySession, riskVerdict, roundMoney, stakeFor, stakePreview, winRate } from './risk';
+import { emptySession, progressionLosses, riskVerdict, roundMoney, stakeFor, stakePreview, winRate } from './risk';
 import type {
     DigitWindowStats,
     EngineConfig,
@@ -338,13 +341,18 @@ export function useGuiEngine() {
                 const activation = activateRecovery(recoveryRef.current, String(update.contractId), configRef.current);
                 recoveryRef.current = activation.runtime;
                 setRecoveryView(activation.runtime);
+                if (activation.activated) {
+                    primaryRef.current = pausePrimaryForRecovery(primaryRef.current);
+                    setPrimaryViews({ ...primaryRef.current });
+                    consumedSetupsRef.current = new Set();
+                }
                 pushJournal({
                     type: 'recovery',
                     level: 'info',
                     strategy: 'Even/Odd Recovery',
                     market: trade.marketName,
                     message: activation.activated
-                        ? `Primary loss ${update.contractId} opened recovery evaluation — watching for a two-digit parity pattern.`
+                        ? `Primary loss ${update.contractId} opened recovery evaluation — primary entries pause while the parity pattern is watched.`
                         : `Recovery not activated · ${activation.reason}`,
                     details: { contractId: update.contractId, activated: activation.activated },
                 });
@@ -379,13 +387,23 @@ export function useGuiEngine() {
             setupId: string | null;
             noteDetails: Record<string, unknown>;
         }) => {
+            /**
+             * A recovery entry that never reached a purchase must hand the
+             * recovery controller back to pattern monitoring. Without this the
+             * controller stayed in RECOVERY_PURCHASE_PENDING for the rest of the
+             * session and the Even/Odd leg never evaluated another tick.
+             */
+            const releaseRecovery = (reason: string) => {
+                if (params.kind !== 'recovery') return;
+                if (recoveryRef.current.state !== 'RECOVERY_PURCHASE_PENDING') return;
+                recoveryRef.current = abortRecoveryAttempt(recoveryRef.current, reason);
+                setRecoveryView(recoveryRef.current);
+            };
+
             if (purchasingRef.current) {
-                setDecision({
-                    allowed: false,
-                    reason: 'A purchase is already pending — duplicate entry prevented.',
-                    at: Date.now(),
-                    label: params.label,
-                });
+                const reason = 'A purchase is already pending — duplicate entry prevented.';
+                setDecision({ allowed: false, reason, at: Date.now(), label: params.label });
+                releaseRecovery(reason);
                 return;
             }
 
@@ -402,6 +420,7 @@ export function useGuiEngine() {
                     message: `Purchase blocked · the selected market is not available.`,
                     details: params.noteDetails,
                 });
+                releaseRecovery('The selected market is not available.');
                 return;
             }
             if (!isAuthorized) {
@@ -411,6 +430,7 @@ export function useGuiEngine() {
                     at: Date.now(),
                     label: params.label,
                 });
+                releaseRecovery('The Deriv account is not authorized.');
                 return;
             }
 
@@ -418,10 +438,9 @@ export function useGuiEngine() {
             setIsPurchasing(true);
 
             try {
-                const stake = stakeFor(cfg, params.kind, {
-                    primaryLosses: sessionRef.current.consecutiveLosses,
-                    recoveryLosses: sessionRef.current.recoveryConsecutiveLosses,
-                });
+                // One shared loss progression, so a recovery trade after a primary
+                // loss carries the multiplier instead of restarting at the base stake.
+                const stake = stakeFor(cfg, params.kind, progressionLosses(sessionRef.current));
 
                 const freshBalance = await fetchBalance();
                 if (freshBalance !== null) setBalance(freshBalance);
@@ -455,6 +474,7 @@ export function useGuiEngine() {
                         message: `Purchase blocked · ${verdict.reason}`,
                         details: { ...params.noteDetails, stake, reason: verdict.reason },
                     });
+                    releaseRecovery(verdict.reason ?? 'The risk check blocked this entry.');
                     return;
                 }
 
@@ -570,14 +590,7 @@ export function useGuiEngine() {
                     details: { ...params.noteDetails, error: message },
                 });
                 if (params.kind === 'recovery') {
-                    recoveryRef.current = {
-                        ...recoveryRef.current,
-                        state: 'WAITING_FOR_EVEN_ODD_PATTERN',
-                        previousDigit: null,
-                        lastTwo: [null, null],
-                        lastReason: message,
-                    };
-                    setRecoveryView(recoveryRef.current);
+                    releaseRecovery(message);
                 } else {
                     const strategy = params.source === 'gui_over1' ? 'over1' : 'under8';
                     const updated = setPrimaryState(primaryRef.current[strategy], 'SETUP_BLOCKED');
@@ -635,7 +648,11 @@ export function useGuiEngine() {
 
             const strategies = strategiesFor(cfg.strategy);
 
-            strategies.forEach(strategyId => {
+            // Primary evaluation pauses while a recovery episode is open: both legs
+            // share the single open-contract slot, so a primary entry taken here
+            // would refuse the recovery purchase and leave Even/Odd looking dead.
+            if (!recoveryRef.current.active)
+                strategies.forEach(strategyId => {
                 const runtime = primaryRef.current[strategyId];
                 const definition = PRIMARY_STRATEGIES[strategyId];
                 const result = evaluatePrimaryTick(runtime, {
@@ -1133,17 +1150,40 @@ export function useGuiEngine() {
         [feed, pushJournal]
     );
 
+    // --- Market Scanner hand-off ("Load bot" → GUI Trading Engine) -----------
+    // The request is applied once the engine's own market list holds the symbol.
+    // Nothing starts trading: the user still presses Start.
+    useEffect(() => {
+        const applyRequest = () => {
+            const request = peekGuiEngineRequest();
+            if (!request) return;
+            if (statusRef.current !== 'stopped' && statusRef.current !== 'error' && statusRef.current !== 'halted') {
+                return;
+            }
+            const market = feed.markets.find(item => item.apiSymbol === request.symbol);
+            if (!market) return;
+            if (!market.isOpen || market.isSuspended) return;
+
+            consumeGuiEngineRequest();
+            setConfigState(current => ({ ...current, strategy: request.strategy }));
+            feed.selectMarket(market);
+            pushJournal({
+                type: 'engine',
+                level: 'info',
+                strategy: strategyLabel(request.strategy),
+                market: market.displayName,
+                message: `Opened from the market scanner — ${strategyLabel(request.strategy)} on ${market.displayName}. Press Start when you are ready.`,
+                details: { symbol: market.apiSymbol, strategy: request.strategy, source: 'scanner' },
+            });
+        };
+
+        applyRequest();
+        return subscribeGuiEngineRequests(applyRequest);
+    }, [feed.markets, feed.selectMarket, pushJournal]);
+
     const stakes: StakePreview = useMemo(
-        () =>
-            stakePreview(
-                config,
-                {
-                    primaryLosses: session.consecutiveLosses,
-                    recoveryLosses: session.recoveryConsecutiveLosses,
-                },
-                session.recoveryTrades > 0 && session.recoveryConsecutiveLosses > 0 ? 'recovery' : 'primary'
-            ),
-        [config, session]
+        () => stakePreview(config, progressionLosses(session), recoveryView.active ? 'recovery' : 'primary'),
+        [config, session, recoveryView.active]
     );
 
     const strategies = strategiesFor(config.strategy);

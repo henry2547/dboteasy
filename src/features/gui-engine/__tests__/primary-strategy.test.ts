@@ -3,6 +3,7 @@ import {
     createPrimaryRuntime,
     evaluatePrimaryTick,
     frequencyPermission,
+    pausePrimaryForRecovery,
     rejectConfirmedSetup,
 } from '../primary-strategy';
 import type { DigitWindowStats, PrimaryEvent, PrimaryRuntime } from '../types';
@@ -274,5 +275,26 @@ describe('Under 8 sequences', () => {
     it('does not detect a pair outside the Under 8 set', () => {
         const { events } = feed(createPrimaryRuntime('under8'), [1, 0, 5, 6], PASSING_HIGH);
         expect(events.filter(event => event.type === 'pair')).toHaveLength(0);
+    });
+});
+
+describe('primary legs during an Even/Odd recovery episode', () => {
+    it('drops a pending setup and stops carrying a previous digit', () => {
+        // A pair detected before the loss must not buy after it, and no pair may
+        // span the pause: the primary previous digit is cleared.
+        const { runtime } = feed(createPrimaryRuntime('over1'), [1, 1]);
+        expect(runtime.pending?.pair).toBe('11');
+
+        const paused = pausePrimaryForRecovery({
+            over1: runtime,
+            under8: { ...createPrimaryRuntime('under8'), previousDigit: 9 },
+        });
+
+        expect(paused.over1.pending).toBeNull();
+        expect(paused.over1.previousDigit).toBeNull();
+        expect(paused.over1.state).toBe('WAITING_FOR_PAIR');
+        expect(paused.under8.previousDigit).toBeNull();
+        // The runtime objects themselves are never mutated.
+        expect(runtime.pending?.pair).toBe('11');
     });
 });

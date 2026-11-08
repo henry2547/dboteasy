@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG } from '../config';
-import { emptySession, riskVerdict, roundMoney, stakeFor, stakePreview, winRate } from '../risk';
+import { emptySession, progressionLosses, riskVerdict, roundMoney, stakeFor, stakePreview, winRate } from '../risk';
 import type { EngineConfig, SessionMetrics } from '../types';
 
 const config: EngineConfig = { ...DEFAULT_CONFIG, initialStake: 1, multiplier: 2, maxStake: 8 };
@@ -42,6 +42,20 @@ describe('staking policy', () => {
         expect(preview.currentStake).toBe(2);
         expect(preview.nextStake).toBe(4);
         expect(preview.remainingRiskAllowance).toBe(6);
+    });
+
+    it('carries the same progression into the recovery leg', () => {
+        // One primary loss, so the recovery trade that follows must already be
+        // multiplied. Separate counters left it at the base stake.
+        const counts = progressionLosses(session({ consecutiveLosses: 1 }));
+        expect(counts).toEqual({ primaryLosses: 1, recoveryLosses: 1 });
+        expect(stakeFor(config, 'primary', counts)).toBe(2);
+        expect(stakeFor(config, 'recovery', counts)).toBe(2);
+    });
+
+    it('resets both legs after a win and counts a recovery loss once', () => {
+        expect(progressionLosses(session({ consecutiveLosses: 0 }))).toEqual({ primaryLosses: 0, recoveryLosses: 0 });
+        expect(stakeFor(config, 'recovery', progressionLosses(session({ consecutiveLosses: 2 })))).toBe(4);
     });
 });
 

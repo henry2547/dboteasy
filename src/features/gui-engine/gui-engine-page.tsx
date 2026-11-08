@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ENGINE_WINDOW, PRIMARY_STRATEGIES, hasConfigErrors, strategiesFor, strategyLabel } from './config';
+import BeginnerGuide from './components/beginner-guide';
 import ConfigPanel from './components/config-panel';
 import ControlPanel from './components/control-panel';
 import DigitFrequencyPanel from './components/digit-frequency-panel';
@@ -107,6 +108,15 @@ export default function GuiEnginePage() {
                     </span>
                 </div>
             </header>
+
+            <BeginnerGuide
+                locked={configLocked}
+                isAuthorized={isAuthorized}
+                marketName={feed.selectedMarket?.displayName ?? 'No market selected'}
+                strategyLabel={strategyLabel(config.strategy)}
+                windowTicks={feed.ticks.length}
+                onApplyPreset={preset => engine.setConfig(preset.config)}
+            />
 
             {!isAuthorized && (
                 <p className='ge-alert ge-alert--info'>

@@ -208,6 +208,24 @@ export function evaluatePrimaryTick(
     };
 }
 
+/**
+ * Primary legs stand down while an Even/Odd recovery episode is open.
+ *
+ * Both legs buy through the same single open-contract slot, so a primary entry
+ * taken after the loss occupies it and every recovery purchase is refused —
+ * the Even/Odd leg then looks like it never fires. Any pending setup is dropped
+ * so a pair detected before the loss cannot buy after it.
+ */
+export function pausePrimaryForRecovery(
+    views: Record<PrimaryStrategyId, PrimaryRuntime>
+): Record<PrimaryStrategyId, PrimaryRuntime> {
+    const paused = { ...views };
+    (Object.keys(paused) as PrimaryStrategyId[]).forEach(key => {
+        paused[key] = { ...paused[key], pending: null, previousDigit: null, state: 'WAITING_FOR_PAIR' };
+    });
+    return paused;
+}
+
 /** A confirmation that fails the pre-purchase revalidation is consumed, not reused. */
 export function rejectConfirmedSetup(runtime: PrimaryRuntime, reason: string): PrimaryRuntime {
     const setup = runtime.pending;

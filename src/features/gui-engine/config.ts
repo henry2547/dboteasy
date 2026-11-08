@@ -74,6 +74,59 @@ export const DEFAULT_CONFIG: EngineConfig = {
     maxOddPercent: 52,
 };
 
+export interface EnginePreset {
+    id: string;
+    label: string;
+    description: string;
+    config: Pick<
+        EngineConfig,
+        | 'initialStake'
+        | 'takeProfit'
+        | 'stopLoss'
+        | 'multiplier'
+        | 'maxStake'
+        | 'maxConsecutiveLosses'
+        | 'maxRecoveryTrades'
+    >;
+}
+
+/**
+ * One-press starting points for a first session. They only change the numbers a
+ * beginner would otherwise have to reason about; every one of them is still
+ * visible and editable in the configuration panel. Neither is a profitability
+ * claim.
+ */
+export const ENGINE_PRESETS: EnginePreset[] = [
+    {
+        id: 'starter',
+        label: 'Safe starter · flat stake',
+        description: 'The same stake on every trade, with a small take profit and stop loss. The gentlest way to watch the engine work.',
+        config: {
+            initialStake: 0.35,
+            takeProfit: 2,
+            stopLoss: 3,
+            multiplier: 1,
+            maxStake: 1,
+            maxConsecutiveLosses: 3,
+            maxRecoveryTrades: 2,
+        },
+    },
+    {
+        id: 'recovery',
+        label: 'Recovery · ×2 stake',
+        description: 'Doubles the stake after a loss, allows two Even/Odd recovery trades and caps the stake at 3.00.',
+        config: {
+            initialStake: 0.35,
+            takeProfit: 5,
+            stopLoss: 10,
+            multiplier: 2,
+            maxStake: 3,
+            maxConsecutiveLosses: 4,
+            maxRecoveryTrades: 2,
+        },
+    },
+];
+
 /** The ten volatility markets the brief lists, used only to label/verify the feed. */
 export const VOLATILITY_MARKET_NAMES: Record<string, string> = {
     R_10: 'Volatility 10 Index',
