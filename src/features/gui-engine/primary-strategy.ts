@@ -9,8 +9,9 @@
  *   2. Two-consecutive-digit pair detection (00/01/10/11 or 88/89/98/99).
  *   3. Delayed confirmation — once a pair is pending, any number of digits from
  *      outside the confirmation group may arrive; only a confirmation digit of
- *      the same group confirms, and the setup expires after the configured
- *      number of subsequent ticks.
+ *      the same group confirms, and the setup stays pending until one does.
+ *      Intervening digits never cancel it; it only ends on confirmation, on a
+ *      failing frequency filter or when the engine stops.
  *
  * The controller never buys anything and never talks to Deriv: it returns
  * events, and the engine hook decides what to do with them.
@@ -19,7 +20,6 @@
 import { ENGINE_WINDOW, PRIMARY_DIGIT_CEILING, PRIMARY_STRATEGIES } from './config';
 import type {
     DigitWindowStats,
-    EngineConfig,
     FrequencyPermission,
     FrequencyReading,
     PendingSetup,
@@ -34,7 +34,6 @@ export interface PrimaryTickInput {
     epoch: number;
     now: number;
     stats: DigitWindowStats;
-    config: EngineConfig;
     market: string;
     marketName: string;
     /** The window must hold this many observations before an entry may pass. */
@@ -151,22 +150,12 @@ export function evaluatePrimaryTick(
             pending = null;
             state = 'CONFIRMATION_RECEIVED';
         } else {
-            const ticksWaited = pending.ticksWaited + 1;
-            const next: PendingSetup = {
+            pending = {
                 ...pending,
                 interveningDigits: [...pending.interveningDigits, input.digit],
-                ticksWaited,
+                ticksWaited: pending.ticksWaited + 1,
             };
-
-            if (ticksWaited >= input.config.maxTicksToConfirm) {
-                const expired: PendingSetup = { ...next, status: 'expired' };
-                events.push({ type: 'expired', setup: expired });
-                pending = null;
-                state = 'SETUP_EXPIRED';
-            } else {
-                pending = next;
-                state = 'WAITING_FOR_CONFIRMATION';
-            }
+            state = 'WAITING_FOR_CONFIRMATION';
         }
     } else if (!permission.passed) {
         // --- 2. No setup: the permission filter gates every new pair ---------
@@ -184,7 +173,6 @@ export function evaluatePrimaryTick(
                 pairDigits: [runtime.previousDigit, input.digit],
                 detectedAt: input.now,
                 detectedSequence: [runtime.previousDigit, input.digit],
-                confirmationDeadline: input.config.maxTicksToConfirm,
                 interveningDigits: [],
                 ticksWaited: 0,
                 status: 'pending',

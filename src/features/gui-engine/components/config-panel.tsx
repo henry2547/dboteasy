@@ -232,16 +232,6 @@ export default function ConfigPanel({
                     disabled={disabled}
                     onChange={value => onChange({ maxStake: value })}
                 />
-                <NumberField
-                    id='ge-confirm-window'
-                    label='Maximum ticks to wait for confirmation'
-                    value={config.maxTicksToConfirm}
-                    min={1}
-                    hint='Intervening digits never cancel a setup; after this many ticks it expires.'
-                    error={errors.maxTicksToConfirm}
-                    disabled={disabled}
-                    onChange={value => onChange({ maxTicksToConfirm: value })}
-                />
             </div>
 
             <div className='ge-subsection'>

@@ -74,6 +74,26 @@ function readError(response: Record<string, any> | null | undefined): { message:
     };
 }
 
+/**
+ * `api_base.api.send` rejects with the whole Deriv message, so a failed request
+ * carries its reason in `error.message` / `error.code` rather than on an `Error`.
+ * Without this the UI could only ever say "the request failed".
+ */
+function rejectionError(error: unknown): { message: string; code: string | null } | null {
+    const rejected = error as { error?: { message?: unknown; code?: unknown } } | null | undefined;
+    if (rejected?.error) {
+        const message = rejected.error.message ?? rejected.error.code;
+        if (message !== undefined && message !== null && String(message) !== '') {
+            return {
+                message: String(message),
+                code: rejected.error.code ? String(rejected.error.code) : null,
+            };
+        }
+    }
+    if (error instanceof Error && error.message) return { message: error.message, code: null };
+    return null;
+}
+
 export async function requestProposal(request: ProposalRequest): Promise<ProposalResult> {
     ensureSocket();
 
@@ -85,7 +105,9 @@ export async function requestProposal(request: ProposalRequest): Promise<Proposa
         currency: request.currency,
         duration: request.duration,
         duration_unit: request.durationUnit,
-        symbol: request.symbol,
+        // The options API names the market `underlying_symbol`; `symbol` is refused
+        // with InputValidationFailed "field is not allowed".
+        underlying_symbol: request.symbol,
     };
 
     if (request.barrier !== undefined && request.barrier !== null) {
@@ -96,7 +118,8 @@ export async function requestProposal(request: ProposalRequest): Promise<Proposa
     try {
         response = await sendRequest(payload);
     } catch (error) {
-        throw new TradeExecutionError((error as Error).message || 'The proposal request failed.', 'ProposalFailed');
+        const rejected = rejectionError(error);
+        throw new TradeExecutionError(rejected?.message ?? 'The proposal request failed.', rejected?.code ?? 'ProposalFailed');
     }
 
     const apiError = readError(response);
@@ -130,7 +153,8 @@ export async function purchaseContract(proposal: ProposalResult): Promise<Purcha
     try {
         response = await sendRequest({ buy: proposal.id, price: proposal.askPrice });
     } catch (error) {
-        throw new TradeExecutionError((error as Error).message || 'The purchase request failed.', 'PurchaseFailed');
+        const rejected = rejectionError(error);
+        throw new TradeExecutionError(rejected?.message ?? 'The purchase request failed.', rejected?.code ?? 'PurchaseFailed');
     }
 
     const apiError = readError(response);

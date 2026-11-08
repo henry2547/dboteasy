@@ -22,7 +22,6 @@ export type PrimaryState =
     | 'PAIR_DETECTED'
     | 'WAITING_FOR_CONFIRMATION'
     | 'CONFIRMATION_RECEIVED'
-    | 'SETUP_EXPIRED'
     | 'SETUP_BLOCKED'
     | 'TRADE_VALIDATION'
     | 'PURCHASE_PENDING'
@@ -64,7 +63,6 @@ export interface EngineConfig {
     maxRecoveryTrades: number;
     maxOpenContracts: number;
     maxStake: number;
-    maxTicksToConfirm: number;
     recoveryFilterEnabled: boolean;
     maxEvenPercent: number;
     maxOddPercent: number;
@@ -124,11 +122,9 @@ export interface PendingSetup {
     pairDigits: [number, number];
     detectedAt: number;
     detectedSequence: number[];
-    /** Maximum intervening ticks the user allows before the setup expires. */
-    confirmationDeadline: number;
     interveningDigits: number[];
     ticksWaited: number;
-    status: 'pending' | 'confirmed' | 'expired' | 'blocked';
+    status: 'pending' | 'confirmed' | 'blocked';
     frequencyAtDetection: FrequencyPermission;
     /** Why the setup stopped being valid, when it did. */
     blockReason?: string;
@@ -137,7 +133,6 @@ export interface PendingSetup {
 export type PrimaryEvent =
     | { type: 'pair'; setup: PendingSetup }
     | { type: 'confirmation'; setup: PendingSetup; digit: number; ticksWaited: number }
-    | { type: 'expired'; setup: PendingSetup }
     | { type: 'blocked'; setup: PendingSetup; reason: string; stage: 'pre_confirmation' | 'post_confirmation' };
 
 export interface PrimaryRuntime {
@@ -216,7 +211,6 @@ export interface EngineJournalEntry {
         | 'engine'
         | 'setup'
         | 'confirmed'
-        | 'expired'
         | 'blocked'
         | 'purchase'
         | 'settlement'
