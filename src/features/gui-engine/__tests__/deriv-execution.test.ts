@@ -96,7 +96,7 @@ describe('requestProposal', () => {
     it('reports the Deriv reason from a rejected message', async () => {
         send.mockRejectedValue({ error: { code: 'InputValidationFailed', message: 'Symbol is not allowed.' } });
 
-        const failure = await requestProposal({
+        const failure = (await requestProposal({
             symbol: 'R_100',
             contractType: 'DIGITOVER',
             stake: 0.35,
@@ -104,7 +104,7 @@ describe('requestProposal', () => {
             currency: 'USD',
             duration: 1,
             durationUnit: 't',
-        }).catch(error => error as TradeExecutionError);
+        }).catch(error => error)) as TradeExecutionError;
 
         expect(failure).toBeInstanceOf(TradeExecutionError);
         expect(failure.message).toBe('Symbol is not allowed.');
