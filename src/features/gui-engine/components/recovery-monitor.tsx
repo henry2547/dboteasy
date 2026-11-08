@@ -124,8 +124,8 @@ export default function RecoveryMonitor({
             {recovery.lastReason && <p className='ge-alert ge-alert--warn'>{recovery.lastReason}</p>}
             <p className='ge-note'>
                 Recovery opens only after a confirmed primary loss from its Deriv settlement. Two even digits select
-                ODD; two odd digits select EVEN; a mixed pair never enters. It is never an unlimited loop — the attempt
-                limit stops it.
+                ODD; two odd digits select EVEN; a mixed pair never enters. Primary entries pause while recovery is
+                active, and it is never an unlimited loop — the attempt limit stops it.
             </p>
         </section>
     );

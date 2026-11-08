@@ -183,6 +183,48 @@
         color: var(--text-loss-danger);
     }
 
+    /* "Where do you want to open this bot?" — Bot Builder or the GUI engine. */
+    &__targets {
+        margin-top: 0.4rem;
+        padding: 0.55rem 0.7rem;
+        border-radius: 8px;
+        border: 1px dashed var(--general-main-3);
+        background: var(--general-main-2);
+    }
+
+    &__targets-title {
+        margin: 0 0 0.4rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    &__targets-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    &__target {
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid var(--brand-primary);
+        background: transparent;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--brand-primary);
+        cursor: pointer;
+
+        &--gui {
+            border-color: var(--brand-success);
+            color: var(--brand-success);
+        }
+
+        &--cancel {
+            border-color: var(--general-main-3);
+            color: var(--text-less-prominent);
+        }
+    }
+
     &__load {
         margin-top: 0.4rem;
         align-self: flex-start;

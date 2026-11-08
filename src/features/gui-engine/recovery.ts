@@ -302,11 +302,16 @@ export function settleRecovery(
     };
 }
 
-/** A recovery attempt that never reached a purchase (risk block, filter, disconnect). */
+/**
+ * A recovery attempt that never reached a purchase (risk block, duplicate entry,
+ * disconnect). It has to go back to pattern monitoring: leaving the controller in
+ * RECOVERY_PURCHASE_PENDING made `evaluateRecoveryTick` ignore every later tick, so
+ * the Even/Odd leg stopped working for the rest of the session.
+ */
 export function abortRecoveryAttempt(runtime: RecoveryRuntime, reason: string): RecoveryRuntime {
     return {
         ...runtime,
-        state: runtime.attempts >= 0 ? 'WAITING_FOR_EVEN_ODD_PATTERN' : runtime.state,
+        state: 'WAITING_FOR_EVEN_ODD_PATTERN',
         previousDigit: null,
         lastTwo: [null, null],
         pattern: null,
