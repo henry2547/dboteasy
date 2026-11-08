@@ -643,7 +643,6 @@ export function useGuiEngine() {
                     epoch: windowTicks[windowTicks.length - 1]?.epoch ?? Math.floor(Date.now() / 1000),
                     now: Date.now(),
                     stats: windowStats,
-                    config: cfg,
                     market: market.apiSymbol,
                     marketName: market.displayName,
                 });
@@ -656,29 +655,12 @@ export function useGuiEngine() {
                             level: 'info',
                             strategy: definition.label,
                             market: market.displayName,
-                            message: `Pair ${event.setup.pair} detected · waiting up to ${cfg.maxTicksToConfirm} ticks for confirmation (0 or 1 style digit in {${definition.targetDigits.join(', ')}})`,
+                            message: `Pair ${event.setup.pair} detected · waiting for confirmation (a digit in {${definition.targetDigits.join(', ')}}); intervening digits never cancel it`,
                             details: {
                                 setupId: event.setup.id,
                                 pair: event.setup.pair,
                                 frequency: event.setup.frequencyAtDetection.readings,
                                 threshold: PRIMARY_DIGIT_CEILING,
-                            },
-                        });
-                        return;
-                    }
-
-                    if (event.type === 'expired') {
-                        pushJournal({
-                            type: 'expired',
-                            level: 'warn',
-                            strategy: definition.label,
-                            market: market.displayName,
-                            message: `Setup ${event.setup.pair} expired after ${event.setup.ticksWaited} ticks · intervening digits ${event.setup.interveningDigits.join(', ') || 'none'}`,
-                            details: {
-                                setupId: event.setup.id,
-                                pair: event.setup.pair,
-                                intervening: event.setup.interveningDigits,
-                                ticksWaited: event.setup.ticksWaited,
                             },
                         });
                         return;

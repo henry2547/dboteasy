@@ -232,7 +232,6 @@ export default function GuiEnginePage() {
                     primaryViews={primaryViews}
                     strategy={config.strategy}
                     permission={primaryPermission}
-                    config={config}
                     decision={decision}
                     isPurchasing={isPurchasing}
                     status={status}

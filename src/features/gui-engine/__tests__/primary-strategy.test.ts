@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, PRIMARY_DIGIT_CEILING } from '../config';
+import { PRIMARY_DIGIT_CEILING } from '../config';
 import {
     createPrimaryRuntime,
     evaluatePrimaryTick,
@@ -37,8 +37,7 @@ const FAILING_NINE = statsFrom({ 8: 9.4, 9: 13.2 });
 function feed(
     runtime: PrimaryRuntime,
     digits: number[],
-    stats: DigitWindowStats = PASSING,
-    config = DEFAULT_CONFIG
+    stats: DigitWindowStats = PASSING
 ): { runtime: PrimaryRuntime; events: PrimaryEvent[] } {
     let current = runtime;
     const events: PrimaryEvent[] = [];
@@ -48,7 +47,6 @@ function feed(
             epoch: 1_700_000_000 + index,
             now: 1_700_000_000_000 + index * 1000,
             stats,
-            config,
             market: 'R_100',
             marketName: 'Volatility 100 Index',
         });
@@ -153,17 +151,23 @@ describe('Over 1 pair detection and delayed confirmation', () => {
         expect(runtime.state).toBe('WAITING_FOR_CONFIRMATION');
     });
 
-    it('expires the setup when no confirmation digit arrives inside the window', () => {
-        const config = { ...DEFAULT_CONFIG, maxTicksToConfirm: 3 };
-        const { events, runtime } = feed(createPrimaryRuntime('over1'), [1, 0, 5, 6, 7], PASSING, config);
-        const expired = events.find(event => event.type === 'expired') as
-            | Extract<PrimaryEvent, { type: 'expired' }>
+    it('never expires a setup — it waits for its confirmation digit', () => {
+        // No tick limit any more: any number of intervening digits only adds to the wait.
+        const { events, runtime } = feed(
+            createPrimaryRuntime('over1'),
+            [1, 0, 5, 6, 7, 2, 3, 4, 5, 6, 7, 8, 9, 4, 2, 6, 7, 5, 3, 4]
+        );
+        expect(events.some(event => event.type === 'pair')).toBe(true);
+        expect(runtime.pending?.pair).toBe('10');
+        expect(runtime.pending?.ticksWaited).toBe(18);
+        expect(runtime.state).toBe('WAITING_FOR_CONFIRMATION');
+
+        const confirmed = feed(runtime, [1]);
+        const confirmation = confirmed.events.find(event => event.type === 'confirmation') as
+            | Extract<PrimaryEvent, { type: 'confirmation' }>
             | undefined;
-        expect(expired?.setup.pair).toBe('10');
-        expect(expired?.setup.ticksWaited).toBe(3);
-        expect(expired?.setup.interveningDigits).toEqual([5, 6, 7]);
-        expect(runtime.pending).toBeNull();
-        expect(runtime.state).toBe('SETUP_EXPIRED');
+        expect(confirmation?.setup.pair).toBe('10');
+        expect(confirmation?.ticksWaited).toBe(18);
     });
 
     it('never overwrites a pending setup with a newer pair', () => {
@@ -206,7 +210,6 @@ describe('Frequency revalidation around a pending setup', () => {
             epoch: 1_700_000_100,
             now: 1_700_000_100_000,
             stats: FAILING_ONE,
-            config: DEFAULT_CONFIG,
             market: 'R_100',
             marketName: 'Volatility 100 Index',
         });

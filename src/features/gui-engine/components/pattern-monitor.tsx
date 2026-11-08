@@ -1,6 +1,5 @@
 import { PRIMARY_STRATEGIES, strategiesFor } from '../config';
 import type {
-    EngineConfig,
     EngineStatus,
     FrequencyPermission,
     PrimaryRuntime,
@@ -15,7 +14,6 @@ interface PatternMonitorProps {
     primaryViews: Record<PrimaryStrategyId, PrimaryRuntime>;
     strategy: StrategySelection;
     permission: Partial<Record<PrimaryStrategyId, FrequencyPermission>>;
-    config: EngineConfig;
     decision: EngineDecision | null;
     isPurchasing: boolean;
     status: EngineStatus;
@@ -29,21 +27,18 @@ function formatTime(value: number | null): string {
 function StrategySetup({
     id,
     runtime,
-    config,
     permission,
     decision,
     isPurchasing,
 }: {
     id: PrimaryStrategyId;
     runtime: PrimaryRuntime;
-    config: EngineConfig;
     permission?: FrequencyPermission;
     decision: EngineDecision | null;
     isPurchasing: boolean;
 }) {
     const definition = PRIMARY_STRATEGIES[id];
     const setup = runtime.pending;
-    const remaining = setup ? Math.max(0, config.maxTicksToConfirm - setup.ticksWaited) : config.maxTicksToConfirm;
 
     return (
         <div className='ge-setup'>
@@ -79,13 +74,7 @@ function StrategySetup({
                 </div>
                 <div className='ge-kv__row'>
                     <dt>Ticks waited</dt>
-                    <dd>
-                        {setup ? setup.ticksWaited : 0} / {config.maxTicksToConfirm}
-                    </dd>
-                </div>
-                <div className='ge-kv__row'>
-                    <dt>Remaining window</dt>
-                    <dd>{setup ? `${remaining} tick${remaining === 1 ? '' : 's'}` : '—'}</dd>
+                    <dd>{setup ? setup.ticksWaited : 0}</dd>
                 </div>
                 <div className='ge-kv__row'>
                     <dt>Next valid confirmation</dt>
@@ -93,7 +82,7 @@ function StrategySetup({
                 </div>
                 <div className='ge-kv__row'>
                     <dt>Setup status</dt>
-                    <dd>{setup ? 'Waiting for confirmation' : runtime.state === 'SETUP_EXPIRED' ? 'Expired' : runtime.state === 'SETUP_BLOCKED' ? 'Blocked' : 'No pending setup'}</dd>
+                    <dd>{setup ? 'Waiting for confirmation' : runtime.state === 'SETUP_BLOCKED' ? 'Blocked' : 'No pending setup'}</dd>
                 </div>
             </dl>
 
@@ -135,7 +124,6 @@ export default function PatternMonitor({
     primaryViews,
     strategy,
     permission,
-    config,
     decision,
     isPurchasing,
     status,
@@ -174,7 +162,6 @@ export default function PatternMonitor({
                         key={id}
                         id={id}
                         runtime={primaryViews[id]}
-                        config={config}
                         permission={permission[id]}
                         decision={decision}
                         isPurchasing={isPurchasing}

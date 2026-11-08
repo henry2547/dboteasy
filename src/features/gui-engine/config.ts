@@ -67,7 +67,6 @@ export const DEFAULT_CONFIG: EngineConfig = {
     maxRecoveryTrades: 3,
     maxOpenContracts: 1,
     maxStake: 20,
-    maxTicksToConfirm: 10,
     recoveryFilterEnabled: true,
     // Editable starting points, not a guarantee. Both percentages are always
     // shown live, with or without the filter.
@@ -142,9 +141,6 @@ export function validateConfig(config: EngineConfig): ConfigErrors {
     }
     if (!isFiniteNumber(config.maxOpenContracts) || config.maxOpenContracts < 1) {
         errors.maxOpenContracts = 'At least one open contract must be allowed.';
-    }
-    if (!isFiniteNumber(config.maxTicksToConfirm) || config.maxTicksToConfirm < 1) {
-        errors.maxTicksToConfirm = 'Confirmation window must be at least one tick.';
     }
     if (!isFiniteNumber(config.maxEvenPercent) || config.maxEvenPercent <= 0 || config.maxEvenPercent > 100) {
         errors.maxEvenPercent = 'Even threshold must be between 0 and 100.';
