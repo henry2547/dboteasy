@@ -140,6 +140,12 @@ function FreeBotCard({
     const rows: [string, string][] = [
         ['Strategy', template.strategyLabel],
         [
+            'Mode',
+            template.mode === 'continuous'
+                ? 'Continuous — one entry carries several trades until the take profit, stop loss or a stop rule ends the run'
+                : 'Single — one trade per entry, then it waits for the next entry',
+        ],
+        [
             'Contract',
             template.parityRecovery
                 ? `${template.primaryContractType ?? template.contractType} ${template.parityRecovery.barrier} → DIGITEVEN / DIGITODD after a loss`

@@ -1,0 +1,153 @@
+/**
+ * Trading mode — how many contracts one confirmed entry may take.
+ *
+ * The mode is a field of the trade definition ("1. Trade parameters" → Mode) and reaches the engine
+ * through `Bot.init`'s `tradingMode` option:
+ *
+ * - CONTINUOUS (default): after a settled WIN the entry stays live, so the bot trades again as soon
+ *   as its purchase conditions pass — one entry carries several trades, until the take profit, the
+ *   stop loss or a stop rule ends the run. A settled LOSS closes the entry, so the bot stops trading
+ *   and awaits the next entry signal.
+ * - SINGLE: one contract per entry. Once the contract settles — won or lost — the entry is used up
+ *   and the bot waits for the next entry: a fresh observer entry signal on a canvas that gates
+ *   entries, or (on a canvas whose entry is its own purchase conditions) until those conditions have
+ *   lapsed and pass again.
+ *
+ * The state is three-valued: `idle` (no entry confirmed), `open` (entry confirmed, may trade) and
+ * `used` (a contract settled under it). Nothing here places a trade, sizes a stake or stops a
+ * session; it only answers the run loop's "may this iteration start a trade?" and blocks a purchase
+ * the single mode has already spent.
+ */
+import { observer as globalObserver } from '../../../utils/observer';
+import { observerRuntime } from '../../observer';
+
+const notify = (message, className = 'info') => globalObserver.emit('ui.log.notify', { className, message });
+
+export const TRADING_MODES = {
+    CONTINUOUS: 'CONTINUOUS',
+    SINGLE: 'SINGLE',
+};
+
+const createTradingModeState = () => ({
+    entry: 'idle',
+    attempted_this_tick: false,
+    waiting_notified: false,
+    announced: false,
+});
+
+export default Engine =>
+    class TradingMode extends Engine {
+        /** The mode the trade definition carries; anything unrecognised is the continuous default. */
+        tradingMode() {
+            return this.options?.tradingMode === TRADING_MODES.SINGLE ? TRADING_MODES.SINGLE : TRADING_MODES.CONTINUOUS;
+        }
+
+        isSingleTradeMode() {
+            return this.tradingMode() === TRADING_MODES.SINGLE;
+        }
+
+        /** Fresh state for a new run; `Bot.init` runs once per run, not once per trade loop. */
+        resetTradingMode() {
+            this.trading_mode_state = createTradingModeState();
+        }
+
+        getTradingModeState() {
+            if (!this.trading_mode_state) this.resetTradingMode();
+            return this.trading_mode_state;
+        }
+
+        /** True when the canvas carries an observer entry gate, which is what "an entry" means there. */
+        tradingModeGated() {
+            return observerRuntime.gateEnabled();
+        }
+
+        /** One journal line per run, so the mode a bot runs in is never a hidden setting. */
+        tradingModeAnnounce() {
+            const state = this.getTradingModeState();
+            if (state.announced) return;
+            state.announced = true;
+            notify(
+                this.isSingleTradeMode()
+                    ? 'Trading mode: single — one contract per entry, then it waits for the next entry.'
+                    : 'Trading mode: continuous — the entry stays live after each settled contract until the run stops.'
+            );
+        }
+
+        /**
+         * The run loop's gate: may this iteration start a trade?
+         *
+         * A canvas with no observer entry gate defines its entry by its purchase conditions, which
+         * are re-read every tick, so the loop always continues and the single mode defers the
+         * purchase instead (see `tradingModeBlocksPurchase`).
+         */
+        tradingModeEntryAllowed() {
+            if (!this.tradingModeGated()) return true;
+
+            const state = this.getTradingModeState();
+            if (state.entry === 'open') return true;
+            if (observerRuntime.consumeEntry()) {
+                state.entry = 'open';
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * Single mode on a canvas without an entry gate: the entry the bot just traded is spent, so
+         * the purchase is deferred until the entry conditions have lapsed once.
+         */
+        tradingModeBlocksPurchase() {
+            if (this.tradingModeGated() || !this.isSingleTradeMode()) return false;
+            return this.getTradingModeState().entry === 'used';
+        }
+
+        /** The canvas reached its purchase block this tick — its entry conditions held. */
+        tradingModePurchaseAttempted() {
+            const state = this.getTradingModeState();
+            state.attempted_this_tick = true;
+            if (state.entry !== 'used') state.entry = 'open';
+        }
+
+        /** A purchase was sent: the entry is live and the single-mode wait is over. */
+        tradingModePurchased() {
+            const state = this.getTradingModeState();
+            state.entry = 'open';
+            state.waiting_notified = false;
+        }
+
+        /**
+         * Called once after a settled contract, before the loop starts its next iteration.
+         *
+         * Single mode spends the entry whatever the result. Continuous mode keeps it live after a
+         * win and closes it after a loss, so a run that keeps winning trades inside one entry while
+         * a loss hands control back to the next entry signal.
+         */
+        tradingModeTradeSettled() {
+            const state = this.getTradingModeState();
+            const result = this.sessionLastResult?.() ?? '';
+            state.entry = this.isSingleTradeMode() ? 'used' : result === 'loss' ? 'idle' : 'open';
+            state.waiting_notified = false;
+        }
+
+        tradingModeTickStart() {
+            this.getTradingModeState().attempted_this_tick = false;
+        }
+
+        /**
+         * A tick of the purchase loop that produced no purchase means the entry conditions did not
+         * hold, so a single-mode entry that was used up is free again on the next qualifying tick.
+         */
+        tradingModeTickEnd() {
+            const state = this.getTradingModeState();
+            if (state.attempted_this_tick) return;
+            if (!this.tradingModeGated() && state.entry === 'used') state.entry = 'idle';
+        }
+
+        /** Journals (once per entry) why a single-mode purchase was held back. */
+        tradingModeJournalWaiting() {
+            const state = this.getTradingModeState();
+            if (state.waiting_notified) return;
+            state.waiting_notified = true;
+            notify('Trading mode: single — waiting for the next entry before trading again.', 'info');
+        }
+    };

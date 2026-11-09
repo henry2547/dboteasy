@@ -121,6 +121,9 @@ describe('Free Bots templates', () => {
         expect(report.settings.tradeTypeCategory).toBe('digits');
         expect(report.settings.tradeType).toBe(template.tradeType ?? 'overunder');
         expect(report.settings.contractType).toBe(template.contractType);
+        // Every bot carries its trading mode in the trade definition (continuous or single).
+        expect(report.settings.mode).toBe(template.mode.toUpperCase());
+        expect(report.checks.find(check => check.id === 'trading-mode')?.passed).toBe(true);
         expect(report.variables.some(name => name.startsWith('freebot:'))).toBe(true);
 
         if (template.observationOnly) {

@@ -8,9 +8,13 @@ export interface WhatsNewEntry {
     body: string;
 }
 
-export const WHATS_NEW_RELEASE = '0.5.0';
+export const WHATS_NEW_RELEASE = '0.6.0';
 
 export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
+    {
+        title: 'Continuous or single trading mode',
+        body: 'Every free bot now carries a mode. Continuous keeps trading after an entry is confirmed — several trades until the take profit, a loss or the stop loss ends the run, then it waits for the next entry. Single takes one trade per entry and waits for the next signal. The mode shows on every bot card and in the Bot Builder’s Trade parameters block.',
+    },
     {
         title: 'Market scan on 1,000 ticks',
         body: 'The floating Scan markets button reads 1,000 ticks on every open volatility market, ranks them best first, and lists each result with its score, rule, scan time and a Load bot button.',

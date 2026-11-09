@@ -24,6 +24,14 @@ const getBotInterface = tradeEngine => {
         // Observer entry gate: true once per signalled entry, so a canvas whose observer
         // program holds entry blocks trades only when those conditions pass.
         observerEntryPassed: () => observerRuntime.consumeEntry(),
+        // Trading mode (trade definition → Mode): may this iteration of the trade loop start a trade?
+        tradingModeEntryAllowed: () => tradeEngine.tradingModeEntryAllowed(),
+        tradingModePurchased: () => tradeEngine.tradingModePurchased(),
+        // One settled contract: the entry stays open in continuous mode, is used up in single mode.
+        tradingModeTradeSettled: () => tradeEngine.tradingModeTradeSettled(),
+        // Wraps one tick of the purchase loop, so a tick with no purchase is a lapsed entry.
+        tradingModeTickStart: () => tradeEngine.tradingModeTickStart(),
+        tradingModeTickEnd: () => tradeEngine.tradingModeTickEnd(),
         // Observer blocks reached by the generated program hand themselves back to the observer
         // runtime, which evaluates them against the genuine tick stream.
         observerValue: (id, fallback) => observerRuntime.valueOfBlock(id, fallback),

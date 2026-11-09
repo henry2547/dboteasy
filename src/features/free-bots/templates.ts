@@ -112,6 +112,15 @@ export type FreeBotTradeType = 'overunder' | 'evenodd' | 'matchesdiffers';
 
 export type FreeBotParity = 'even' | 'odd' | 'both';
 
+/**
+ * How many trades one confirmed entry may take — the trade definition's `MODE_LIST` field.
+ *
+ * - `continuous`: the entry stays live after a settled contract, so the bot keeps trading until the
+ *   take profit, the stop loss or a stop rule ends the run. One entry carries several trades.
+ * - `single`: one contract per entry; once it settles the bot waits for the next entry.
+ */
+export type FreeBotTradeMode = 'continuous' | 'single';
+
 export interface FreeBotTemplate {
     id: FreeBotId;
     name: string;
@@ -135,6 +144,11 @@ export interface FreeBotTemplate {
     strategy: FreeBotStrategy;
     /** Scanner/strategy label, e.g. "Digit Over". */
     strategyLabel: string;
+    /**
+     * Trading mode written into the trade definition: `continuous` keeps trading inside a confirmed
+     * entry, `single` takes one contract per entry and then waits for the next one.
+     */
+    mode: FreeBotTradeMode;
     /** Contract type in the trade definition — `both` when the template trades two legs. */
     contractType: FreeBotTradeContractType;
     /** Contract the entry condition buys; only needed when `contractType` is `both`. */
@@ -195,6 +209,7 @@ const MARTINGALE_STOP =
 export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     {
         id: 'under8_entry_every_time',
+        mode: 'continuous',
         name: 'Under 8 — Entries 4, 7, 9',
         sourceFile: 'Under 8 with Entry every time.xml',
         asset: 'under8_entry_every_time.xml',
@@ -224,6 +239,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'over1_entry_every_time',
+        mode: 'continuous',
         name: 'Over 1 — Entries 2, 5, 6',
         sourceFile: 'Over 1 with Entry every time.xml',
         asset: 'over1_entry_every_time.xml',
@@ -253,6 +269,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'over1_two_low_digits',
+        mode: 'single',
         name: 'Over 1 — Two Low Digits in a Row',
         sourceFile: 'Derived from Over 1 with Entry every time.xml',
         asset: 'over1_two_low_digits.xml',
@@ -281,6 +298,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'under8_two_high_digits',
+        mode: 'single',
         name: 'Under 8 — Two High Digits in a Row',
         sourceFile: 'Derived from Under 8 with Entry every time.xml',
         asset: 'under8_two_high_digits.xml',
@@ -309,6 +327,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'even_odd_window',
+        mode: 'single',
         name: 'Even / Odd — Last 2 Digits Reversal',
         sourceFile: 'Built from the Even/Odd strategy blocks',
         asset: 'even_odd_window.xml',
@@ -346,6 +365,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'over1_under6_recovery',
+        mode: 'continuous',
         name: 'Over 1 — Under 6 Recovery',
         sourceFile: 'Derived from Over 1 with Entry every time.xml',
         asset: 'over1_under6_recovery.xml',
@@ -381,6 +401,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'over1_parity_recovery',
+        mode: 'continuous',
         name: 'Over 1 — Even/Odd Recovery',
         sourceFile: 'Built from the "Trade Over 1 / Under 8, recover on Even/Odd" Digits block',
         asset: 'parity_recovery_bot.xml',
@@ -413,6 +434,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'over1_cold_run_recovery',
+        mode: 'continuous',
         name: 'Over 1 — Confirmed 0/1 Pair',
         sourceFile: 'Built from the "Pair entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
         asset: 'over1_cold_run_recovery.xml',
@@ -445,6 +467,7 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     },
     {
         id: 'under8_cold_run_recovery',
+        mode: 'continuous',
         name: 'Under 8 — Confirmed 8/9 Pair',
         sourceFile: 'Built from the "Pair entry: Over 1 / Under 8, Even/Odd recovery" Digits block',
         asset: 'under8_cold_run_recovery.xml',

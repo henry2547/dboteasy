@@ -111,6 +111,7 @@ describe('applyMarketToXml', () => {
 
         // Everything except the symbol is untouched.
         expect(after.settings.contractType).toBe(before.settings.contractType);
+        expect(after.settings.mode).toBe(before.settings.mode);
         expect(after.settings.prediction).toBe(before.settings.prediction);
         expect(after.settings.duration).toBe(before.settings.duration);
         expect(after.settings.durationType).toBe(before.settings.durationType);
