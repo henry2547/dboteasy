@@ -13,11 +13,8 @@
 
 import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { DBOT_TABS } from '@/constants/bot-contents';
 import { formatPercent } from '@/features/digits/format';
 import type { MarketScan } from '@/features/digits/scan-markets';
-import { requestGuiEngine } from '@/features/gui-engine/open-request';
-import { useStore } from '@/hooks/useStore';
 import { backtestColdRunBot, type BotBacktestResult } from '../bot-backtest';
 import { botLoaderStore } from '../bot-loader-store';
 import { supportsDigitContracts } from '../market-support';
@@ -108,19 +105,14 @@ function BotBacktest({ setup, digits }: { setup: FreeBotSetup; digits: number[] 
 
 const ScannerBotResult = observer(({ result, selected, onPick, onLoaded }: ScannerBotResultProps) => {
     const loader = useFreeBotLoader();
-    const { dashboard } = useStore();
     const setups = useMemo(() => matchFreeBotSetups(result.digits), [result.digits]);
     const support = supportsDigitContracts(result.market);
 
     const isThisMarket = loader.bot?.market.symbol === result.market.apiSymbol;
 
-    /** Which setup's "where do you want to open it?" chooser is showing. */
-    const [choosing, set_choosing] = useState<string | null>(null);
-
     const handleLoad = (setup: FreeBotSetup) => {
         const template = freeBotById(setup.templateId);
         if (!template) return;
-        set_choosing(null);
         return loader
             .loadBot({
                 template,
@@ -137,22 +129,6 @@ const ScannerBotResult = observer(({ result, selected, onPick, onLoaded }: Scann
             .then(() => {
                 if (botLoaderStore.status === 'loaded') onLoaded();
             });
-    };
-
-    /**
-     * Opens the same strategy in the GUI Trading Engine: that tab selects the
-     * scanned market, applies the matching strategy and waits for Start. The
-     * request survives the tab switch and places no trade by itself.
-     */
-    const handleGuiEngine = (setup: FreeBotSetup) => {
-        requestGuiEngine({
-            symbol: result.market.apiSymbol,
-            displayName: result.market.displayName,
-            strategy: setup.strategy,
-        });
-        set_choosing(null);
-        dashboard?.setActiveTab(DBOT_TABS.GUI_ENGINE);
-        onLoaded();
     };
 
     return (
@@ -249,54 +225,16 @@ const ScannerBotResult = observer(({ result, selected, onPick, onLoaded }: Scann
 
                         <BotBacktest setup={setup} digits={result.digits} />
 
-                        {choosing === setup.templateId ? (
-                            <div className='scanner-bot__targets' role='group' aria-label='Where to open this bot'>
-                                <p className='scanner-bot__targets-title'>
-                                    Where do you want to open bot {setup.botNumber} · {setup.strategyLabel}?
-                                </p>
-                                <div className='scanner-bot__targets-actions'>
-                                    <button
-                                        type='button'
-                                        className='scanner-bot__target'
-                                        onClick={() => handleLoad(setup)}
-                                    >
-                                        Blockly Bot Builder
-                                    </button>
-                                    <button
-                                        type='button'
-                                        className='scanner-bot__target scanner-bot__target--gui'
-                                        onClick={() => handleGuiEngine(setup)}
-                                    >
-                                        GUI Trading Engine
-                                    </button>
-                                    <button
-                                        type='button'
-                                        className='scanner-bot__target scanner-bot__target--cancel'
-                                        onClick={() => set_choosing(null)}
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                                <p className='scanner-bot__note'>
-                                    The Bot Builder loads the whole block bot. The GUI engine opens on{' '}
-                                    {result.market.displayName} with {setup.strategyLabel} and waits for you to press
-                                    Start — neither option places a trade on its own.
-                                </p>
-                            </div>
-                        ) : (
-                            <button
-                                type='button'
-                                className='scanner-bot__load'
-                                onClick={() => set_choosing(setup.templateId)}
-                                disabled={!canLoad}
-                                title={canLoad ? 'Choose where to open this bot on this market' : blockedReason}
-                                aria-label={`Load bot ${setup.botNumber} (${setup.strategyLabel}) on ${result.market.displayName}`}
-                            >
-                                {loadingThis
-                                    ? 'Loading…'
-                                    : `Load bot ${setup.botNumber} · ${setup.strategyLabel}`}
-                            </button>
-                        )}
+                        <button
+                            type='button'
+                            className='scanner-bot__load'
+                            onClick={() => handleLoad(setup)}
+                            disabled={!canLoad}
+                            title={canLoad ? 'Load this bot into the Bot Builder on this market' : blockedReason}
+                            aria-label={`Load bot ${setup.botNumber} (${setup.strategyLabel}) on ${result.market.displayName}`}
+                        >
+                            {loadingThis ? 'Loading…' : `Load bot ${setup.botNumber} · ${setup.strategyLabel}`}
+                        </button>
                     </div>
                 );
             })}

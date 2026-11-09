@@ -737,6 +737,21 @@ never trade, size a stake or stop a session on their own initiative.
   `Bot.sessionReport()` without console errors. Real settlement numbers need a logged-in account, so
   the live path is verified by hand with a Demo account (Run is login-gated).
 
+## GUI Trading Engine tab (removed — code unused but kept)
+The GUI Trading Engine tab (`#gui_engine`) is gone from the app: `main.tsx` no longer lazy-loads
+`GuiEnginePage` or renders the `#id-gui-engine` tab, `DBOT_TABS` / `TAB_IDS` / the `hash` array in
+`main.tsx` no longer carry an entry for it (Strategy Engine is now index 4 and Deriv Chart / Digits /
+Statistics each moved down one — keep the three lists in the same order), and the hamburger **App guide**
+no longer lists it. A stale `#gui_engine` hash falls back to the default tab.
+- **The scanner loads straight into the Bot Builder.** The result card's "Where do you want to open this
+  bot?" chooser existed only to offer the GUI engine next to Blockly, so it is removed: **Load bot N**
+  calls `handleLoad` directly and the scanner's stylesheet no longer carries `__targets` / `__target`
+  rules. Do not reintroduce a chooser unless a second destination comes back.
+- `src/features/gui-engine/` is unused but kept (same as `src/features/ai-bot/` and
+  `src/features/dtrader/`), with its unit tests still passing. Restoring the tab means putting the four
+  places back (lazy import, hash entry, `DBOT_TABS` / `TAB_IDS` index, tab `<div>`, App guide row) plus
+  the scanner target.
+
 ## AI Bot module (tab removed — code unused but kept)
 The AI Bot tab (`#ai_bot`) was removed from the app: `main.tsx` no longer wraps `<Tabs>` in
 `AiBotProvider` or lazy-loads `AiBotPage`, and `DBOT_TABS` / `TAB_IDS` / the `hash` array in

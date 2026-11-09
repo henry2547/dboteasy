@@ -41,11 +41,6 @@ const DESTINATIONS: TDestination[] = [
         hint: 'Drag blocks onto the canvas to build or change a bot, then hit Run.',
     },
     {
-        tab: DBOT_TABS.GUI_ENGINE,
-        name: 'GUI Trading Engine',
-        hint: 'Trade Over 1, Under 8 and the Even/Odd recovery from a form — no blocks needed.',
-    },
-    {
         tab: DBOT_TABS.STRATEGY_ENGINE,
         name: 'Strategy Engine',
         hint: 'Live digit-market evaluation and entry-threshold monitoring.',
