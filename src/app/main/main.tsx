@@ -39,7 +39,6 @@ import {
     LabelPairedCircleStarCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
-    LabelPairedPlayLgFillIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
     LabelPairedTableLayoutCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
@@ -56,7 +55,6 @@ const DerivChart = lazy(() => import('../../features/chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../../features/digits'));
 const StatisticsPage = lazy(() => import('../../features/statistics'));
 const StrategyEnginePage = lazy(() => import('../../features/strategy-engine'));
-const GuiEnginePage = lazy(() => import('../../features/gui-engine'));
 const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
 const FreeBotsPage = lazy(() => import('../../features/free-bots'));
 const GlobalScanButton = lazy(() => import('../../features/digits/components/global-scan-button'));
@@ -97,7 +95,6 @@ const AppWrapper = observer(() => {
         'ai_architect',
         'free_bots',
         'bot_builder',
-        'gui_engine',
         'strategy_engine',
         'chart',
         'digits',
@@ -475,29 +472,6 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-bot-builder'
                             />
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedPlayLgFillIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='GUI Trading Engine' />
-                                    </>
-                                }
-                                id='id-gui-engine'
-                            >
-                                <ErrorBoundary label='GUI Trading Engine'>
-                                    <Suspense
-                                        fallback={
-                                            <ChunkLoader message={localize('Please wait, loading the GUI trading engine...')} />
-                                        }
-                                    >
-                                        <GuiEnginePage />
-                                    </Suspense>
-                                </ErrorBoundary>
-                            </div>
                             <div
                                 label={
                                     <>
