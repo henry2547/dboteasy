@@ -304,9 +304,6 @@ class DBot {
      * @param {Object} limitations Optional limitations (legacy argument)
      */
     generateCode(limitations = {}) {
-        // A canvas that carries observer entry blocks trades only on a signalled entry; every other
-        // strategy keeps the loop it had before.
-        const observer_gate = observerRuntime.gateEnabled();
         return `
             var BinaryBotPrivateInit;
             var BinaryBotPrivateStart;
@@ -355,7 +352,13 @@ class DBot {
             BinaryBotPrivateRun(BinaryBotPrivateInit);
             while (true) {
                 BinaryBotPrivateTickAnalysis();
-                ${observer_gate ? 'if (!Bot.observerEntryPassed()) { sleep(1); continue; }' : ''}
+                // Trading mode: with an observer entry gate this is "a signal is standing" (single
+                // mode needs a fresh one after every settled contract, continuous mode keeps the
+                // entry open); with no gate the bot's own purchase conditions decide.
+                if (!Bot.tradingModeEntryAllowed()) {
+                    sleep(1);
+                    continue;
+                }
                 BinaryBotPrivateRun(BinaryBotPrivateStart);
                 if (!BinaryBotPrivateHasCalledTradeOptions) {
                     sleep(1);
@@ -363,7 +366,9 @@ class DBot {
                 }
                 while (watch('before')) {
                     BinaryBotPrivateTickAnalysis();
+                    Bot.tradingModeTickStart();
                     BinaryBotPrivateRun(BinaryBotPrivateBeforePurchase);
+                    Bot.tradingModeTickEnd();
                 }
                 while (watch('during')) {
                     BinaryBotPrivateTickAnalysis();
@@ -373,6 +378,8 @@ class DBot {
                 if (!BinaryBotPrivateRun(BinaryBotPrivateAfterPurchase)) {
                     break;
                 }
+                // One settled contract: continuous mode keeps trading inside the same entry.
+                Bot.tradingModeTradeSettled();
             }
             
             `;

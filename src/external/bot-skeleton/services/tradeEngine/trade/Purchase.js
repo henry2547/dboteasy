@@ -34,6 +34,14 @@ export default Engine =>
                 return Promise.resolve();
             }
 
+            // Trading mode: the blocks keep running, but single mode that already took its one
+            // contract for this entry holds the purchase back until the entry is signalled again.
+            this.tradingModePurchaseAttempted?.();
+            if (this.tradingModeBlocksPurchase?.()) {
+                this.tradingModeJournalWaiting?.();
+                return Promise.resolve();
+            }
+
             const resolved = this.resolveContractTradeOptions?.(contract_type, options);
             if (resolved && !resolved.ok) {
                 notify('warn', `Cannot buy ${contract_type}: ${resolved.error}.`);
@@ -87,6 +95,9 @@ export default Engine =>
                     const action = () => api_base.api.send({ buy: id, price: askPrice });
 
                     this.isSold = false;
+                    // A contract is being bought, so this entry is live (and single mode is spent
+                    // once it settles).
+                    this.tradingModePurchased?.();
 
                     contractStatus({
                         id: 'contract.purchase_sent',
@@ -124,6 +135,7 @@ export default Engine =>
             const action = () => api_base.api.send(trade_option);
 
             this.isSold = false;
+            this.tradingModePurchased?.();
 
             contractStatus({
                 id: 'contract.purchase_sent',

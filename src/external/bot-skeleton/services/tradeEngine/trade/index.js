@@ -13,6 +13,7 @@ import rootReducer from './state/reducers';
 import Balance from './Balance';
 import ContractFamily from './ContractFamily';
 import EvenOdd from './EvenOdd';
+import TradingMode from './TradingMode';
 import OpenContract from './OpenContract';
 import Proposal from './Proposal';
 import Purchase from './Purchase';
@@ -77,12 +78,14 @@ const watchScope = ({ store, stopScope, passScope, passFlag }) => {
 // `ContractFamily` resolves the contract type and barrier a buy really uses, which is what lets one
 // bot trade an Over/Under leg and an Even/Odd leg in the same session.
 export default class TradeEngine extends EvenOdd(
-    ContractFamily(
-        SessionControl(
-            StrategyLearning(
-                RiskManagement(
-                    MarketIntelligence(
-                        MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {}))))))))
+    TradingMode(
+        ContractFamily(
+            SessionControl(
+                StrategyLearning(
+                    RiskManagement(
+                        MarketIntelligence(
+                            MarketScan(Balance(Purchase(Sell(OpenContract(Proposal(Ticks(Total(class {}))))))))
+                        )
                     )
                 )
             )
@@ -112,6 +115,8 @@ export default class TradeEngine extends EvenOdd(
 
         this.initArgs = args;
         this.options = options;
+        // One run starts here; the trade loop below calls `start()` once per iteration.
+        this.resetTradingMode?.();
         this.startPromise = this.loginAndGetBalance(token);
 
         if (!this.checkTicksPromiseExists()) this.watchTicks(symbol);
@@ -129,6 +134,7 @@ export default class TradeEngine extends EvenOdd(
         this.tradeOptions = { ...validated_trade_options, symbol: this.options.symbol };
         this.store.dispatch(start());
         this.checkLimits(validated_trade_options);
+        this.tradingModeAnnounce?.();
 
         // Said once per run (start() runs once per trade loop), so the journal explains why no
         // contract ever appears.

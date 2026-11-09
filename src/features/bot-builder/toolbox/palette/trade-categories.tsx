@@ -5,6 +5,7 @@ export const TradeCategories = () => (
     <>
             <Category id='trade_parameters' name={localize('Trade parameters')}>
                 <Block type='trade_definition'>
+                    <Field name='MODE_LIST'>CONTINUOUS</Field>
                     <Statement name='TRADE_OPTIONS'>
                         <Block type='trade_definition_market' deletable='false' movable='false'>
                             <Field name='MARKET_LIST' />

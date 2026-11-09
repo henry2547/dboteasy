@@ -354,6 +354,14 @@ export default Engine =>
                 return false;
             }
 
+            // Trading mode: single mode already took its one contract for this entry, so the entry
+            // is not refused — it is deferred until the next one.
+            this.tradingModePurchaseAttempted?.();
+            if (this.tradingModeBlocksPurchase?.()) {
+                this.tradingModeJournalWaiting?.();
+                return false;
+            }
+
             const key = this.eoCurrentSignalKey();
 
             // Observation mode: the signal is recorded and journalled, but nothing is bought.

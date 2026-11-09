@@ -18,6 +18,7 @@
     <variable type="" id="freebot-multiplier" islocal="false" iscloud="false">freebot:multiplier</variable>
   </variables>
   <block type="trade_definition" id="freebot-o1u6-definition" x="0" y="0">
+    <field name="MODE_LIST">CONTINUOUS</field>
     <statement name="TRADE_OPTIONS">
       <block type="trade_definition_market" id="freebot-o1u6-market" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>

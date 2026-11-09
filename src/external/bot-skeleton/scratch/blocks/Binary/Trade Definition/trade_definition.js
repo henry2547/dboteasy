@@ -18,7 +18,7 @@ window.Blockly.Blocks.trade_definition = {
     },
     definition() {
         return {
-            message0: '%1 %2 %3',
+            message0: '%1 %2 %3 %4',
             message1: '%1',
             message2: '%1 %2 %3',
             message3: '%1',
@@ -40,6 +40,17 @@ window.Blockly.Blocks.trade_definition = {
                 },
                 {
                     type: 'input_dummy',
+                },
+                // How many trades one confirmed entry may take: CONTINUOUS keeps trading inside the
+                // entry after each settled contract, SINGLE takes one contract per entry and then
+                // waits for the next entry. The run loop reads it through `Bot.init`.
+                {
+                    type: 'field_dropdown',
+                    name: 'MODE_LIST',
+                    options: [
+                        [localize('Mode: Continuous'), 'CONTINUOUS'],
+                        [localize('Mode: Single'), 'SINGLE'],
+                    ],
                 },
             ],
             args1: [
@@ -104,7 +115,9 @@ window.Blockly.Blocks.trade_definition = {
             colour: window.Blockly.Colours.RootBlock.colour,
             colourSecondary: window.Blockly.Colours.RootBlock.colourSecondary,
             colourTertiary: window.Blockly.Colours.RootBlock.colourTertiary,
-            tooltip: localize('Here is where you define the parameters of your contract.'),
+            tooltip: localize(
+                'Here is where you define the parameters of your contract. Trading mode: Continuous keeps trading after each settled contract until the take profit, stop loss or a stop rule ends the run; Single takes one contract per confirmed entry and then waits for the next entry.'
+            ),
             category: window.Blockly.Categories.Trade_Definition,
         };
     },
@@ -181,6 +194,9 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition = block 
     const candle_interval = candle_interval_block.getFieldValue('CANDLEINTERVAL_LIST');
     const should_restart_on_error = restart_on_error_block.getFieldValue('RESTARTONERROR') !== 'FALSE';
     const should_restart_on_buy_sell = restart_on_buy_sell_block.getFieldValue('TIME_MACHINE_ENABLED') !== 'FALSE';
+    // A canvas saved before the field existed reports the first option, so an older bot keeps trading
+    // exactly as it did.
+    const trading_mode = block.getFieldValue('MODE_LIST') === 'SINGLE' ? 'SINGLE' : 'CONTINUOUS';
 
     const { opposites } = config();
     const contract_type_list =
@@ -199,6 +215,7 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition = block 
           candleInterval      : '${candle_interval || 'FALSE'}',
           shouldRestartOnError: ${should_restart_on_error},
           timeMachineEnabled  : ${should_restart_on_buy_sell},
+          tradingMode         : '${trading_mode}',
         });
         ${initialization.trim()}
     };

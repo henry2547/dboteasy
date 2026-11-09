@@ -25,6 +25,8 @@ export interface FreeBotXmlSettings {
     tradeTypeCategory: string | null;
     tradeType: string | null;
     contractType: string | null;
+    /** The trade definition's `MODE_LIST` — `CONTINUOUS` or `SINGLE`. */
+    mode: string | null;
     prediction: string | null;
     durationType: string | null;
     duration: string | null;
@@ -70,6 +72,7 @@ const EMPTY_SETTINGS: FreeBotXmlSettings = {
     tradeTypeCategory: null,
     tradeType: null,
     contractType: null,
+    mode: null,
     prediction: null,
     durationType: null,
     duration: null,
@@ -121,6 +124,7 @@ export function parseBotXml(xml: string): { doc: Document | null; error: string 
 }
 
 function readSettings(doc: Document): FreeBotXmlSettings {
+    const definition = blocksOfType(doc, 'trade_definition')[0];
     const market = blocksOfType(doc, 'trade_definition_market')[0];
     const tradetype = blocksOfType(doc, 'trade_definition_tradetype')[0];
     const contractType = blocksOfType(doc, 'trade_definition_contracttype')[0];
@@ -143,6 +147,7 @@ function readSettings(doc: Document): FreeBotXmlSettings {
         tradeTypeCategory: fieldValue(tradetype, 'TRADETYPECAT_LIST', 'field'),
         tradeType: fieldValue(tradetype, 'TRADETYPE_LIST', 'field'),
         contractType: fieldValue(contractType, 'TYPE_LIST', 'field'),
+        mode: fieldValue(definition, 'MODE_LIST'),
         prediction: valueField(tradeoptions, 'PREDICTION'),
         durationType: fieldValue(tradeoptions, 'DURATIONTYPE_LIST', 'field'),
         duration: valueField(tradeoptions, 'DURATION'),
@@ -523,6 +528,22 @@ export function inspectFreeBotXml(
         detail: `${settings.contractType ?? '—'} (expected ${template.contractType})`,
     });
     if (!contractOk) errors.push(`Expected contract type ${template.contractType} but the XML says ${settings.contractType ?? 'nothing'}.`);
+
+    // The trade definition's Mode field decides how many trades one entry may take, so the bot must
+    // carry the mode its card describes.
+    const expectedMode = template.mode.toUpperCase();
+    const modeOk = settings.mode === expectedMode;
+    checks.push({
+        id: 'trading-mode',
+        label: 'Trading mode',
+        passed: modeOk,
+        detail: `${settings.mode ?? '—'} (expected ${expectedMode})`,
+    });
+    if (!modeOk) {
+        errors.push(
+            `Expected trading mode ${expectedMode} but the XML says ${settings.mode ?? 'nothing'}. Set "1. Trade parameters" → Mode to match the template.`
+        );
+    }
 
     // Over/Under carries a barrier digit; Even/Odd carries none, so an absent
     // prediction is the correct reading for a parity template.
