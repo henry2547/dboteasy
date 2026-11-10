@@ -14,30 +14,24 @@
 
 import { classifyRegime, TREND_SUITABLE_REGIMES } from '../regime';
 import type { RegimeState, RiseFallSignal, SignalContribution, SignalDirection, Tick } from '../types';
+import {
+    DEFAULT_STRATEGY_CONFIG,
+    assembleSignal,
+    clamp01,
+    contribution,
+    deltasOf,
+    directionOf,
+    ema,
+    emptySignal,
+    formatPrice,
+    quotesOf,
+    structureDirection,
+    type StrategyConfig,
+} from './shared';
 
-export interface TrendContinuationConfig {
-    fastPeriod: number;
-    mediumPeriod: number;
-    slowPeriod: number;
-    /** 0..100 entry threshold the winning side must reach. */
-    minScore: number;
-    /** Ticks used for the momentum and consistency reads. */
-    confirmationTicks: number;
-    /** Ticks required before any signal is offered. */
-    minTicks: number;
-    /** Refuse the entry when higher highs / lower lows do not confirm the trend. */
-    requireStructure: boolean;
-}
+export type TrendContinuationConfig = StrategyConfig;
 
-export const DEFAULT_TREND_CONTINUATION: TrendContinuationConfig = {
-    fastPeriod: 5,
-    mediumPeriod: 13,
-    slowPeriod: 34,
-    minScore: 60,
-    confirmationTicks: 10,
-    minTicks: 60,
-    requireStructure: true,
-};
+export const DEFAULT_TREND_CONTINUATION: StrategyConfig = DEFAULT_STRATEGY_CONFIG;
 
 const WEIGHTS = {
     ema: 30,
@@ -47,80 +41,24 @@ const WEIGHTS = {
     consistency: 15,
 } as const;
 
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-
-/** Exponential moving average, or null while there are not enough values. */
-export function ema(values: number[], period: number): number | null {
-    if (!Number.isFinite(period) || period < 1 || values.length < period) return null;
-
-    const k = 2 / (period + 1);
-    let value = values.slice(0, period).reduce((sum, item) => sum + item, 0) / period;
-    for (let index = period; index < values.length; index += 1) {
-        value = values[index] * k + value * (1 - k);
-    }
-    return value;
-}
-
-/** A display helper for the explanation text only — never used in a judgement. */
-function formatPrice(value: number, meanAbsMove: number): string {
-    const decimals = meanAbsMove >= 0.1 ? 2 : meanAbsMove >= 0.01 ? 3 : meanAbsMove >= 0.001 ? 4 : 5;
-    return value.toFixed(decimals);
-}
-
-/** Higher highs + higher lows → rise; lower highs + lower lows → fall. */
-function structureDirection(quotes: number[], blockSize: number): SignalDirection {
-    if (blockSize < 2 || quotes.length < blockSize * 2) return 'none';
-
-    const recent = quotes.slice(-blockSize);
-    const previous = quotes.slice(-blockSize * 2, -blockSize);
-    const higherHigh = Math.max(...recent) > Math.max(...previous);
-    const higherLow = Math.min(...recent) > Math.min(...previous);
-    const lowerHigh = Math.max(...recent) < Math.max(...previous);
-    const lowerLow = Math.min(...recent) < Math.min(...previous);
-
-    if (higherHigh && higherLow) return 'rise';
-    if (lowerHigh && lowerLow) return 'fall';
-    return 'none';
-}
-
-function emptySignal(symbol: string, ticks: Tick[], message: string): RiseFallSignal {
-    return {
-        strategyId: 'trend_continuation',
-        symbol,
-        direction: 'none',
-        riseScore: 0,
-        fallScore: 0,
-        confidence: 0,
-        contributions: [],
-        explanation: message,
-        regime: 'uncertain',
-        suitable: false,
-        ticksAnalysed: ticks.length,
-        evaluatedAt: (ticks[ticks.length - 1]?.epoch ?? 0) * 1000,
-        fingerprint: `${symbol}:none:${ticks[ticks.length - 1]?.epoch ?? 0}`,
-    };
-}
-
 export function evaluateTrendContinuation(
     ticks: Tick[],
     symbol: string,
-    config: TrendContinuationConfig = DEFAULT_TREND_CONTINUATION,
+    config: StrategyConfig = DEFAULT_STRATEGY_CONFIG,
     regime: RegimeState = classifyRegime(ticks)
 ): RiseFallSignal {
     const requiredTicks = Math.max(config.minTicks, config.slowPeriod + config.confirmationTicks);
     if (ticks.length < requiredTicks) {
         return emptySignal(
+            'trend_continuation',
             symbol,
             ticks,
             `No trade — waiting for ${requiredTicks - ticks.length} more genuine ticks before the trend can be read.`
         );
     }
 
-    const quotes = ticks.map(tick => tick.quote);
-    const deltas: number[] = [];
-    for (let index = 1; index < quotes.length; index += 1) {
-        deltas.push(quotes[index] - quotes[index - 1]);
-    }
+    const quotes = quotesOf(ticks);
+    const deltas = deltasOf(quotes);
     const meanAbsMove = deltas.length
         ? deltas.reduce((sum, delta) => sum + Math.abs(delta), 0) / deltas.length
         : 0;
@@ -129,7 +67,7 @@ export function evaluateTrendContinuation(
     const medium = ema(quotes, config.mediumPeriod);
     const slow = ema(quotes, config.slowPeriod);
     if (fast === null || medium === null || slow === null) {
-        return emptySignal(symbol, ticks, 'No trade — the moving averages are not ready yet.');
+        return emptySignal('trend_continuation', symbol, ticks, 'No trade — the moving averages are not ready yet.');
     }
 
     // 1. EMA alignment. A mixed stack is not a trend, so it scores nothing.
@@ -137,7 +75,6 @@ export function evaluateTrendContinuation(
     if (fast > medium && medium > slow) emaDirection = 'rise';
     else if (fast < medium && medium < slow) emaDirection = 'fall';
     const separation = meanAbsMove > 0 ? Math.abs(fast - slow) / (meanAbsMove * 3) : 0;
-    const emaScore = emaDirection === 'none' ? 0 : WEIGHTS.ema * clamp01(0.5 + separation);
     const emaDetail =
         emaDirection === 'none'
             ? `Mixed EMA stack (fast ${formatPrice(fast, meanAbsMove)}, medium ${formatPrice(
@@ -152,7 +89,6 @@ export function evaluateTrendContinuation(
     // 2. Market structure: higher highs and higher lows (or the mirror image).
     const blockSize = Math.max(3, Math.floor(config.slowPeriod / 3));
     const structure = structureDirection(quotes, blockSize);
-    const structureScore = structure === 'none' ? 0 : WEIGHTS.structure;
     const structureDetail =
         structure === 'none'
             ? 'No clean higher-high/higher-low (or lower-high/lower-low) structure'
@@ -163,16 +99,13 @@ export function evaluateTrendContinuation(
     // 3. Trend strength from the regime classifier (efficiency ratio).
     const strengthDirection: SignalDirection =
         regime.direction === 'up' ? 'rise' : regime.direction === 'down' ? 'fall' : 'none';
-    const strengthScore = strengthDirection === 'none' ? 0 : WEIGHTS.strength * regime.trendStrength;
     const strengthDetail = `${regime.label} · efficiency ${(regime.trendStrength * 100).toFixed(0)}%`;
 
     // 4. Momentum: the fast EMA's own movement over the confirmation window.
     const pastFast = ema(quotes.slice(0, quotes.length - config.confirmationTicks), config.fastPeriod);
     const momentumMove = pastFast === null ? 0 : fast - pastFast;
     const momentumNormalised = meanAbsMove > 0 ? momentumMove / (meanAbsMove * config.confirmationTicks) : 0;
-    const momentumDirection: SignalDirection =
-        Math.abs(momentumNormalised) < 0.1 ? 'none' : momentumNormalised > 0 ? 'rise' : 'fall';
-    const momentumScore = momentumDirection === 'none' ? 0 : WEIGHTS.momentum * clamp01(Math.abs(momentumNormalised));
+    const momentumDirection = directionOf(momentumNormalised, 0.1);
     const momentumDetail =
         momentumDirection === 'none'
             ? 'Flat momentum over the confirmation window'
@@ -188,105 +121,63 @@ export function evaluateTrendContinuation(
     const consistencyShare = recentDeltas.length ? dominant / recentDeltas.length : 0;
     const consistencyDirection: SignalDirection =
         upTicks === downTicks ? 'none' : upTicks > downTicks ? 'rise' : 'fall';
-    const consistencyScore =
-        consistencyDirection === 'none' ? 0 : WEIGHTS.consistency * clamp01((consistencyShare - 0.5) / 0.5);
     const consistencyDetail = `${Math.max(upTicks, downTicks)} of ${recentDeltas.length} recent ticks ${
         consistencyDirection === 'fall' ? 'down' : 'up'
     }`;
 
     const contributions: SignalContribution[] = [
-        { id: 'ema', label: 'EMA alignment', weight: WEIGHTS.ema, score: emaScore, direction: emaDirection, detail: emaDetail },
-        {
-            id: 'structure',
-            label: 'Market structure',
-            weight: WEIGHTS.structure,
-            score: structureScore,
-            direction: structure,
-            detail: structureDetail,
-        },
-        {
-            id: 'strength',
-            label: 'Trend strength',
-            weight: WEIGHTS.strength,
-            score: strengthScore,
-            direction: strengthDirection,
-            detail: strengthDetail,
-        },
-        {
-            id: 'momentum',
-            label: 'Momentum',
-            weight: WEIGHTS.momentum,
-            score: momentumScore,
-            direction: momentumDirection,
-            detail: momentumDetail,
-        },
-        {
-            id: 'consistency',
-            label: 'Tick consistency',
-            weight: WEIGHTS.consistency,
-            score: consistencyScore,
-            direction: consistencyDirection,
-            detail: consistencyDetail,
-        },
+        contribution('ema', 'EMA alignment', WEIGHTS.ema, emaDirection, 0.5 + separation, emaDetail),
+        contribution('structure', 'Market structure', WEIGHTS.structure, structure, 1, structureDetail),
+        contribution(
+            'strength',
+            'Trend strength',
+            WEIGHTS.strength,
+            strengthDirection,
+            regime.trendStrength,
+            strengthDetail
+        ),
+        contribution(
+            'momentum',
+            'Momentum',
+            WEIGHTS.momentum,
+            momentumDirection,
+            Math.abs(momentumNormalised),
+            momentumDetail
+        ),
+        contribution(
+            'consistency',
+            'Tick consistency',
+            WEIGHTS.consistency,
+            consistencyDirection,
+            (consistencyShare - 0.5) / 0.5,
+            consistencyDetail
+        ),
     ];
 
-    const round = (value: number) => Math.round(Math.min(100, Math.max(0, value)));
-    const riseScore = round(
-        contributions.filter(item => item.direction === 'rise').reduce((sum, item) => sum + item.score, 0)
-    );
-    const fallScore = round(
-        contributions.filter(item => item.direction === 'fall').reduce((sum, item) => sum + item.score, 0)
-    );
-
-    const best = riseScore >= fallScore ? 'rise' : 'fall';
-    const bestScore = Math.max(riseScore, fallScore);
-    const direction: SignalDirection = bestScore >= config.minScore ? best : 'none';
-
-    // Suitability: a declared regime that agrees with the direction, plus the
-    // structural confirmation the brief insists on (never a bare crossover).
-    let suitable = direction !== 'none' && TREND_SUITABLE_REGIMES.includes(regime.id);
-    if (direction === 'rise' && regime.direction === 'down') suitable = false;
-    if (direction === 'fall' && regime.direction === 'up') suitable = false;
-    if (direction !== 'none' && config.requireStructure && structure !== direction) suitable = false;
-
-    const lastEpoch = ticks[ticks.length - 1].epoch;
-    const summary = contributions
-        .filter(item => item.direction !== 'none')
-        .map(item => `${item.label.toLowerCase()} ${item.score.toFixed(0)}/${item.weight}`)
-        .join(', ');
-
-    let explanation: string;
-    if (direction === 'none') {
-        explanation = `No trade — best side scored ${bestScore}/100 against a ${config.minScore} threshold. ${
-            summary || 'No component confirms a direction'
-        }. Regime: ${regime.label}.`;
-    } else if (!suitable) {
-        explanation = `No trade — ${best === 'rise' ? 'Rise' : 'Fall'} scored ${bestScore}/100 but ${
-            !TREND_SUITABLE_REGIMES.includes(regime.id)
-                ? `the regime (${regime.label}) is not one this strategy trades`
-                : config.requireStructure && structure !== direction
-                  ? 'market structure does not confirm the trend'
-                  : 'the regime points the other way'
-        }.`;
-    } else {
-        explanation = `${best === 'rise' ? 'Rise' : 'Fall'} ${bestScore}/100 — ${summary}. Regime: ${
-            regime.label
-        }. The score is a filter strength, not a probability of winning.`;
-    }
-
-    return {
+    return assembleSignal({
         strategyId: 'trend_continuation',
         symbol,
-        direction,
-        riseScore,
-        fallScore,
-        confidence: bestScore / 100,
+        ticks,
         contributions,
-        explanation,
-        regime: regime.id,
-        suitable,
-        ticksAnalysed: ticks.length,
-        evaluatedAt: lastEpoch * 1000,
-        fingerprint: `${symbol}:${best}:${lastEpoch}`,
-    };
+        regime,
+        minScore: config.minScore,
+        suitableWhen: ({ direction, best }) => {
+            if (direction === 'none') return { suitable: false, reason: null };
+            if (!TREND_SUITABLE_REGIMES.includes(regime.id)) {
+                return { suitable: false, reason: `the regime (${regime.label}) is not one this strategy trades` };
+            }
+            if (best === 'rise' && regime.direction === 'down') {
+                return { suitable: false, reason: 'the regime points the other way' };
+            }
+            if (best === 'fall' && regime.direction === 'up') {
+                return { suitable: false, reason: 'the regime points the other way' };
+            }
+            if (config.requireStructure && structure !== direction) {
+                return { suitable: false, reason: 'market structure does not confirm the trend' };
+            }
+            return { suitable: true, reason: null };
+        },
+    });
 }
+
+export { ema, clamp01 };

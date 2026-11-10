@@ -19,6 +19,7 @@ import './Math';
 import './Observer';
 import './Reporting';
 import './Risk Management';
+import './RiseFall';
 import './Strategy Learning';
 import './Text';
 import './Trading Execution';

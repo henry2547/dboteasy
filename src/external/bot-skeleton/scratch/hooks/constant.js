@@ -23,6 +23,7 @@ window.Blockly.Categories = {
     Trading_Execution: 'trading_execution',
     Bot_Control: 'bot_control',
     Session_Reporting: 'session_reporting',
+    Rise_Fall: 'rise_fall',
     Candle: 'candle',
     Miscellaneous: 'miscellaneous',
     Loop: 'loops',

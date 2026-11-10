@@ -1,6 +1,18 @@
-import { RiseFallExecutionService, SIGNAL_MAX_AGE_MS, VIRTUAL_PAYOUT_RATE } from '../execution-service';
+import {
+    LIVE_ACCOUNT_REQUIRED,
+    RiseFallExecutionService,
+    SIGNAL_MAX_AGE_MS,
+    VIRTUAL_PAYOUT_RATE,
+} from '../execution-service';
 import { RiseFallJournal, type StorageLike } from '../journal';
-import type { MarketIntegrity, RiseFallSignal } from '../types';
+import type {
+    BrokerBuyResult,
+    BrokerTicket,
+    LiveContractUpdate,
+    MarketIntegrity,
+    RiseFallBroker,
+    RiseFallSignal,
+} from '../types';
 
 const NOW = 1_700_000_000_000;
 
@@ -40,14 +52,53 @@ function makeSignal(overrides: Partial<RiseFallSignal> = {}): RiseFallSignal {
         suitable: true,
         ticksAnalysed: 140,
         evaluatedAt: NOW - 500,
-        fingerprint: 'R_100:rise:1700000000',
+        fingerprint: 'R_100:trend_continuation:rise:1700000000',
         ...overrides,
     };
 }
 
-function makeService() {
+class FakeBroker implements RiseFallBroker {
+    readonly tickets: BrokerTicket[] = [];
+    result: BrokerBuyResult;
+    constructor(result: BrokerBuyResult) {
+        this.result = result;
+    }
+    async buy(ticket: BrokerTicket): Promise<BrokerBuyResult> {
+        this.tickets.push(ticket);
+        return this.result;
+    }
+}
+
+const accepted: BrokerBuyResult = { ok: true, contractId: '555', payout: 1.9, reason: null, unknown: false };
+
+const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+
+function makeService(broker?: RiseFallBroker) {
     const journal = new RiseFallJournal(memoryStorage());
     const service = new RiseFallExecutionService({ journal, clock: () => NOW });
+    if (broker) {
+        service.setBroker(broker);
+        service.verifyAccount('demo', {
+            verified: true,
+            accountType: 'demo',
+            maskedLoginId: 'VR•••01',
+            currency: 'USD',
+            balance: 10_000,
+            tradePermitted: true,
+            verifiedAt: NOW,
+            reason: null,
+        });
+        service.verifyAccount('real', {
+            verified: true,
+            accountType: 'real',
+            maskedLoginId: 'CR•••01',
+            currency: 'USD',
+            balance: 500,
+            tradePermitted: true,
+            verifiedAt: NOW,
+            reason: null,
+        });
+    }
     return { service, journal };
 }
 
@@ -124,7 +175,7 @@ describe('RiseFallExecutionService', () => {
         const { service } = makeService();
         service.start();
         enter(service, {
-            signal: makeSignal({ direction: 'fall', fingerprint: 'R_100:fall:1700000000' }),
+            signal: makeSignal({ direction: 'fall', fingerprint: 'R_100:trend_continuation:fall:1700000000' }),
             durationTicks: 1,
         });
 
@@ -200,7 +251,7 @@ describe('RiseFallExecutionService', () => {
         expect(service.snapshot().modes.virtual.openContract).toBeNull();
     });
 
-    it('refuses Demo purchases with the explicit phase gate', () => {
+    it('refuses a Demo entry until a Demo account is verified', () => {
         const { service } = makeService();
         expect(service.setMode('demo').ok).toBe(true);
         service.start();
@@ -208,18 +259,150 @@ describe('RiseFallExecutionService', () => {
         const outcome = enter(service);
         expect(outcome.status).toBe('halted');
         expect(outcome.stage).toBe('account');
-        expect(outcome.reason).toContain('Phase B');
+        expect(outcome.reason).toContain('No verified Deriv account');
+        expect(LIVE_ACCOUNT_REQUIRED.length).toBeGreaterThan(0);
         expect(service.snapshot().modes.demo.openContract).toBeNull();
     });
 
-    it('locks Real execution behind the activation gate', () => {
-        const { service } = makeService();
-        service.setMode('real');
+    it('buys a Demo contract through the broker and journals it as not estimated', async () => {
+        const broker = new FakeBroker(accepted);
+        const { service, journal } = makeService(broker);
+        service.setMode('demo');
         service.start();
 
         const outcome = enter(service);
-        expect(outcome.status).toBe('halted');
-        expect(outcome.reason).toContain('locked');
+        expect(outcome.status).toBe('opened');
+        await flush();
+
+        expect(broker.tickets).toHaveLength(1);
+        expect(broker.tickets[0]).toMatchObject({
+            mode: 'demo',
+            symbol: 'R_100',
+            contractType: 'CALL',
+            stake: 1,
+            currency: 'USD',
+            durationTicks: 2,
+        });
+
+        const contract = service.snapshot().modes.demo.openContract;
+        expect(contract?.contractId).toBe('555');
+        expect(contract?.source).toBe('DEMO');
+        expect(contract?.awaitingBroker).toBe(false);
+
+        const [line] = journal.entries('demo');
+        expect(line.source).toBe('DEMO');
+        expect(line.contractId).toBe('555');
+        expect(line.estimated).toBe(false);
+        expect(journal.entries('virtual')).toHaveLength(0);
+    });
+
+    it('settles a live contract only on Deriv’s own report', async () => {
+        const broker = new FakeBroker(accepted);
+        const { service, journal } = makeService(broker);
+        service.setMode('demo');
+        service.start();
+        enter(service);
+        await flush();
+
+        // A tick must never settle a purchased contract.
+        expect(service.onTick({ epoch: entryTick.epoch + 5, quote: 200 })).toBeNull();
+        expect(service.snapshot().modes.demo.openContract?.status).toBe('open');
+
+        const update: LiveContractUpdate = {
+            contractId: '555',
+            status: 'won',
+            profit: 0.95,
+            exitQuote: 100.5,
+            exitEpoch: entryTick.epoch + 2,
+            balance: 10_000.95,
+        };
+        service.onContractUpdate(update);
+
+        expect(service.snapshot().modes.demo.openContract).toBeNull();
+        const [line] = journal.entries('demo');
+        expect(line.status).toBe('won');
+        expect(line.profit).toBe(0.95);
+        expect(line.exitQuote).toBe(100.5);
+        expect(service.snapshot().modes.demo.account.balance).toBeCloseTo(10_000.95, 2);
+    });
+
+    it('refuses a Demo entry Deriv declines and leaves no contract open', async () => {
+        const broker = new FakeBroker({
+            ok: false,
+            contractId: null,
+            payout: null,
+            reason: 'This contract is not offered.',
+            unknown: false,
+        });
+        const { service, journal } = makeService(broker);
+        service.setMode('demo');
+        service.start();
+        enter(service);
+        await flush();
+
+        expect(service.snapshot().modes.demo.openContract).toBeNull();
+        expect(journal.entries('demo')).toHaveLength(0);
+        expect(service.snapshot().lastOutcome?.reason).toContain('not offered');
+        // The engine keeps running; nothing was bought, so another attempt is allowed.
+        expect(service.snapshot().modes.demo.state).toBe('running');
+    });
+
+    it('halts the mode when the purchase outcome is UNKNOWN and never resubmits', async () => {
+        const broker = new FakeBroker({
+            ok: false,
+            contractId: null,
+            payout: null,
+            reason: 'The buy request timed out.',
+            unknown: true,
+        });
+        const { service } = makeService(broker);
+        service.setMode('demo');
+        service.start();
+        enter(service);
+        await flush();
+
+        const snapshot = service.snapshot();
+        expect(snapshot.modes.demo.state).toBe('halted');
+        expect(snapshot.modes.demo.haltReason).toContain('UNKNOWN');
+        expect(broker.tickets).toHaveLength(1);
+    });
+
+    it('locks Real execution until the mode is armed, then asks for confirmation', async () => {
+        const broker = new FakeBroker(accepted);
+        const { service } = makeService(broker);
+        service.setMode('real');
+
+        expect(service.start().ok).toBe(false);
+        service.armReal(true);
+        expect(service.start().ok).toBe(true);
+
+        const outcome = enter(service);
+        expect(outcome.status).toBe('confirmation-required');
+        expect(service.snapshot().modes.real.pendingContract).not.toBeNull();
+        expect(broker.tickets).toHaveLength(0);
+
+        const confirmed = service.confirmEntry();
+        expect(confirmed.ok).toBe(true);
+        await flush();
+        expect(broker.tickets).toHaveLength(1);
+        expect(broker.tickets[0].mode).toBe('real');
+        expect(service.snapshot().modes.real.openContract?.contractId).toBe('555');
+    });
+
+    it('cancels a pending real entry without buying anything', async () => {
+        const broker = new FakeBroker(accepted);
+        const { service } = makeService(broker);
+        service.setMode('real');
+        service.armReal(true);
+        service.start();
+        enter(service);
+
+        service.cancelPendingEntry();
+        await flush();
+
+        expect(broker.tickets).toHaveLength(0);
+        expect(service.snapshot().modes.real.pendingContract).toBeNull();
+        expect(service.snapshot().modes.real.openContract).toBeNull();
     });
 
     it('blocks a mode switch while a contract is open', () => {
@@ -239,7 +422,7 @@ describe('RiseFallExecutionService', () => {
         service.emergencyStop();
 
         const blocked = enter(service, {
-            signal: makeSignal({ fingerprint: 'R_100:rise:1700000001' }),
+            signal: makeSignal({ fingerprint: 'R_100:trend_continuation:rise:1700000001' }),
         });
         expect(blocked.status).toBe('halted');
         expect(blocked.reason).toContain('Emergency stop');

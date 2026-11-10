@@ -5,6 +5,7 @@ import getLearningInterface from './LearningInterface';
 import getMarketIntelligenceInterface from './MarketIntelligenceInterface';
 import getMarketScanInterface from './MarketScanInterface';
 import getRiskInterface from './RiskInterface';
+import getRiseFallInterface from './RiseFallInterface';
 import getSessionControlInterface, { getSessionControlAsyncInterface } from './SessionControlInterface';
 import getTicksInterface from './TicksInterface';
 import getToolsInterface from './ToolsInterface';
@@ -41,6 +42,9 @@ const Interface = $scope => {
             // the once-per-signal gate — synchronous reads of genuine ticks, so they work inside an
             // ordinary condition.
             ...getEvenOddInterface(tradeEngine),
+            // Rise/Fall engine reads and its one entry request — the executor on the
+            // Rise/Fall tab still runs every check.
+            ...getRiseFallInterface(tradeEngine),
             getTicksInterface: getTicksInterface(tradeEngine),
             // The one promise: the program suspends until the open contract settles.
             getSessionControlAsyncInterface: getSessionControlAsyncInterface(tradeEngine),

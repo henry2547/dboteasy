@@ -4,10 +4,12 @@
  * Three execution modes, strictly separated. Each mode owns its own account
  * verification, risk configuration, open contract, journal and statistics; no
  * value crosses between them. Virtual mode simulates fills against genuine
- * Deriv ticks and never sends a purchase.
+ * Deriv ticks and never sends a purchase; Demo and Real send their purchases
+ * over the authenticated Deriv socket through the same central executor.
  *
  * Nothing here fabricates a price. Every signal, virtual fill and settlement is
- * derived from ticks that arrived on Deriv's public market-data socket.
+ * derived from ticks that arrived on Deriv's public market-data socket, or from
+ * the contract Deriv itself reported for a live purchase.
  */
 
 export type ExecutionMode = 'virtual' | 'demo' | 'real';
@@ -57,6 +59,17 @@ export interface RegimeState {
     expansion: number;
 }
 
+/** The eight strategies of the brief. Each one is a pure function of the ticks. */
+export type StrategyId =
+    | 'trend_continuation'
+    | 'breakout'
+    | 'pullback'
+    | 'momentum'
+    | 'reversal'
+    | 'volatility_expansion'
+    | 'confluence'
+    | 'tick_sequence';
+
 export interface SignalContribution {
     id: string;
     label: string;
@@ -69,7 +82,7 @@ export interface SignalContribution {
 }
 
 export interface RiseFallSignal {
-    strategyId: 'trend_continuation';
+    strategyId: StrategyId;
     symbol: string;
     direction: SignalDirection;
     /** 0..100 strength of the Rise case. A filter score, never a probability. */
@@ -86,11 +99,19 @@ export interface RiseFallSignal {
     ticksAnalysed: number;
     /** Epoch ms of the newest tick the signal was computed from. */
     evaluatedAt: number;
-    /** One entry per tick per direction — the duplicate-entry guard. */
+    /** One entry per strategy per tick — the duplicate-entry guard. */
     fingerprint: string;
 }
 
-export type EntryStage = 'signal' | 'duplicate' | 'market-data' | 'risk' | 'account' | 'contract' | 'execution';
+export type EntryStage =
+    | 'signal'
+    | 'duplicate'
+    | 'market-data'
+    | 'risk'
+    | 'account'
+    | 'contract'
+    | 'confirmation'
+    | 'execution';
 
 export interface AccountVerification {
     mode: ExecutionMode;
@@ -108,13 +129,15 @@ export interface AccountVerification {
 
 export type ContractStatus = 'open' | 'won' | 'lost';
 
+/** Where a record came from: the simulated ledger or a real Deriv contract. */
+export type ContractSource = 'VIRTUAL' | 'DEMO' | 'REAL';
+
 export interface VirtualContract {
-    /** Internal id for this simulated contract. */
+    /** Internal id for this entry. */
     id: string;
     mode: ExecutionMode;
-    /** VIRTUAL only: simulated fills, no Deriv contract exists. */
-    source: 'VIRTUAL';
-    /** Always null — virtual mode never purchases anything on Deriv. */
+    source: ContractSource;
+    /** VIRTUAL: always null. DEMO/REAL: the contract id Deriv acknowledged. */
     contractId: string | null;
     symbol: string;
     direction: TradeDirection;
@@ -122,12 +145,16 @@ export interface VirtualContract {
     stake: number;
     currency: string;
     durationTicks: number;
-    /** Genuine ticks still to arrive before settlement. */
+    /** Genuine ticks still to arrive before settlement (virtual only). */
     ticksRemaining: number;
     /** Newest tick epoch already counted — a replayed tick is ignored. */
     lastAppliedEpoch: number;
     entryEpoch: number;
     entryQuote: number;
+    /** Deriv's quoted payout for a live entry; null while unknown. */
+    payout: number | null;
+    /** True between the executor's decision and the broker's acknowledgement. */
+    awaitingBroker: boolean;
     openedAt: number;
     status: ContractStatus;
     exitEpoch: number | null;
@@ -144,10 +171,10 @@ export interface VirtualContract {
 export interface JournalEntry {
     id: string;
     mode: ExecutionMode;
-    source: 'VIRTUAL' | 'DEMO' | 'REAL';
+    source: ContractSource;
     contractId: string | null;
     symbol: string;
-    strategyId: string;
+    strategyId: StrategyId;
     direction: TradeDirection;
     durationTicks: number;
     stake: number;
@@ -217,13 +244,53 @@ export interface MarketIntegrity {
 
 export type EngineState = 'idle' | 'running' | 'paused' | 'stopped' | 'halted';
 
+/** What the broker is asked to buy. Structured fields only — never a description. */
+export interface BrokerTicket {
+    /** The executor's internal entry id, used to correlate the acknowledgement. */
+    entryId: string;
+    mode: 'demo' | 'real';
+    symbol: string;
+    contractType: 'CALL' | 'PUT';
+    stake: number;
+    currency: string;
+    durationTicks: number;
+}
+
+export interface BrokerBuyResult {
+    ok: boolean;
+    contractId: string | null;
+    payout: number | null;
+    /** Why the purchase did not happen, when it did not. */
+    reason: string | null;
+    /** True when the outcome is unknown (a timeout) — the entry must not be retried. */
+    unknown: boolean;
+}
+
+/** Everything the engine needs from an authenticated connection. */
+export interface RiseFallBroker {
+    buy(ticket: BrokerTicket): Promise<BrokerBuyResult>;
+}
+
+/** One settlement update, as Deriv itself reported it. */
+export interface LiveContractUpdate {
+    contractId: string;
+    status: ContractStatus;
+    profit: number | null;
+    exitQuote: number | null;
+    exitEpoch: number | null;
+    balance: number | null;
+}
+
 export interface ModeSnapshot {
     mode: ExecutionMode;
     state: EngineState;
     emergency: boolean;
+    realArmed: boolean;
     account: AccountVerification;
     risk: Record<string, number>;
     openContract: VirtualContract | null;
+    /** A real entry waiting for the user's explicit confirmation. */
+    pendingContract: VirtualContract | null;
     stats: JournalStats;
     haltReason: string | null;
 }

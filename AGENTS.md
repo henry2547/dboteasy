@@ -1393,36 +1393,67 @@ stay on the canvas.
   `__tests__/digits-*-recovery.test.js` (generated calls + decisions). A live continuous run needs a
   logged-in Demo account, so it is verified by hand.
 
-## Rise/Fall engine (inside the Bot Builder — Phase A)
-A separate execution engine for Rise/Fall contracts lives in `src/features/rise-fall/` and is mounted
-by `bot-builder.tsx` next to `MarketScanStrip` (Bot Builder tab only). It is **not** a new tab: a
-launcher pill opens a panel over the canvas.
-- Phased build. **Phase A only**: account-mode selector with strict separation, the Trend Continuation
-  strategy, and **virtual** execution on genuine live ticks. Demo is refused as "Phase B" and Real as
-  "locked (Phase E)" — both by the executor, never simulated. Documents:
-  `docs/rise-fall/{REALITY_GATE,ARCHITECTURE,STRATEGY_SPEC,RISK_ENGINE_SPEC,KNOWN_LIMITATIONS}.md`.
+## Rise/Fall engine (its own tab, right after the Bot Builder)
+A separate execution engine for Rise/Fall contracts lives in `src/features/rise-fall/` and is the
+**fifth tab** (`#rise_fall`, `#id-rise-fall`, `DBOT_TABS.RISE_FALL = 4`). `DBOT_TABS`, `TAB_IDS` and the
+`hash` array in `main.tsx` are now: Dashboard, AI Builder, Free Bots, Bot Builder, **Rise/Fall**,
+Strategy Engine, Deriv Chart, Digits, Statistics — keep the three lists in the same order. The old
+launcher pill inside the Bot Builder is gone (`bot-builder.tsx` no longer mounts it) so exactly one
+engine instance and one journal exist per browser tab. Documents:
+`docs/rise-fall/{ARCHITECTURE,STRATEGY_SPEC,RISK_ENGINE_SPEC,BACKTEST_METHODOLOGY,BLOCKLY_BLOCKS,REALITY_GATE,KNOWN_LIMITATIONS}.md`.
+- **All phases are implemented.** Virtual is the simulated ledger on genuine ticks; Demo and Real send
+  real `proposal` → `buy` → `proposal_open_contract` requests over the app's existing authenticated
+  socket (`features/ai-bot/auth-ws`) through `live-broker.ts`. Real is additionally gated: the mode
+  must be **armed** for the session (`armReal`, cleared when the account changes or the socket closes)
+  and every real entry waits for the user's explicit **Buy this contract** confirmation. Nothing is
+  ever promoted between modes.
 - **One entry path.** `execution-service.ts` `RiseFallExecutionService.enter()` is the only way a
-  contract opens: engine state → signal (+age) → duplicate fingerprint → feed integrity → risk engine
-  → account verification → contract field validation → entry. A future Blockly block must call it, not
-  re-implement the checks.
+  contract opens — from the page or from a Blockly block — in this order: engine state → signal (+age)
+  → duplicate fingerprint → feed integrity → risk engine → account verification → contract field
+  validation → entry. Demo/Real entries are then dispatched to the injected broker; the journal line is
+  written only when Deriv acknowledges the contract (`estimated: false`, `contractId` set). A `buy`
+  timeout is an **UNKNOWN** outcome: the mode is halted with the reason and the order is never
+  resubmitted (reconcile it against the Deriv statement by hand).
 - **Virtual fills are simulated, on real prices.** `contractId` stays `null`, the journal line is
   `source: 'VIRTUAL'` with `estimated: true`, and profit uses `VIRTUAL_PAYOUT_RATE` (0.95). Settlement
   counts **genuine ticks** (`durationTicks`), ignores a replayed epoch (`lastAppliedEpoch`) and never
-  synthesises a price; equal quotes are a **loss** (no allow-equals parameter exists in the API).
+  synthesises a price; equal quotes are a **loss** (no allow-equals parameter exists in the API). A
+  live contract settles only on Deriv's own report — `onTick` returns early for anything that is not
+  `source: 'VIRTUAL'`.
+- **Eight strategies** in `strategies/` (one file each, all pure): trend continuation, breakout,
+  pullback, momentum, reversal, volatility expansion, confluence (needs ≥2 agreeing) and tick sequence.
+  `strategies/index.ts` is the registry; `evaluateAllStrategies` runs the seven base strategies first
+  and confluence from their signals for the same tick. Every strategy returns the same signal object
+  and its fingerprint carries `symbol:strategyId:direction:tick`, so one entry per strategy per tick.
+  Only the strategy selected in the panel's dropdown may enter; the ranking lists all eight.
+- **Backtest & ranking** (`backtest.ts`): one walk-forward pass, entry decides on tick `i` and settles
+  on `i + durationTicks` (no slice ever reaches past the decision), flat stake, the same 95% payout
+  assumption, break-even win rate 51.3%, ranking by `edge × √trades` with fewer than 5 trades reported
+  as unqualified. Everything is labelled **ESTIMATED**; `BACKTEST_METHODOLOGY.md` states the limits.
 - **Feed.** `use-tick-feed.ts` reuses `@/features/digits/deriv-public-ws` plus `digits/markets` (the
-  same deep imports `main.tsx` already uses) and opens one socket only while the panel is open. It
-  requests `ticks_history` with **`subscribe: 1`**; a gap > 5 s blocks entries for 30 s. `selectMarket`
-  reads `marketsRef`, not the `markets` state — the deferred default-market pick fired before the state
+  same deep imports `main.tsx` already uses) and opens one socket while the tab is mounted. It requests
+  `ticks_history` with **`subscribe: 1`**; a gap > 5 s blocks entries for 30 s. `selectMarket` reads
+  `marketsRef`, not the `markets` state — the deferred default-market pick fired before the state
   closure updated and silently sent no history request.
 - **Journals are per mode**, keyed `rise-fall.journal.v1.<mode>`; a mode switch is refused while a
-  contract is open. Risk config is *not* persisted (resets to defaults on reload).
+  contract is open or a real entry is pending. Risk config is *not* persisted (resets on reload).
+- **Bot Builder blocks** live in `scratch/blocks/RiseFall/` (`rf_connected`, `rf_signal`, `rf_score`,
+  `rf_regime`, `rf_best_strategy`, `rf_stat`, `rf_enter`, `rf_report`), in the palette's **Rise/Fall**
+  category (`Category id='rise_fall'`, `Blockly.Categories.Rise_Fall`). They read the mounted engine
+  through `src/utils/rise-fall-runtime.ts` — the one place the React engine and the interpreter meet —
+  and `rf_enter` calls the same executor (`Bot.rfEnter` → `RiseFallExecutionService.enter()`), so a
+  block cannot skip a check. With the tab closed the bridge answers neutral values and refuses the
+  entry with the reason, which `RiseFallInterface.js` journals. The runtime surface is registered in
+  `Interface/index.js` next to the other mixins.
 - Verify: `docker compose -f docker-compose.base44.yml exec web npx jest src/features/rise-fall
-  --coverage=false` (56 tests) and `npx tsc --noEmit` (clean). In the preview, Bot Builder → the
-  "Rise/Fall engine" pill: expect ~1000 genuine ticks, live Rise/Fall scores with per-component detail,
-  a regime, Start/Pause/Stop/Emergency, and the DEMO note refusing purchases. A NO TRADE reading on a
-  sideways market is correct behaviour, not a bug.
-- **Not built yet:** Demo/Real purchase loops, `proposal`/`buy`/`proposal_open_contract`, uncertain-buy
-  reconciliation, strategies 2–8, the Rise/Fall Blockly blocks, backtest/optimisation. The reusable
-  authenticated socket and order service already exist in `src/features/ai-bot/`.
+  --coverage=false` (84 tests) and `npx tsc --noEmit` (clean). In the preview, open the Rise/Fall tab:
+  expect ~1000 genuine ticks, all eight readings in the ranking, a walk-forward table after **Run the
+  walk-forward ranking**, DEMO/REAL honestly reporting "not verified" while signed out, and the REAL
+  arm button disabled until a verified Real account is connected. A NO TRADE reading on a sideways
+  market is correct behaviour, not a bug. In the Bot Builder, `Blockly.Blocks.rf_*` are registered and a
+  scratch workspace holding `rf_enter` generates `Bot.rfEnter(0.35, 5);`.
+- **Live purchases are not verified in the preview**: Run and the authenticated socket need a signed-in
+  Deriv account, so the Demo/Real `proposal → buy → settle` path is covered by unit tests with a fake
+  broker and must be exercised by hand on a Demo account. See `KNOWN_LIMITATIONS.md`.
 
 
