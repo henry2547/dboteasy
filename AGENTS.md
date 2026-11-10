@@ -1364,4 +1364,33 @@ authorised socket for `balance` so the header figure and the balance stream show
   `src/services/__tests__/derivws-accounts-reset.test.ts` (endpoint, method, headers, error text);
   the live reset needs a signed-in Demo session, so it is verified by hand.
 
+## Trading modes (Continuous / Single)
+The trade definition's `MODE_LIST` field ("1. Trade parameters" → Mode) reaches the engine as
+`Bot.init({ tradingMode })` and is applied by `trade/TradingMode.js` (a trade-engine mixin). It decides
+how many contracts one **confirmed entry** may carry — nothing else; the per-trade strategy conditions
+stay on the canvas.
+- **Continuous (default)** — the first confirmed entry (the losing pairs plus the confirmation digit)
+  opens the entry and it then stays live: after a settled WIN the bot trades again as soon as the
+  block's own conditions pass, with no new pair, and after a settled LOSS it takes the Even/Odd
+  reversal leg (the block's `sessionLastResult() === 'loss'` branch) and keeps trading from the same
+  live entry until the take profit / stop loss / stop rule ends the run.
+- **Single** — one contract per confirmed entry: after any settlement the entry is spent, so the next
+  trade needs the pairs and the confirmation digit again (`tradingModeBlocksPurchase` holds the
+  purchase back until the entry conditions lapsed once). A settled loss still takes the Even/Odd leg:
+  those buys are marked `purchase(contract, { recovery: true })` and are never held back, so the
+  single mode cannot block the recovery strategy.
+- `Bot.tradingModeEntryLive()` (sync, exposed in `BotInterface.js`) is what an entry block reads to
+  skip its own confirmation: `digits_cold_run_recovery` gates its Over 1 / Under 8 leg on
+  `(Bot.tradingModeEntryLive() || Bot.isPairConfirmed(set)) && shares-at-or-below && riskCanTrade()`.
+  It is always `false` in single mode, so the same block asks for a fresh confirmed pair per trade.
+  `entry_live` is seeded per run (`resetTradingMode`, called from `trade/index.js` `init`) and set by
+  `tradingModePurchased()`; it is never cleared by a settlement — that is what "continuous" means.
+  The share ceiling keeps gating every trade of a live entry, so continuous does not trade blind.
+- The Even/Odd recovery legs of `digits_cold_run_recovery` and `digits_parity_recovery` themselves are
+  unchanged (same reversal rule, same digits) — only the mode above them changed.
+- Coverage: `services/tradeEngine/utils/__tests__/trading-mode-engine.test.js` (mode state,
+  entry-live, the single-mode recovery exemption) and the two blocks'
+  `__tests__/digits-*-recovery.test.js` (generated calls + decisions). A live continuous run needs a
+  logged-in Demo account, so it is verified by hand.
+
 

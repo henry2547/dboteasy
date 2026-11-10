@@ -171,22 +171,28 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_cold_run_recovery 
     // the frequency-limit guard in their `before_purchase`, which stops the bot with a reason as soon
     // as a losing digit rises above its share ceiling; a pair that is not confirmed yet is just a wait.
     //
+    // The trading mode decides how many trades one confirmed entry may carry: continuous keeps the
+    // entry live after its first trade, so the pair and its confirmation digit are waited for once
+    // (the share ceiling still gates every trade), while single asks for a fresh confirmed pair
+    // before every contract. `Bot.tradingModeEntryLive()` answers false in single mode.
+    //
     // The engine reports a settled contract as `win` or `loss`, so the recovery branch has to read
-    // `loss` — the reversal never runs while this compares against anything else.
+    // `loss` — the reversal never runs while this compares against anything else. Its buys are marked
+    // `recovery` so the single mode never holds back the leg a settled loss opened.
     return `
         if (!Bot.sessionHasOpenContract()) {
             if (Bot.sessionLastResult() === 'loss') {
                 if (Bot.eoParityReversal(${reversal}, '${parity}') === 'ODD') {
-                    Bot.purchase('DIGITODD');
+                    Bot.purchase('DIGITODD', { recovery: true });
                 } else if (Bot.eoParityReversal(${reversal}, '${parity}') === 'EVEN') {
-                    Bot.purchase('DIGITEVEN');
+                    Bot.purchase('DIGITEVEN', { recovery: true });
                 } else {
                     Bot.sessionJournal('Recovery waiting · the last digits are mixed', 'info');
                 }
-            } else if (Bot.isPairConfirmed('${primary.set}') && Bot.areDigitSharesAtOrBelow([${first}, ${second}], Bot.adaptiveColdShare(${percent}, ${sample}), ${sample}) && Bot.riskCanTrade()) {
+            } else if ((Bot.tradingModeEntryLive() || Bot.isPairConfirmed('${primary.set}')) && Bot.areDigitSharesAtOrBelow([${first}, ${second}], Bot.adaptiveColdShare(${percent}, ${sample}), ${sample}) && Bot.riskCanTrade()) {
                 Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });
             } else {
-                Bot.sessionJournal('Pair gate waiting · last digit ' + Bot.getLastDigit(), 'info');
+                Bot.sessionJournal('Entry gate waiting · last digit ' + Bot.getLastDigit(), 'info');
             }
         }
     `;

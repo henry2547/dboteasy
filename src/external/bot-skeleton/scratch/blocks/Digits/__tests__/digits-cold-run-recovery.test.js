@@ -29,7 +29,9 @@ describe('cold-run recovery block generation', () => {
     it('reads the confirmed losing pair and its adaptive share before buying Over 1', () => {
         const code = generate(blockWith(fields));
 
-        expect(code).toContain("Bot.isPairConfirmed('0_1')");
+        // A live continuous entry trades without waiting for another pair; a fresh confirmation is
+        // what the first trade (and every single-mode trade) needs.
+        expect(code).toContain("(Bot.tradingModeEntryLive() || Bot.isPairConfirmed('0_1'))");
         // The ceiling is re-read from the live window on every trade loop instead of being fixed.
         expect(code).toContain('Bot.areDigitSharesAtOrBelow([0, 1], Bot.adaptiveColdShare(10.2, 100), 100)');
         // The red (coldest) bar is not part of the rule: a losing digit may carry it or not.
@@ -41,7 +43,7 @@ describe('cold-run recovery block generation', () => {
     it('waits on the 8/9 pair for the Under 8 leg', () => {
         const code = generate(blockWith({ ...fields, PRIMARY: 'under_8' }));
 
-        expect(code).toContain("Bot.isPairConfirmed('8_9')");
+        expect(code).toContain("(Bot.tradingModeEntryLive() || Bot.isPairConfirmed('8_9'))");
         expect(code).toContain('Bot.areDigitSharesAtOrBelow([8, 9], Bot.adaptiveColdShare(10.2, 100), 100)');
         expect(code).not.toContain('Bot.isDigitCold');
         expect(code).toContain("Bot.purchase('DIGITUNDER', { barrier: 8 })");
@@ -54,6 +56,9 @@ describe('cold-run recovery block generation', () => {
         expect(code).toContain("Bot.sessionLastResult() === 'loss'");
         expect(code).toContain("Bot.eoParityReversal(2, 'both') === 'ODD'");
         expect(code).toContain("Bot.eoParityReversal(2, 'both') === 'EVEN'");
+        // The recovery buys are marked as their own entry, so a single-mode entry never holds them.
+        expect(code).toContain("Bot.purchase('DIGITODD', { recovery: true })");
+        expect(code).toContain("Bot.purchase('DIGITEVEN', { recovery: true })");
     });
 
     it('keeps one decimal on the cold share', () => {
@@ -78,6 +83,7 @@ describe('cold-run program decisions', () => {
         result = '',
         reversal = 'NO SIGNAL',
         pair_confirmed = true,
+        entry_live = false,
         shares_ok = true,
         ceiling = 8.4,
         risk = true,
@@ -86,6 +92,7 @@ describe('cold-run program decisions', () => {
         sessionLastResult: jest.fn(() => result),
         eoParityReversal: jest.fn(() => reversal),
         isPairConfirmed: jest.fn(() => pair_confirmed),
+        tradingModeEntryLive: jest.fn(() => entry_live),
         areDigitSharesAtOrBelow: jest.fn(() => shares_ok),
         adaptiveColdShare: jest.fn(() => ceiling),
         riskCanTrade: jest.fn(() => risk),
@@ -101,6 +108,22 @@ describe('cold-run program decisions', () => {
 
         expect(bot.purchase).toHaveBeenCalledWith('DIGITOVER', { barrier: 1 });
         expect(bot.sessionJournal).not.toHaveBeenCalled();
+    });
+
+    it('trades on a live continuous entry without waiting for another confirmed pair', () => {
+        const bot = createBot({ pair_confirmed: false, entry_live: true });
+        run(fields, bot);
+
+        expect(bot.purchase).toHaveBeenCalledWith('DIGITOVER', { barrier: 1 });
+        // The share ceiling still gates every trade of the live entry.
+        expect(bot.areDigitSharesAtOrBelow).toHaveBeenCalled();
+    });
+
+    it('still waits on the ceiling inside a live entry', () => {
+        const bot = createBot({ pair_confirmed: false, entry_live: true, shares_ok: false });
+        run(fields, bot);
+
+        expect(bot.purchase).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -123,7 +146,7 @@ describe('cold-run program decisions', () => {
         run(fields, bot);
 
         expect(bot.eoParityReversal).toHaveBeenCalledWith(2, 'both');
-        expect(bot.purchase).toHaveBeenCalledWith('DIGITODD');
+        expect(bot.purchase).toHaveBeenCalledWith('DIGITODD', { recovery: true });
         expect(bot.isPairConfirmed).not.toHaveBeenCalled();
     });
 
@@ -131,7 +154,7 @@ describe('cold-run program decisions', () => {
         const bot = createBot({ result: 'loss', reversal: 'EVEN' });
         run(fields, bot);
 
-        expect(bot.purchase).toHaveBeenCalledWith('DIGITEVEN');
+        expect(bot.purchase).toHaveBeenCalledWith('DIGITEVEN', { recovery: true });
     });
 
     it('never trades while a contract is open', () => {

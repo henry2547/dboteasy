@@ -47,8 +47,9 @@ describe('parity recovery block generation', () => {
         const code = generate(blockWith({ ...fields, RUN: 3, PARITY: 'odd' }));
         expect(code).toContain("Bot.eoParityReversal(3, 'odd') === 'ODD'");
         expect(code).toContain("Bot.eoParityReversal(3, 'odd') === 'EVEN'");
-        expect(code).toContain("Bot.purchase('DIGITODD')");
-        expect(code).toContain("Bot.purchase('DIGITEVEN')");
+        // The recovery buys are marked as their own entry, so a single-mode entry never holds them.
+        expect(code).toContain("Bot.purchase('DIGITODD', { recovery: true })");
+        expect(code).toContain("Bot.purchase('DIGITEVEN', { recovery: true })");
         // The recovery trades the market it is already on: no scan, no async preparation.
         expect(code).not.toContain('marketScanBestParity');
         expect(code).not.toContain('eoRecoveryPrepare');
@@ -80,14 +81,14 @@ describe('parity recovery program after a settled loss', () => {
         run(fields, bot);
         expect(bot.eoParityReversal).toHaveBeenCalledWith(2, 'both');
         expect(bot.purchase).toHaveBeenCalledTimes(1);
-        expect(bot.purchase).toHaveBeenCalledWith('DIGITODD');
+        expect(bot.purchase).toHaveBeenCalledWith('DIGITODD', { recovery: true });
     });
 
     it('buys EVEN when the last two digits were both odd', () => {
         const bot = createBot({ reversal: 'EVEN' });
         run(fields, bot);
         expect(bot.purchase).toHaveBeenCalledTimes(1);
-        expect(bot.purchase).toHaveBeenCalledWith('DIGITEVEN');
+        expect(bot.purchase).toHaveBeenCalledWith('DIGITEVEN', { recovery: true });
     });
 
     it('waits without trading while the run is mixed', () => {

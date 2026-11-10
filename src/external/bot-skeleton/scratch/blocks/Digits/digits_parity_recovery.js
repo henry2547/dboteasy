@@ -110,14 +110,15 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.digits_parity_recovery = 
     // as a losing digit rises above its share ceiling.
     //
     // The engine reports a settled contract as `win` or `loss`, so the loss branch has to read
-    // `loss` — the recovery never ran while this compared against anything else.
+    // `loss` — the recovery never ran while this compared against anything else. Its buys are marked
+    // `recovery`, so the single trading mode never holds back the leg a settled loss opened.
     return `
         if (!Bot.sessionHasOpenContract()) {
             if (Bot.sessionLastResult() === 'loss') {
                 if (Bot.eoParityReversal(${run}, '${parity}') === 'ODD') {
-                    Bot.purchase('DIGITODD');
+                    Bot.purchase('DIGITODD', { recovery: true });
                 } else if (Bot.eoParityReversal(${run}, '${parity}') === 'EVEN') {
-                    Bot.purchase('DIGITEVEN');
+                    Bot.purchase('DIGITEVEN', { recovery: true });
                 }
             } else if (Bot.getLastDigit() ${primary.compare} ${primary.barrier} && Bot.riskCanTrade()) {
                 Bot.purchase('${primary.contract}', { barrier: ${primary.barrier} });
