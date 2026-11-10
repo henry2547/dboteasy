@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApiBase } from '@/hooks/useApiBase';
 import { riseFallRuntime } from '@/utils/rise-fall-runtime';
 import { rankStrategies, type BacktestResult } from './backtest';
+import type { GeneratedBot } from './bot-generator';
 import { RiseFallExecutionService, maskLoginId } from './execution-service';
 import { createDerivRiseFallBroker, type DerivRiseFallBroker } from './live-broker';
 import { classifyRegime } from './regime';
@@ -48,6 +49,8 @@ export interface RiseFallEngine {
     journal: JournalEntry[];
     config: StrategyConfig;
     durationTicks: number;
+    /** The generated bot whose settings this mode is running, or null. */
+    appliedBot: GeneratedBot | null;
     notice: string | null;
     live: LiveConnectionState;
     backtest: BacktestResult[] | null;
@@ -57,6 +60,8 @@ export interface RiseFallEngine {
     setDurationTicks: (ticks: number) => void;
     setMode: (mode: ExecutionMode) => void;
     setRiskField: (field: keyof RiskConfig, value: number) => void;
+    applyBot: (bot: GeneratedBot) => void;
+    clearAppliedBot: () => void;
     runBacktest: () => void;
     armReal: (armed: boolean) => void;
     confirmEntry: () => void;
@@ -80,6 +85,7 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
     const [config, setConfig] = useState<StrategyConfig>(DEFAULT_STRATEGY_CONFIG);
     const [strategyId, setStrategyIdState] = useState<StrategyId>('trend_continuation');
     const [durationTicks, setDurationState] = useState(DEFAULT_DURATION_TICKS);
+    const [appliedBot, setAppliedBot] = useState<GeneratedBot | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [backtest, setBacktest] = useState<BacktestResult[] | null>(null);
     const [backtestNotice, setBacktestNotice] = useState<string | null>(null);
@@ -201,6 +207,7 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
             !current.openContract &&
             !current.pendingContract &&
             signal.direction !== 'none' &&
+            (!appliedBot || signal.direction === appliedBot.direction) &&
             signal.suitable &&
             feed.integrity.healthy;
 
@@ -219,11 +226,11 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
                 setNotice('A real-money entry is waiting for your confirmation below.');
             }
         }
-    }, [lastTick, symbol, signal, durationTicks, feed.integrity, service]);
+    }, [lastTick, symbol, signal, durationTicks, appliedBot, feed.integrity, service]);
 
     // ── The Bot Builder bridge ────────────────────────────────────────────────
-    const latestRef = useRef({ signal, signals, snapshot, backtest, symbol, durationTicks, feed });
-    latestRef.current = { signal, signals, snapshot, backtest, symbol, durationTicks, feed };
+    const latestRef = useRef({ signal, signals, snapshot, backtest, symbol, durationTicks, feed, appliedBot });
+    latestRef.current = { signal, signals, snapshot, backtest, symbol, durationTicks, feed, appliedBot };
 
     useEffect(() => {
         if (!enabled) return undefined;
@@ -268,6 +275,15 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
                 const current = latestRef.current;
                 const tick = current.feed.ticks[current.feed.ticks.length - 1];
                 if (!tick) return { ok: false, reason: 'No genuine tick has arrived yet.' };
+                const gate = current.appliedBot;
+                if (gate && current.signal.direction !== gate.direction) {
+                    return {
+                        ok: false,
+                        reason: `${gate.name} only takes ${
+                            gate.direction === 'rise' ? 'Rise' : 'Fall'
+                        } entries — the engine refused this one.`,
+                    };
+                }
                 const modeSnapshot = current.snapshot.modes[current.snapshot.mode];
                 const outcome = service.enter({
                     signal: current.signal,
@@ -328,10 +344,38 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
     const setMode = useCallback(
         (next: ExecutionMode) => {
             const result = service.setMode(next);
-            setNotice(result.ok ? `${next.toUpperCase()} mode selected.` : result.reason);
+            if (!result.ok) {
+                setNotice(result.reason);
+                return;
+            }
+            // A generated bot belongs to the mode it was applied to — the new mode starts clean.
+            setAppliedBot(null);
+            setNotice(`${next.toUpperCase()} mode selected.`);
         },
         [service]
     );
+
+    /** Puts the generated bot's settings on the active mode: strategy, stake, duration and side. */
+    const applyBot = useCallback(
+        (bot: GeneratedBot) => {
+            setStrategyIdState(bot.strategyId);
+            setDurationState(Math.min(300, Math.max(1, Math.round(bot.durationTicks))));
+            const risk = service.setRisk({ stake: bot.stake });
+            setAppliedBot(bot);
+            const side = bot.direction === 'rise' ? 'Rise' : 'Fall';
+            setNotice(
+                bot.stake > risk.maxStake
+                    ? `${bot.name} applied — its ${bot.stake} stake is above this mode's ${risk.maxStake} maximum, so raise that limit or entries will be refused.`
+                    : `${bot.name} applied — this mode now takes ${side} entries only, at a flat ${bot.stake} stake.`
+            );
+        },
+        [service]
+    );
+
+    const clearAppliedBot = useCallback(() => {
+        setAppliedBot(null);
+        setNotice('Bot removed — the engine follows every strategy signal again.');
+    }, []);
 
     const setRiskField = useCallback(
         (field: keyof RiskConfig, value: number) => {
@@ -423,6 +467,7 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
         journal,
         config,
         durationTicks,
+        appliedBot,
         notice,
         live: { active: mode === 'demo' || mode === 'real', status: liveStatus, error: liveError },
         backtest,
@@ -432,6 +477,8 @@ export function useRiseFallEngine(enabled: boolean): RiseFallEngine {
         setDurationTicks,
         setMode,
         setRiskField,
+        applyBot,
+        clearAppliedBot,
         runBacktest,
         armReal,
         confirmEntry,

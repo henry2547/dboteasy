@@ -1,10 +1,19 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { localize } from '@deriv-com/translations';
 import { MODE_LABELS } from '../types';
+import {
+    clearGeneratedBot,
+    generateBot,
+    loadGeneratedBot,
+    saveGeneratedBot,
+    type BotGeneratorInput,
+    type GeneratedBot,
+} from '../bot-generator';
 import { STAKING_RULE } from '../risk-engine';
 import { useRiseFallEngine } from '../use-rise-fall-engine';
 import AccountPanel from './account-panel';
 import BacktestPanel from './backtest-panel';
+import BotGenerator from './bot-generator';
 import EngineControls from './engine-controls';
 import MarketPanel from './market-panel';
 import RiskEditor from './risk-editor';
@@ -25,6 +34,25 @@ const RiseFallPage = () => {
     const { feed, snapshot, notice } = engine;
     const mode = snapshot.mode;
     const active = snapshot.modes[mode];
+
+    // One bot at a time: generating replaces the previous one (and its stored record).
+    const [bot, setBot] = useState<GeneratedBot | null>(() => loadGeneratedBot());
+
+    const handleGenerate = useCallback((input: BotGeneratorInput) => {
+        const next = generateBot(input);
+        saveGeneratedBot(next);
+        setBot(next);
+    }, []);
+
+    const handleUse = useCallback(() => {
+        if (bot) engine.applyBot(bot);
+    }, [bot, engine]);
+
+    const handleRemove = useCallback(() => {
+        clearGeneratedBot();
+        setBot(null);
+        engine.clearAppliedBot();
+    }, [engine]);
 
     return (
         <section className='rise-fall' data-testid='rise-fall-page'>
@@ -58,6 +86,13 @@ const RiseFallPage = () => {
                     onStop={engine.stop}
                     onEmergency={engine.emergencyStop}
                     onReleaseEmergency={engine.releaseEmergencyStop}
+                />
+                <BotGenerator
+                    bot={bot}
+                    applied={Boolean(bot) && engine.appliedBot?.id === bot?.id}
+                    onGenerate={handleGenerate}
+                    onUse={handleUse}
+                    onRemove={handleRemove}
                 />
                 <AccountPanel
                     mode={mode}

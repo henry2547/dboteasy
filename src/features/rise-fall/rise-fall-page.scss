@@ -99,6 +99,11 @@
         padding: 0.3rem;
         border-radius: 8px;
         background: var(--dash-inset);
+
+        &--pair {
+            grid-template-columns: repeat(2, 1fr);
+            margin-top: 0.8rem;
+        }
     }
 
     &__mode {

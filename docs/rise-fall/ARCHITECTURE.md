@@ -102,6 +102,23 @@ verification, risk config, open contract, pending confirmation, used fingerprint
 its own journal storage key (`rise-fall.journal.v1.<mode>`). A mode switch is refused while a contract
 is open or a real entry is pending, and the engine never promotes Demo → Real by itself.
 
+## Bot generator
+
+`bot-generator.ts` builds **one** bot — direction (Rise or Fall), strategy, flat stake and tick duration
+— from the form in the page's `bot-generator.tsx` panel. Generating replaces the previous bot and stores
+it under the single key `rise-fall:generated-bot`, so the tab never accumulates bots; the stake is
+rounded to two decimals and clamped to `0.01 … 100`, the duration to the executor's own
+`1 … 300` ticks.
+
+**Use this bot** applies its settings to the active mode (`applyBot` in `use-rise-fall-engine.ts`): the
+strategy and duration become the engine's, the stake is written to that mode's risk config, and the
+engine only takes entries on the bot's own side — the tick loop's `actionable` check and the runtime
+bridge's `requestEntry` both refuse a mismatched direction with the reason. The generator therefore adds
+no second entry path: every entry still passes the central executor, the risk engine and the account
+verification. A generated bot belongs to the mode it was applied to; switching mode clears it.
+
+The panel sits directly under the run controls and above the account panel.
+
 ## UI
 
 A single page of focused panels: hero (mode, market, state), execution mode + run controls, account
