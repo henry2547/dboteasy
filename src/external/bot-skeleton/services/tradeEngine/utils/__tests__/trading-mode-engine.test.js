@@ -71,6 +71,54 @@ describe('trading mode', () => {
     });
 });
 
+describe('one entry, many trades: the confirmation a live entry skips', () => {
+    it('needs the pairs-plus-confirmation entry for the first trade only in continuous mode', () => {
+        const engine = createEngine('CONTINUOUS');
+        expect(engine.tradingModeEntryLive()).toBe(false);
+
+        runPurchaseTick(engine, true);
+        engine.tradingModePurchased();
+        expect(engine.tradingModeEntryLive()).toBe(true);
+
+        // Wins and losses alike keep the entry live: a loss opens the Even/Odd leg, it does not send
+        // the bot back to waiting for another confirmed pair.
+        engine.sessionLastResult = () => 'win';
+        engine.tradingModeTradeSettled();
+        expect(engine.tradingModeEntryLive()).toBe(true);
+
+        engine.sessionLastResult = () => 'loss';
+        engine.tradingModeTradeSettled();
+        expect(engine.tradingModeEntryLive()).toBe(true);
+    });
+
+    it('never skips the confirmation in single mode', () => {
+        const engine = createEngine('SINGLE');
+        runPurchaseTick(engine, true);
+        engine.tradingModePurchased();
+
+        expect(engine.tradingModeEntryLive()).toBe(false);
+        engine.tradingModeTradeSettled();
+        expect(engine.tradingModeEntryLive()).toBe(false);
+    });
+
+    it('lets the Even/Odd leg a settled loss opens through in single mode', () => {
+        const engine = createEngine('SINGLE');
+        runPurchaseTick(engine, true);
+        engine.tradingModePurchased();
+        engine.tradingModeTradeSettled();
+        expect(engine.tradingModeBlocksPurchase()).toBe(true);
+
+        // The reversal buy is marked as the recovery entry, so the spent entry never holds it back.
+        engine.tradingModePurchaseAttempted({ recovery: true });
+        expect(engine.tradingModeBlocksPurchase()).toBe(false);
+
+        // Once that contract settles the pair entry is spent again.
+        engine.tradingModeTradeSettled();
+        engine.tradingModePurchaseAttempted({ recovery: false });
+        expect(engine.tradingModeBlocksPurchase()).toBe(true);
+    });
+});
+
 describe('trading mode on a canvas with an observer entry gate', () => {
     it('starts a trade only once the observer signals an entry', () => {
         const engine = createEngine('SINGLE', { gate: true });

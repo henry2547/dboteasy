@@ -27,6 +27,9 @@ const getBotInterface = tradeEngine => {
         // Trading mode (trade definition → Mode): may this iteration of the trade loop start a trade?
         tradingModeEntryAllowed: () => tradeEngine.tradingModeEntryAllowed(),
         tradingModePurchased: () => tradeEngine.tradingModePurchased(),
+        // Continuous mode: the confirmed entry is already live, so an entry block reads this instead
+        // of waiting for the losing pair and its confirmation digit again. Always false in single mode.
+        tradingModeEntryLive: () => tradeEngine.tradingModeEntryLive(),
         // One settled contract: the entry stays open in continuous mode, is used up in single mode.
         tradingModeTradeSettled: () => tradeEngine.tradingModeTradeSettled(),
         // Wraps one tick of the purchase loop, so a tick with no purchase is a lapsed entry.

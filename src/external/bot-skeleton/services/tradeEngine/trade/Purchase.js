@@ -36,7 +36,8 @@ export default Engine =>
 
             // Trading mode: the blocks keep running, but single mode that already took its one
             // contract for this entry holds the purchase back until the entry is signalled again.
-            this.tradingModePurchaseAttempted?.();
+            // The Even/Odd recovery leg a settled loss opens is its own entry and is never held.
+            this.tradingModePurchaseAttempted?.(options);
             if (this.tradingModeBlocksPurchase?.()) {
                 this.tradingModeJournalWaiting?.();
                 return Promise.resolve();
