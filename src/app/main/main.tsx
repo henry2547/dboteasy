@@ -34,7 +34,6 @@ import {
 } from '@/utils/trade-type-modal-handler';
 import {
     LabelPairedChartLineCaptionRegularIcon,
-    LabelPairedChartLineUpDownCaptionRegularIcon,
     LabelPairedLightbulbCaptionRegularIcon,
     LabelPairedCircleDotCaptionFillIcon,
     LabelPairedCircleStarCaptionRegularIcon,
@@ -56,7 +55,6 @@ const DerivChart = lazy(() => import('../../features/chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../../features/digits'));
 const StatisticsPage = lazy(() => import('../../features/statistics'));
 const StrategyEnginePage = lazy(() => import('../../features/strategy-engine'));
-const RiseFallPage = lazy(() => import('../../features/rise-fall'));
 const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
 const FreeBotsPage = lazy(() => import('../../features/free-bots'));
 const GlobalScanButton = lazy(() => import('../../features/digits/components/global-scan-button'));
@@ -97,7 +95,6 @@ const AppWrapper = observer(() => {
         'ai_architect',
         'free_bots',
         'bot_builder',
-        'rise_fall',
         'strategy_engine',
         'chart',
         'digits',
@@ -475,29 +472,6 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-bot-builder'
                             />
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedChartLineUpDownCaptionRegularIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='Rise/Fall' />
-                                    </>
-                                }
-                                id='id-rise-fall'
-                            >
-                                <ErrorBoundary label='Rise/Fall'>
-                                    <Suspense
-                                        fallback={
-                                            <ChunkLoader message={localize('Please wait, loading the Rise/Fall engine...')} />
-                                        }
-                                    >
-                                        <RiseFallPage />
-                                    </Suspense>
-                                </ErrorBoundary>
-                            </div>
                             <div
                                 label={
                                     <>

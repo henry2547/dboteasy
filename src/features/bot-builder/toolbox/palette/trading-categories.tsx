@@ -311,32 +311,5 @@ export const TradingCategories = () => (
                     </Value>
                 </Block>
             </Category>
-            {/* Rise/Fall engine: the blocks read the engine that lives on its own tab, and the entry
-                block asks the same central executor the tab uses. Nothing here buys a contract itself. */}
-            <Category id='rise_fall' name={localize('Rise/Fall')}>
-                <Block type='rf_connected' />
-                <Block type='rf_signal' />
-                <Block type='rf_score'>
-                    <Field name='SIDE'>rise</Field>
-                </Block>
-                <Block type='rf_regime' />
-                <Block type='rf_best_strategy' />
-                <Block type='rf_stat'>
-                    <Field name='STAT'>wins</Field>
-                </Block>
-                <Block type='rf_enter'>
-                    <Value name='STAKE'>
-                        <Shadow type='math_number'>
-                            <Field name='NUM'>0.35</Field>
-                        </Shadow>
-                    </Value>
-                    <Value name='DURATION'>
-                        <Shadow type='math_number'>
-                            <Field name='NUM'>5</Field>
-                        </Shadow>
-                    </Value>
-                </Block>
-                <Block type='rf_report' />
-            </Category>
     </>
 );

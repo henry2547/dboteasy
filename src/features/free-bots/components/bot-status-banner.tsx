@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useApiBase } from '@/hooks/useApiBase';
+import { freeBotById } from '../templates';
 import { useFreeBotLoader } from '../use-free-bot-loader';
 import '../free-bots.scss';
 
@@ -27,6 +28,8 @@ const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) =
     }, [bot?.templateId, bot?.loadedAt, isRunning]);
 
     if (!bot) return null;
+
+    const template = freeBotById(bot.templateId);
 
     const liveAccount: 'Demo' | 'Real' | 'Not signed in' = activeLoginid
         ? activeLoginid.startsWith('VR')
@@ -83,8 +86,17 @@ const BotStatusBanner = observer(({ variant = 'panel' }: BotStatusBannerProps) =
                 <div>
                     <dt>Strategy</dt>
                     <dd>
-                        {bot.strategyLabel} · {bot.contractType === 'both' ? 'Over / Under' : bot.contractType}
-                        {bot.prediction !== null ? ` · prediction ${bot.prediction}` : ' · parity contract'}
+                        {bot.strategyLabel} ·{' '}
+                        {template?.entryTrend
+                            ? `CALL / PUT · ${template.entryTrend.averageTicks}-tick trend`
+                            : bot.contractType === 'both'
+                              ? 'Over / Under'
+                              : bot.contractType}
+                        {template?.entryTrend
+                            ? ''
+                            : bot.prediction !== null
+                              ? ` · prediction ${bot.prediction}`
+                              : ' · parity contract'}
                     </dd>
                 </div>
                 <div>

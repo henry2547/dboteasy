@@ -58,7 +58,7 @@ function FreeBotCard({
             ['Mode', 'Observation only — the bot journals its signal and no contract is ever bought'],
             ['Signal', template.entryRule],
             ['Journal', 'Every tick writes the newest digit and detector stage; the observer journals each signal, outcome and wait'],
-            ['Duration', `${template.durationTicks} tick`],
+            ['Duration', `${template.durationTicks} ${template.durationTicks === 1 ? 'tick' : 'ticks'}`],
             [
                 template.marketScan ? 'Starting market in the XML' : 'Default market in the XML',
                 `${template.defaultMarket} — replaced by the market you pick`,
@@ -149,7 +149,9 @@ function FreeBotCard({
             'Contract',
             template.parityRecovery
                 ? `${template.primaryContractType ?? template.contractType} ${template.parityRecovery.barrier} → DIGITEVEN / DIGITODD after a loss`
-                : template.prediction !== null
+                : template.entryTrend
+                  ? `CALL / PUT · the ${template.entryTrend.averageTicks}-tick trend picks Rise or Fall`
+                  : template.prediction !== null
                   ? `${template.contractType} · prediction ${template.prediction}`
                   : template.entryParity === 'both'
                     ? 'DIGITEVEN / DIGITODD · the signal picks the parity'
@@ -167,7 +169,7 @@ function FreeBotCard({
                   ],
               ] as [string, string][])
             : []),
-        ['Duration', `${template.durationTicks} tick`],
+        ['Duration', `${template.durationTicks} ${template.durationTicks === 1 ? 'tick' : 'ticks'}`],
         [
             template.marketScan ? 'Starting market in the XML' : 'Default market in the XML',
             template.marketScan

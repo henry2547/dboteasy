@@ -29,7 +29,7 @@ describe('rise/fall runtime bridge', () => {
         expect(reading.direction).toBe('none');
         expect(riseFallRuntime.requestEntry({ stake: 1, durationTicks: 5 })).toEqual({
             ok: false,
-            reason: expect.stringContaining('not open'),
+            reason: expect.stringContaining('not mounted'),
         });
         expect(riseFallRuntime.report()).toContain('not connected');
     });

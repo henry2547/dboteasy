@@ -163,8 +163,9 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has eight tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
-Strategy Engine, Deriv Chart, Digits, Statistics.
+The main tab bar has seven tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
+Strategy Engine, Deriv Chart, Digits, Statistics. (The Rise/Fall tab was removed — see "Rise/Fall
+engine" below.)
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/app/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
@@ -1393,13 +1394,31 @@ stay on the canvas.
   `__tests__/digits-*-recovery.test.js` (generated calls + decisions). A live continuous run needs a
   logged-in Demo account, so it is verified by hand.
 
-## Rise/Fall engine (its own tab, right after the Bot Builder)
-A separate execution engine for Rise/Fall contracts lives in `src/features/rise-fall/` and is the
-**fifth tab** (`#rise_fall`, `#id-rise-fall`, `DBOT_TABS.RISE_FALL = 4`). `DBOT_TABS`, `TAB_IDS` and the
-`hash` array in `main.tsx` are now: Dashboard, AI Builder, Free Bots, Bot Builder, **Rise/Fall**,
-Strategy Engine, Deriv Chart, Digits, Statistics — keep the three lists in the same order. The old
-launcher pill inside the Bot Builder is gone (`bot-builder.tsx` no longer mounts it) so exactly one
-engine instance and one journal exist per browser tab. Documents:
+## Rise/Fall engine (tab removed — one free bot trades Rise/Fall)
+**The Rise/Fall tab is gone from the app.** `main.tsx` no longer lazy-loads `RiseFallPage` or renders
+the `#id-rise-fall` tab, `DBOT_TABS` / `TAB_IDS` / the `hash` array in `main.tsx` no longer carry an
+entry for it (Strategy Engine is now index 4 and Deriv Chart / Digits / Statistics each moved down
+one — keep the three lists in the same order), and the hamburger **App guide** no longer lists it. A
+stale `#rise_fall` hash falls back to the default tab. The engine's own `rise_fall` **palette
+category** is gone as well, so the `rf_*` blocks are no longer offered in the Blocks menu; they stay
+**registered** (with `src/utils/rise-fall-runtime.ts` and `RiseFallInterface.js`) so a workspace saved
+with them still loads and validates. With no tab mounted the bridge answers neutral values and
+refuses an entry with its reason, which the interface journals.
+Rise/Fall is traded from the **Free Bots library** instead: bot 10, **"Rise / Fall — 5-Tick Trend"**
+(`src/xml/rise_fall_trend.xml`, `tradeTypeCategory: 'callput'`), is the one template whose trade
+definition is not a digit contract — `TRADETYPECAT_LIST`/`TRADETYPE_LIST` are `callput` with contract
+type `both`, and its `before_purchase` stack recalculates a simple moving average of the tick list
+(`sma_statement` over the `ticks` block, period 5) and then buys **CALL** (Rise) when the newest tick
+is above that average and **PUT** (Fall) when it is below it, waiting when they are equal. Everything
+it uses is already in the Blocks menu (Analysis → Indicators, Tick Analysis, Logic, Risk management,
+Strategy learning, Trading & execution, Bot control, Reporting), and the loader's trend entry check
+(`findEntryCondition`'s `trend` reading, `template.entryTrend`) is what validates it.
+The rest of this section still describes the engine code that is kept but unused:
+
+A separate execution engine for Rise/Fall contracts lives in `src/features/rise-fall/`, mounted only
+by that removed tab, so it is unused but kept (like `src/features/gui-engine/` and
+`src/features/ai-bot/`). Restoring the tab means putting the four places back (lazy import, hash
+entry, `DBOT_TABS` / `TAB_IDS` index, tab `<div>`, App guide row) plus the palette category. Documents:
 `docs/rise-fall/{ARCHITECTURE,STRATEGY_SPEC,RISK_ENGINE_SPEC,BACKTEST_METHODOLOGY,BLOCKLY_BLOCKS,REALITY_GATE,KNOWN_LIMITATIONS}.md`.
 - **All phases are implemented.** Virtual is the simulated ledger on genuine ticks; Demo and Real send
   real `proposal` → `buy` → `proposal_open_contract` requests over the app's existing authenticated
@@ -1438,8 +1457,10 @@ engine instance and one journal exist per browser tab. Documents:
 - **Journals are per mode**, keyed `rise-fall.journal.v1.<mode>`; a mode switch is refused while a
   contract is open or a real entry is pending. Risk config is *not* persisted (resets on reload).
 - **Bot Builder blocks** live in `scratch/blocks/RiseFall/` (`rf_connected`, `rf_signal`, `rf_score`,
-  `rf_regime`, `rf_best_strategy`, `rf_stat`, `rf_enter`, `rf_report`), in the palette's **Rise/Fall**
-  category (`Category id='rise_fall'`, `Blockly.Categories.Rise_Fall`). They read the mounted engine
+  `rf_regime`, `rf_best_strategy`, `rf_stat`, `rf_enter`, `rf_report`). They were listed in the
+  palette's **Rise/Fall** category (`Category id='rise_fall'`, `Blockly.Categories.Rise_Fall`), which
+  was removed with the tab: the blocks are still registered but the Blocks menu no longer lists them.
+  They read the mounted engine
   through `src/utils/rise-fall-runtime.ts` — the one place the React engine and the interpreter meet —
   and `rf_enter` calls the same executor (`Bot.rfEnter` → `RiseFallExecutionService.enter()`), so a
   block cannot skip a check. With the tab closed the bridge answers neutral values and refuses the

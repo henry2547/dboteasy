@@ -173,6 +173,11 @@ interface EntryCondition {
     entryDigits?: string[];
     /** Set when the gate is a run of high/low digits (`digits_high_run`). */
     run?: { mode: string; digit: string; count: string } | null;
+    /**
+     * Set when the gate is a Rise/Fall trend read: the newest tick against a simple moving
+     * average of the tick list.
+     */
+    trend?: { operator: string; averageTicks: number; direction: 'CALL' | 'PUT' } | null;
     purchaseContract: string | null;
     hasPurchase: boolean;
     /** Set when the entry is an Even/Odd strategy block (`eo_buy_even` / `eo_buy_odd`). */
@@ -337,6 +342,32 @@ export function findEntryCondition(doc: Document): EntryCondition | null {
             matchDigit,
             purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
             hasPurchase: true,
+        };
+    }
+
+    // Rise/Fall: `if <last tick> is above/below its simple moving average then purchase CALL/PUT`.
+    // The average is recalculated every loop by the `sma_statement` block above the gate.
+    const average = blocksOfType(beforePurchase, 'sma_statement')[0];
+    const trendCompare = compares.find(compare => compare.querySelector('value[name="A"] > block[type="tick"]'));
+    const averageTicks = average
+        ?.querySelector('statement[name="STATEMENT"] value[name="PERIOD"] field[name="NUM"]')
+        ?.textContent?.trim();
+    const trendOperator = fieldValue(trendCompare ?? null, 'OP');
+    if (trendCompare && trendOperator && averageTicks) {
+        const purchase = gatePurchase(trendCompare);
+        return {
+            operator: null,
+            trigger: null,
+            parity: null,
+            matchMode: null,
+            matchDigit: null,
+            purchaseContract: fieldValue(purchase, 'PURCHASE_LIST'),
+            hasPurchase: !!purchase,
+            trend: {
+                operator: trendOperator,
+                averageTicks: Number(averageTicks),
+                direction: trendOperator === 'LT' ? 'PUT' : 'CALL',
+            },
         };
     }
 
@@ -511,14 +542,19 @@ export function inspectFreeBotXml(
     if (!hasMarket) errors.push('The template has no market symbol.');
 
     const expectedTradeType = template.tradeType ?? 'overunder';
-    const tradeTypeOk = settings.tradeTypeCategory === 'digits' && settings.tradeType === expectedTradeType;
+    const expectedTradeTypeCategory = template.tradeTypeCategory ?? 'digits';
+    const tradeTypeOk =
+        settings.tradeTypeCategory === expectedTradeTypeCategory && settings.tradeType === expectedTradeType;
     checks.push({
         id: 'trade-type',
-        label: 'Digit trade type',
+        label: expectedTradeTypeCategory === 'callput' ? 'Rise/Fall trade type' : 'Digit trade type',
         passed: tradeTypeOk,
         detail: `${settings.tradeTypeCategory ?? '—'} / ${settings.tradeType ?? '—'} (expected ${expectedTradeType})`,
     });
-    if (!tradeTypeOk) errors.push(`Expected the ${expectedTradeType} digit trade type but the XML says ${settings.tradeType ?? 'nothing'}.`);
+    if (!tradeTypeOk)
+        errors.push(
+            `Expected the ${expectedTradeType} trade type but the XML says ${settings.tradeTypeCategory ?? 'nothing'} / ${settings.tradeType ?? 'nothing'}.`
+        );
 
     const contractOk = settings.contractType === template.contractType;
     checks.push({
@@ -719,6 +755,12 @@ export function inspectFreeBotXml(
     const expectsMatch = template.strategy === 'matches' || template.strategy === 'differs';
 
     const entryMatchesTemplate = (condition: EntryCondition): boolean => {
+        if (template.entryTrend) {
+            return (
+                condition.trend?.direction === template.entryTrend.direction &&
+                condition.trend?.averageTicks === template.entryTrend.averageTicks
+            );
+        }
         if (template.entryRun) {
             return (
                 condition.run?.mode === template.entryRun.mode &&
@@ -771,6 +813,10 @@ export function inspectFreeBotXml(
             ? `${
                   entry.strategyBuy
                       ? `Even/Odd signal → ${entry.purchaseContract ?? '—'}`
+                      : entry.trend
+                        ? `Last tick ${entry.trend.operator === 'LT' ? 'below' : 'above'} its ${
+                              entry.trend.averageTicks
+                          }-tick average`
                       : entry.parity
                       ? `Last digit ${entry.parity}`
                       : entry.matchMode
@@ -793,7 +839,9 @@ export function inspectFreeBotXml(
         );
     } else if (!entryOk) {
         errors.push(
-            expectsMatch
+            template.entryTrend
+                ? `Entry condition mismatch: expected "last tick against its ${template.entryTrend.averageTicks}-tick average → purchase ${primary_contract}".`
+                : expectsMatch
                 ? `Entry condition mismatch: expected "last digit ${template.strategy} ${template.prediction} → purchase ${primary_contract}".`
                 : expectsParity
                   ? `Entry condition mismatch: expected "last digit ${template.entryParity} → purchase ${primary_contract}".`

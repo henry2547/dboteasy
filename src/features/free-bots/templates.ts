@@ -45,6 +45,7 @@ import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
 import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
 import over1ColdRunRecoveryXml from '@/xml/over1_cold_run_recovery.xml';
 import under8ColdRunRecoveryXml from '@/xml/under8_cold_run_recovery.xml';
+import riseFallTrendXml from '@/xml/rise_fall_trend.xml';
 
 export type FreeBotId =
     | 'under8_entry_every_time'
@@ -55,9 +56,11 @@ export type FreeBotId =
     | 'over1_under6_recovery'
     | 'over1_parity_recovery'
     | 'over1_cold_run_recovery'
-    | 'under8_cold_run_recovery';
+    | 'under8_cold_run_recovery'
+    | 'rise_fall_trend';
 
 export type FreeBotStrategy =
+    | 'rise_fall'
     | 'over1'
     | 'under8'
     | 'over2'
@@ -71,7 +74,15 @@ export type FreeBotStrategy =
     | 'matches'
     | 'differs';
 
-export type FreeBotContractType = 'DIGITOVER' | 'DIGITUNDER' | 'DIGITEVEN' | 'DIGITODD' | 'DIGITMATCH' | 'DIGITDIFF';
+export type FreeBotContractType =
+    | 'DIGITOVER'
+    | 'DIGITUNDER'
+    | 'DIGITEVEN'
+    | 'DIGITODD'
+    | 'DIGITMATCH'
+    | 'DIGITDIFF'
+    | 'CALL'
+    | 'PUT';
 
 /**
  * Contract type written into the trade definition: the single contract a plain
@@ -108,7 +119,24 @@ export interface FreeBotParityRecovery {
  * Digit trade type in the Bot Builder: Over/Under carries a prediction, Even/Odd a
  * parity, Matches/Differs a target digit.
  */
-export type FreeBotTradeType = 'overunder' | 'evenodd' | 'matchesdiffers';
+export type FreeBotTradeType = 'overunder' | 'evenodd' | 'matchesdiffers' | 'callput';
+
+/**
+ * The trade definition's trade-type category: the digit contracts under `digits`, or the
+ * Rise/Fall pair (`CALL` / `PUT`) under `callput`.
+ */
+export type FreeBotTradeTypeCategory = 'digits' | 'callput';
+
+/**
+ * A Rise/Fall entry read from the live price: the bot compares the newest tick with a simple
+ * moving average of the tick list and buys Rise (`CALL`) above it or Fall (`PUT`) below it.
+ */
+export interface FreeBotTrendEntry {
+    /** Contract the "above the average" branch buys. */
+    direction: 'CALL' | 'PUT';
+    /** Ticks the simple moving average is taken over. */
+    averageTicks: number;
+}
 
 export type FreeBotParity = 'even' | 'odd' | 'both';
 
@@ -159,6 +187,13 @@ export interface FreeBotTemplate {
     parityRecovery?: FreeBotParityRecovery;
     /** Defaults to `overunder` when the template does not say. */
     tradeType?: FreeBotTradeType;
+    /** Defaults to `digits` when the template does not say. */
+    tradeTypeCategory?: FreeBotTradeTypeCategory;
+    /**
+     * Rise/Fall templates gate their purchase on a price trend instead of a digit read: the
+     * newest tick against its simple moving average.
+     */
+    entryTrend?: FreeBotTrendEntry;
     /**
      * Barrier digit for the primary Over/Under entry; `null` for an Even/Odd
      * template. A template with a recovery leg keeps this barrier in a variable,
@@ -498,6 +533,41 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
         blocksUsed:
             'Digits: Pair entry: Over 1 / Under 8, Even/Odd recovery · Pair, then a confirmation digit · Cold pair setup ready · Two digits below a share · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · AND',
     },
+    {
+        // The only Rise/Fall bot: it trades the CALL / PUT pair straight from the price, not a digit
+        // contract, so it is the one template whose trade type is `callput`.
+        id: 'rise_fall_trend',
+        mode: 'continuous',
+        name: 'Rise / Fall — 5-Tick Trend',
+        sourceFile: 'Built from the Analysis → Indicators (Simple Moving Average) and Tick Analysis blocks',
+        asset: 'rise_fall_trend.xml',
+        strategy: 'rise_fall',
+        strategyLabel: 'Rise / Fall',
+        contractType: 'both',
+        primaryContractType: 'CALL',
+        tradeType: 'callput',
+        tradeTypeCategory: 'callput',
+        entryTrend: { direction: 'CALL', averageTicks: 5 },
+        prediction: null,
+        durationTicks: 5,
+        defaultMarket: '1HZ25V',
+        stake: 10,
+        takeProfit: 10,
+        stopLoss: 20,
+        multiplier: 2,
+        entryOperator: null,
+        triggerDigit: null,
+        entryRule:
+            'The newest tick sits above its 5-tick simple moving average → buy Rise (CALL) · below it → buy Fall (PUT) · equal to it → wait · risk guard, no open contract, trade cap',
+        buyCondition:
+            'Every trade loop first recalculates the 5-tick simple moving average of the market\'s own tick list with the Simple Moving Average block. When the newest tick is above that average the bot buys Rise (CALL); when it is below the average it buys Fall (PUT). A tick exactly on the average buys nothing — it waits for the next one. A buy also needs the risk guard to allow a trade, no contract to still be open and fewer than 250 trades to have been taken. Every entry is journalled with the direction it took.',
+        afterPurchase:
+            'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20 · a sweet alert announces which limit ended the run',
+        restartCondition:
+            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that is not exactly on its 5-tick average, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run.',
+        blocksUsed:
+            'Analysis → Indicators: Simple Moving Average · Tick Analysis: Tick list · Last tick · Logic: Compare · AND · Variables · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert',
+    },
 ];
 
 const FREE_BOT_XML: Record<string, string> = {
@@ -510,6 +580,7 @@ const FREE_BOT_XML: Record<string, string> = {
     over1_parity_recovery: parityRecoveryXml,
     over1_cold_run_recovery: over1ColdRunRecoveryXml,
     under8_cold_run_recovery: under8ColdRunRecoveryXml,
+    rise_fall_trend: riseFallTrendXml,
 };
 
 export function freeBotById(id: string | null | undefined): FreeBotTemplate | null {

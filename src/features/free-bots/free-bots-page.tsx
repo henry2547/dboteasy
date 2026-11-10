@@ -66,7 +66,7 @@ const FreeBotsPage = observer(() => {
                 <div>
                     <h2 className='free-bots__title'>Free Bots</h2>
                     <p className='free-bots__subtitle'>
-                        Digit Over/Under bots built from the uploaded strategy files, loaded straight into the Bot Builder
+                        Ready-made digit bots plus one Rise/Fall trend bot, loaded straight into the Bot Builder
                     </p>
                 </div>
                 <div className='free-bots__chips'>

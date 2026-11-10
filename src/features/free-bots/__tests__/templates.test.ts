@@ -23,6 +23,7 @@ jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 jest.mock('@/xml/parity_recovery_bot.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_cold_run_recovery.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_cold_run_recovery.xml', () => '', { virtual: true });
+jest.mock('@/xml/rise_fall_trend.xml', () => '', { virtual: true });
 
 import { applyMarketToXml, inspectFreeBotXml } from '../bot-xml';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from '../templates';
@@ -118,7 +119,7 @@ describe('Free Bots templates', () => {
         expect(report.errors).toEqual([]);
         expect(report.ok).toBe(true);
         expect(report.settings.symbol).toBe(template.defaultMarket);
-        expect(report.settings.tradeTypeCategory).toBe('digits');
+        expect(report.settings.tradeTypeCategory).toBe(template.tradeTypeCategory ?? 'digits');
         expect(report.settings.tradeType).toBe(template.tradeType ?? 'overunder');
         expect(report.settings.contractType).toBe(template.contractType);
         // Every bot carries its trading mode in the trade definition (continuous or single).
@@ -139,6 +140,11 @@ describe('Free Bots templates', () => {
             // Even/Odd: gated by parity, so no barrier digit at all.
             expect(report.settings.prediction).toBeNull();
             expect(report.settings.entryParity).toBe(template.entryParity);
+        } else if (template.entryTrend) {
+            // Rise/Fall: the trend gate decides CALL or PUT, so there is no barrier digit either.
+            expect(report.settings.prediction).toBeNull();
+            expect(report.settings.purchases).toEqual(['CALL', 'PUT']);
+            expect(report.checks.find(check => check.id === 'entry-condition')?.passed).toBe(true);
         } else {
             expect(report.settings.prediction).toBe(String(template.prediction));
             expect(report.settings.entryOperator).toBe(template.entryOperator);

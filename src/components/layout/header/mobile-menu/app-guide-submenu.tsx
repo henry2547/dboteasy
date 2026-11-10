@@ -41,11 +41,6 @@ const DESTINATIONS: TDestination[] = [
         hint: 'Drag blocks onto the canvas to build or change a bot, then hit Run.',
     },
     {
-        tab: DBOT_TABS.RISE_FALL,
-        name: 'Rise/Fall',
-        hint: 'Eight Rise/Fall strategies on live ticks — virtual, demo and real modes, ranking and journal.',
-    },
-    {
         tab: DBOT_TABS.STRATEGY_ENGINE,
         name: 'Strategy Engine',
         hint: 'Live digit-market evaluation and entry-threshold monitoring.',

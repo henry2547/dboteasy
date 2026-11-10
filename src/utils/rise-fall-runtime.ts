@@ -65,12 +65,12 @@ const DISCONNECTED: RiseFallRuntimeSnapshot = {
     suitable: false,
     riseScore: 0,
     fallScore: 0,
-    explanation: 'The Rise/Fall engine is not open — no signal is being produced.',
+    explanation: 'The Rise/Fall engine is not mounted — no signal is being produced.',
     bestStrategy: null,
     bestScore: null,
     stats: { trades: 0, wins: 0, losses: 0, net: 0, open: 0 },
     tickEpoch: 0,
-    detail: 'Rise/Fall engine not connected — open the Rise/Fall tab.',
+    detail: 'Rise/Fall engine not connected — the Rise/Fall tab is no longer part of the app.',
 };
 
 class RiseFallRuntime {
@@ -95,14 +95,14 @@ class RiseFallRuntime {
         if (!this.provider) {
             return {
                 ok: false,
-                reason: 'The Rise/Fall engine is not open — open the Rise/Fall tab so the entry can pass its checks.',
+                reason: 'The Rise/Fall engine is not mounted, so the entry cannot pass its checks.',
             };
         }
         return this.provider.requestEntry(request);
     }
 
     report(): string {
-        if (!this.provider) return 'Rise/Fall engine not connected — open the Rise/Fall tab to read its numbers.';
+        if (!this.provider) return 'Rise/Fall engine not connected — no numbers to read.';
         return this.provider.report();
     }
 }
