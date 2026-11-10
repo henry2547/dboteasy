@@ -1393,4 +1393,36 @@ stay on the canvas.
   `__tests__/digits-*-recovery.test.js` (generated calls + decisions). A live continuous run needs a
   logged-in Demo account, so it is verified by hand.
 
+## Rise/Fall engine (inside the Bot Builder — Phase A)
+A separate execution engine for Rise/Fall contracts lives in `src/features/rise-fall/` and is mounted
+by `bot-builder.tsx` next to `MarketScanStrip` (Bot Builder tab only). It is **not** a new tab: a
+launcher pill opens a panel over the canvas.
+- Phased build. **Phase A only**: account-mode selector with strict separation, the Trend Continuation
+  strategy, and **virtual** execution on genuine live ticks. Demo is refused as "Phase B" and Real as
+  "locked (Phase E)" — both by the executor, never simulated. Documents:
+  `docs/rise-fall/{REALITY_GATE,ARCHITECTURE,STRATEGY_SPEC,RISK_ENGINE_SPEC,KNOWN_LIMITATIONS}.md`.
+- **One entry path.** `execution-service.ts` `RiseFallExecutionService.enter()` is the only way a
+  contract opens: engine state → signal (+age) → duplicate fingerprint → feed integrity → risk engine
+  → account verification → contract field validation → entry. A future Blockly block must call it, not
+  re-implement the checks.
+- **Virtual fills are simulated, on real prices.** `contractId` stays `null`, the journal line is
+  `source: 'VIRTUAL'` with `estimated: true`, and profit uses `VIRTUAL_PAYOUT_RATE` (0.95). Settlement
+  counts **genuine ticks** (`durationTicks`), ignores a replayed epoch (`lastAppliedEpoch`) and never
+  synthesises a price; equal quotes are a **loss** (no allow-equals parameter exists in the API).
+- **Feed.** `use-tick-feed.ts` reuses `@/features/digits/deriv-public-ws` plus `digits/markets` (the
+  same deep imports `main.tsx` already uses) and opens one socket only while the panel is open. It
+  requests `ticks_history` with **`subscribe: 1`**; a gap > 5 s blocks entries for 30 s. `selectMarket`
+  reads `marketsRef`, not the `markets` state — the deferred default-market pick fired before the state
+  closure updated and silently sent no history request.
+- **Journals are per mode**, keyed `rise-fall.journal.v1.<mode>`; a mode switch is refused while a
+  contract is open. Risk config is *not* persisted (resets to defaults on reload).
+- Verify: `docker compose -f docker-compose.base44.yml exec web npx jest src/features/rise-fall
+  --coverage=false` (56 tests) and `npx tsc --noEmit` (clean). In the preview, Bot Builder → the
+  "Rise/Fall engine" pill: expect ~1000 genuine ticks, live Rise/Fall scores with per-component detail,
+  a regime, Start/Pause/Stop/Emergency, and the DEMO note refusing purchases. A NO TRADE reading on a
+  sideways market is correct behaviour, not a bug.
+- **Not built yet:** Demo/Real purchase loops, `proposal`/`buy`/`proposal_open_contract`, uncertain-buy
+  reconciliation, strategies 2–8, the Rise/Fall Blockly blocks, backtest/optimisation. The reusable
+  authenticated socket and order service already exist in `src/features/ai-bot/`.
+
 
