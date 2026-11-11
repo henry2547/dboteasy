@@ -96,12 +96,12 @@ const AppWrapper = observer(() => {
         'dashboard',
         'ai_architect',
         'free_bots',
+        'ai_bots',
         'bot_builder',
         'strategy_engine',
         'chart',
         'digits',
         'statistics',
-        'ai_bots',
     ];
     const { isDesktop } = useDevice();
     const location = useLocation();
@@ -465,6 +465,29 @@ const AppWrapper = observer(() => {
                             <div
                                 label={
                                     <>
+                                        <LabelPairedArrowsRotateCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='AI Bots' />
+                                    </>
+                                }
+                                id='id-ai-bots'
+                            >
+                                <ErrorBoundary label='AI Bots'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading the AI bots...')} />
+                                        }
+                                    >
+                                        <AiBotsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
+                            <div
+                                label={
+                                    <>
                                         <LabelPairedPuzzlePieceTwoCaptionBoldIcon
                                             height='24px'
                                             width='24px'
@@ -568,29 +591,6 @@ const AppWrapper = observer(() => {
                                         }
                                     >
                                         <StatisticsPage />
-                                    </Suspense>
-                                </ErrorBoundary>
-                            </div>
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedArrowsRotateCaptionRegularIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='AI Bots' />
-                                    </>
-                                }
-                                id='id-ai-bots'
-                            >
-                                <ErrorBoundary label='AI Bots'>
-                                    <Suspense
-                                        fallback={
-                                            <ChunkLoader message={localize('Please wait, loading the AI bots...')} />
-                                        }
-                                    >
-                                        <AiBotsPage />
                                     </Suspense>
                                 </ErrorBoundary>
                             </div>

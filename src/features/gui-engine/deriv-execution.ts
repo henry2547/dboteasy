@@ -11,7 +11,7 @@ import { api_base } from '@/external/bot-skeleton';
 
 export interface ProposalRequest {
     symbol: string;
-    contractType: 'DIGITOVER' | 'DIGITUNDER' | 'DIGITEVEN' | 'DIGITODD';
+    contractType: 'DIGITOVER' | 'DIGITUNDER' | 'DIGITEVEN' | 'DIGITODD' | 'CALL' | 'PUT';
     stake: number;
     barrier?: number;
     currency: string;

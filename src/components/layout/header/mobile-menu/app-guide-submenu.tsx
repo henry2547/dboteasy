@@ -36,6 +36,11 @@ const DESTINATIONS: TDestination[] = [
         hint: 'Ready-made digit bots — open one and load it straight into the builder.',
     },
     {
+        tab: DBOT_TABS.AI_BOTS,
+        name: 'AI Bots',
+        hint: 'Even-Odd and Rise-Fall bots that scan every volatility market and trade their signal.',
+    },
+    {
         tab: DBOT_TABS.BOT_BUILDER,
         name: 'Bot Builder',
         hint: 'Drag blocks onto the canvas to build or change a bot, then hit Run.',
@@ -59,11 +64,6 @@ const DESTINATIONS: TDestination[] = [
         tab: DBOT_TABS.STATISTICS,
         name: 'Statistics',
         hint: 'The numbers behind the market you analysed on the Digits tab.',
-    },
-    {
-        tab: DBOT_TABS.AI_BOTS,
-        name: 'AI Bots',
-        hint: 'Even-Odd and Rise-Fall scanners that read every volatility market.',
     },
 ];
 

@@ -39,7 +39,7 @@ Every module under `src/features/` has an `index.ts` that is what the rest of th
 | --- | --- |
 | `ai-architect` | AI Builder tab: prompt → spec → workspace (planner, registry, builder, validator, palette reader) |
 | `ai-bot` | AI Bot engine (scanner, execution, risk, ledger). Tab is removed from the UI; code is kept and unit-tested |
-| `ai-bots` | AI Bots tab: Even-Odd and Rise-Fall scanners over the public market scan |
+| `ai-bots` | AI Bots tab (next to Free Bots): Even-Odd and Rise-Fall bots that rescan the volatility markets and buy their signal |
 | `bot-builder` | Blockly workspace, toolbar, Blocks palette (`toolbox/`), quick strategy |
 | `chart` | Deriv Chart tab and the SmartChart adapter wiring |
 | `dashboard` | Dashboard tab, bot list, announcements |

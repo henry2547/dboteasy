@@ -163,17 +163,17 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has nine tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
-Strategy Engine, Deriv Chart, Digits, Statistics, **AI Bots**.
-`AI Bots` is the last tab (`DBOT_TABS.AI_BOTS = 8`, `#id-ai-bots`, hash `ai_bots`); it holds the
-Even-Odd and Rise-Fall scanners documented in "AI Bots tab" below.
+The main tab bar has nine tabs, in this order: Dashboard, **AI Builder**, Free Bots, **AI Bots**,
+Bot Builder, Strategy Engine, Deriv Chart, Digits, Statistics.
+`AI Bots` sits right after Free Bots (`DBOT_TABS.AI_BOTS = 3`, `#id-ai-bots`, hash `ai_bots`); it
+holds the Even-Odd and Rise-Fall bots documented in "AI Bots tab" below.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/app/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
-**Bot Builder is index 3** (AI Builder, then Free Bots, sit right after Dashboard; both hand a bot straight
-to the builder). Code that switches on the active tab compares against `DBOT_TABS.BOT_BUILDER`, never a
-literal — the vendored tours, save/load modals and `bot-builder.tsx` were all moved off `=== 1` when the
-tabs were reordered.
+**Bot Builder is index 4** (AI Builder, Free Bots and AI Bots sit right after Dashboard; Free Bots and
+AI Bots both hand a bot straight to the run panels). Code that switches on the active tab compares
+against `DBOT_TABS.BOT_BUILDER`, never a literal — the vendored tours, save/load modals and
+`bot-builder.tsx` were all moved off `=== 1` when the tabs were reordered.
 
 ### Floating market scanner (app-wide)
 `ScanMarketsButton` (`digits/components/scan-markets-button.tsx`) is mounted ONCE in the app shell —
@@ -1370,10 +1370,11 @@ stay on the canvas.
 
 
 
-## AI Bots tab (Even-Odd and Rise-Fall scanners)
-The last tab (`DBOT_TABS.AI_BOTS = 8`, `#id-ai-bots`, hash `ai_bots`), in `src/features/ai-bots/`.
-It lists two bots and opens each one's scanner setup — the dark console with the rule card, the
-market scope / stake / ticks / take profit / stop loss / martingale fields and the live market scan.
+## AI Bots tab (Even-Odd and Rise-Fall bots)
+The fourth tab (`DBOT_TABS.AI_BOTS = 3`, `#id-ai-bots`, hash `ai_bots`), right after Free Bots, in
+`src/features/ai-bots/`. It lists two bots and opens each one's setup — the dark console with the
+rule card, the market scope / stake / ticks / take profit / stop loss / martingale fields and the
+live market scan.
 - `ai-bots-page.tsx` keeps the selected bot, one settings object per bot and the scanner state, so
   going back to the strategy list does not throw away a finished scan.
 - Rules are pure in `signals.ts`: `readHotCold` takes the most and least frequent digit of the
@@ -1381,14 +1382,44 @@ market scope / stake / ticks / take profit / stop loss / martingale fields and t
   either the hot or the cold digit. `readRun` reads the last N quotes: strictly rising → Fall,
   strictly falling → Rise, and a flat tick breaks the run. `buildInsights` applies the selected
   market scope and writes each row's status line; `countSignals` feeds the badge.
-- `use-ai-bot-scan.ts` runs the Digits scanner (`scanDigitMarkets`) on its own short-lived public
-  socket, so every open volatility market is read (13 in practice, 1000 ticks each) without touching
-  the live feed. `MarketScan` now also carries `prices`, which the Rise-Fall rule reads. Stop aborts
-  the scan and a stale scan can never overwrite a newer one.
-- The tab is read-only: stake, take profit, stop loss, martingale and ticks are scanner settings, and
-  no order is placed — the footer says so. Do not present a signal as an executed trade.
+- **The run lives outside the page (`ai-bot-session.ts`).** The tab strip renders only the active
+  tab's children, so a page-local scan loop would stop the moment the user opens the Bot Builder to
+  watch the trades. The selected bot, its settings and the scan loop are therefore module state,
+  bound by `use-ai-bot-session.ts`; going back to the strategy list (`closeAiBot`) or pressing STOP
+  ends the run, and switching tabs does not.
+- The scan is the Digits scanner (`scanDigitMarkets`) on its own short-lived public socket, so every
+  open volatility market is read (13 in practice, 1000 ticks each) without touching the live feed.
+  **A running bot rescans on its own**: each pass sets `scanning`, publishes the rows and returns to
+  `ready`, then schedules the next pass `RESCAN_INTERVAL_MS` (5 s) later; STOP clears that timer,
+  aborts the pass in flight and keeps the last report on screen. `MarketScan` also carries `prices`,
+  which the Rise-Fall rule reads, and a stale pass can never overwrite a newer one.
+- **The bot trades, and its purchases show up in the Bot Builder panels.** `trading.ts` is the rule
+  book: `tradePlanFor` maps a confirmed side to its contract (`Even` → `DIGITEVEN`, `Odd` →
+  `DIGITODD`, `Rise` → `CALL`, `Fall` → `PUT`), `nextStake` sizes the next stake (base × multiplier
+  after each loss, reset on a win), `sessionStop` reports a reached take profit / stop loss (a limit
+  of 0 is "not set") and `contractTicks` clamps the Ticks field to 1–10. `ai-bot-session.ts` places
+  one entry per finished scan, only while the bot is running, and `ai-bot-runner.ts` skips a market
+  that still holds an open contract or a purchase in flight. Every buy goes through the app's own
+  authorized socket via `gui-engine/deriv-execution.ts` (quote → buy → `watchContracts`), and each
+  contract is mirrored into `summary_card.onBotContractEvent` + `transactions.onBotContractEvent`
+  with `journal.pushMessage('AI bot · …')` lines for the purchase and the settlement — the same
+  three stores the Bot Builder's run panel renders, so the trades appear in its **Summary**,
+  **Transactions** and **Journal**. The open contracts, the session figures and the contract
+  subscription are module state, so a contract that settles after the AI Bots tab is closed still
+  reaches those panels; only the stores (app singletons) and the stop callback are attached from the
+  page. The account is read from the app's own socket (`isAuthorized$` / `authData$`), so the tab
+  needs no React auth state. A signed-out session places nothing: the run journals "Sign in with
+  your Deriv account to place the entries." once. A rejected proposal journals its reason instead of
+  failing silently, and reaching the take profit / stop loss stops the scan. Do not describe a signal
+  as an executed trade until the contract is confirmed — the live line's trade count comes from the
+  store updates, never from the signal alone.
 - `ai-bots.scss` uses the theme tokens (`--dash-surface`, `--dash-border`, `--brand-success`,
   `--status-danger`), so the hamburger Dark theme switch still changes this page.
-- Verify: click `#id-ai-bots`, open a bot, press START AI SCANNER — rows appear for every open
-  volatility market with its newest digits and a reading, and the badge counts the signals; narrowing
-  MARKET SCOPE leaves only that market's row. `docker compose exec web npx jest src/features/ai-bots`.
+- Verify: click `#id-ai-bots`, open a bot, press START AI BOT — rows appear for every open volatility
+  market with its newest digits and a reading, the badge counts the signals, and the live line reads
+  `rescans every 5s · N trades · P/L …`; the status alternates LIVE → READY about every 5 s, so one
+  press keeps scanning. Open another tab and come back: the bot is still running with its rows (the
+  run is module state). Narrowing MARKET SCOPE leaves only that market's row. The Bot Builder's
+  Journal tab shows the `AI bot ·` lines. A real purchase and its Summary / Transactions rows need a
+  signed-in account, so the buy → settle path is verified by hand on a Demo account.
+  `docker compose exec web npx jest src/features/ai-bots`.

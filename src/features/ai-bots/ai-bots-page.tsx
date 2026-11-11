@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react';
-import { AI_BOT_DEFINITIONS, AI_BOT_SETTINGS, aiBotById } from './catalog';
+import { useMemo } from 'react';
+import { AI_BOT_DEFINITIONS, aiBotById } from './catalog';
 import AiBotCard from './components/ai-bot-card';
 import LiveMarketScan from './components/live-market-scan';
 import ScannerFields from './components/scanner-fields';
 import TradingRule from './components/trading-rule';
+import { RESCAN_INTERVAL_MS } from './ai-bot-session';
 import { buildInsights, countSignals } from './signals';
-import { useAiBotScan } from './use-ai-bot-scan';
-import type { AiBotId, AiBotSettings } from './types';
+import { useAiBotSession } from './use-ai-bot-session';
+import type { AiBotSettings } from './types';
 import './ai-bots.scss';
 
 const STATUS_LABEL = {
@@ -17,19 +18,31 @@ const STATUS_LABEL = {
 } as const;
 
 /**
- * AI Bots tab — two digit bots (Even-Odd and Rise-Fall) configured and scanned
- * from one dark console. The scan reads every open volatility market on the
- * public feed and the selected bot's rule marks the markets it would trade; no
- * order is placed from here.
+ * AI Bots tab — two digit bots (Even-Odd and Rise-Fall) configured and run from
+ * one dark console. While a bot is running the public market scan re-reads every
+ * open volatility market every few seconds, and a signal it confirms buys that
+ * contract through the app's authorized account. The purchases land in the Bot
+ * Builder's Summary, Transactions and Journal, like any other run.
+ *
+ * The run itself lives in `ai-bot-session.ts`, so it keeps going when this tab
+ * is closed.
  */
 const AiBotsPage = () => {
-    const [activeId, setActiveId] = useState<AiBotId | null>(null);
-    const [settings, setSettings] = useState<Record<AiBotId, AiBotSettings>>(AI_BOT_SETTINGS);
-    const scan = useAiBotScan();
-
-    const updateSettings = (id: AiBotId, patch: Partial<AiBotSettings>) => {
-        setSettings(current => ({ ...current, [id]: { ...current[id], ...patch } }));
-    };
+    const {
+        activeBot: activeId,
+        settings,
+        status,
+        running,
+        rows,
+        progress,
+        error,
+        run,
+        openBot,
+        closeBot,
+        start,
+        stop,
+        updateSettings,
+    } = useAiBotSession();
 
     // A market picked from an earlier scan that this scan did not reach falls back to all markets,
     // so the list can never go quietly empty behind a stale selection.
@@ -38,15 +51,15 @@ const AiBotsPage = () => {
               ...settings[activeId],
               marketScope:
                   settings[activeId].marketScope === 'all' ||
-                  scan.rows.some(row => row.symbol === settings[activeId].marketScope)
+                  rows.some(row => row.symbol === settings[activeId].marketScope)
                       ? settings[activeId].marketScope
                       : 'all',
           }
         : null;
 
     const insights = useMemo(
-        () => (activeId && botSettings ? buildInsights(activeId, scan.rows, botSettings) : []),
-        [activeId, botSettings?.marketScope, botSettings?.ticks, scan.rows]
+        () => (activeId && botSettings ? buildInsights(activeId, rows, botSettings) : []),
+        [activeId, botSettings?.marketScope, botSettings?.ticks, rows]
     );
     const signals = countSignals(insights);
 
@@ -57,38 +70,37 @@ const AiBotsPage = () => {
                     <div>
                         <h2 className='ai-bots__title'>AI bots</h2>
                         <p className='ai-bots__subtitle'>
-                            Digit bots that scan every volatility market on the public feed and flag the markets their
-                            rule would trade.
+                            Digit bots that scan every volatility market on the public feed and buy the contract their
+                            rule confirms.
                         </p>
                     </div>
                 </header>
 
                 <div className='ai-bots__grid'>
                     {AI_BOT_DEFINITIONS.map(bot => (
-                        <AiBotCard key={bot.id} bot={bot} onOpen={setActiveId} />
+                        <AiBotCard key={bot.id} bot={bot} onOpen={openBot} />
                     ))}
                 </div>
 
                 <p className='ai-bots__disclaimer'>
-                    The scanner only reads ticks already seen — it never predicts the next one and never places a trade.
-                    Test any setup on a Demo account first.
+                    A bot reads ticks already seen and trades the signal it confirms; every purchase shows in the Bot
+                    Builder's Summary, Transactions and Journal. Test any setup on a Demo account first.
                 </p>
             </div>
         );
     }
 
     const bot = aiBotById(activeId);
-    const scanning = scan.status === 'scanning';
 
     return (
         <div className='ai-bots'>
             <header className='ai-bots__top'>
-                <button type='button' className='ai-bots__back' onClick={() => setActiveId(null)}>
+                <button type='button' className='ai-bots__back' onClick={closeBot}>
                     <span aria-hidden='true'>←</span> Strategies
                 </button>
-                <span className={`ai-bots__status ai-bots__status--${scan.status}`}>
+                <span className={`ai-bots__status ai-bots__status--${status}`}>
                     <span className='ai-bots__status-dot' aria-hidden='true' />
-                    {STATUS_LABEL[scan.status]}
+                    {STATUS_LABEL[status]}
                 </span>
             </header>
 
@@ -108,33 +120,42 @@ const AiBotsPage = () => {
 
                 <button
                     type='button'
-                    className={`ai-setup__start${scanning ? ' ai-setup__start--stop' : ''}`}
-                    onClick={() => (scanning ? scan.stop() : void scan.start())}
+                    className={`ai-setup__start${running ? ' ai-setup__start--stop' : ''}`}
+                    onClick={() => (running ? stop() : start())}
                 >
-                    {scanning ? 'STOP AI SCANNER' : 'START AI SCANNER'}
+                    {running ? 'STOP AI BOT' : 'START AI BOT'}
                 </button>
+
+                {running && (
+                    <p className='ai-setup__live'>
+                        Live · rescans every {Math.round(RESCAN_INTERVAL_MS / 1000)}s · {run.trades}{' '}
+                        {run.trades === 1 ? 'trade' : 'trades'} · P/L {run.profit.toFixed(2)}
+                        {run.openContracts > 0 ? ` · ${run.openContracts} open` : ''}
+                    </p>
+                )}
 
                 <TradingRule botId={activeId} ticks={botSettings.ticks} />
 
                 <ScannerFields
                     settings={botSettings}
-                    rows={scan.rows}
+                    rows={rows}
                     onChange={patch => updateSettings(activeId, patch)}
                 />
             </section>
 
             <LiveMarketScan
                 insights={insights}
-                status={scan.status}
-                progress={scan.progress}
-                error={scan.error}
+                status={status}
+                running={running}
+                progress={progress}
+                error={error}
                 ticks={botSettings.ticks}
                 signals={signals}
             />
 
             <p className='ai-bots__disclaimer'>
-                Reads public market data only. Stake, take profit, stop loss and martingale describe the setup; no order is
-                placed from this tab.
+                Buys the contract its rule confirms with the stake, ticks, take profit, stop loss and martingale above.
+                Purchases appear in the Bot Builder's Summary, Transactions and Journal.
             </p>
         </div>
     );

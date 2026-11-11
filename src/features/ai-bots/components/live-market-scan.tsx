@@ -5,6 +5,8 @@ import type { ScanStatus } from '../types';
 interface LiveMarketScanProps {
     insights: MarketInsight[];
     status: ScanStatus;
+    /** A running bot rescans on a timer, so the panel says so. */
+    running: boolean;
     progress: ScanProgress | null;
     error: string | null;
     ticks: number;
@@ -21,7 +23,7 @@ function badgeText(status: ScanStatus, signals: number, progress: ScanProgress |
 }
 
 /** Live market scan — one row per volatility market with its newest digits and status. */
-function LiveMarketScan({ insights, status, progress, error, ticks, signals }: LiveMarketScanProps) {
+function LiveMarketScan({ insights, status, running, progress, error, ticks, signals }: LiveMarketScanProps) {
     const tone = status === 'ready' && signals > 0 ? 'success' : status === 'error' ? 'danger' : 'idle';
 
     return (
@@ -46,7 +48,11 @@ function LiveMarketScan({ insights, status, progress, error, ticks, signals }: L
             {status === 'error' && error && <p className='ai-scan__note ai-scan__note--danger'>{error}</p>}
 
             {status === 'idle' && insights.length === 0 && (
-                <p className='ai-scan__note'>Press START AI SCANNER to read every volatility market.</p>
+                <p className='ai-scan__note'>Press START AI BOT to read every volatility market.</p>
+            )}
+
+            {running && insights.length > 0 && (
+                <p className='ai-scan__note'>Live · this scan re-reads every market automatically.</p>
             )}
 
             {insights.length > 0 && (
