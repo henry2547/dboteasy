@@ -17,9 +17,6 @@ import path from 'path';
 // from disk instead.
 jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
 jest.mock('@/xml/parity_recovery_bot.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_cold_run_recovery.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_cold_run_recovery.xml', () => '', { virtual: true });
@@ -168,42 +165,15 @@ describe('Free Bots templates', () => {
             );
         });
 
-        // Eight of the nine assets carry an explicit window; the parity bot reads parity and
-        // freshness instead of a frequency window. The two neutral bar reads per Over/Under
-        // asset were dropped when the red bar stopped gating the entry, and each of the eight
-        // Over/Under bots now reads its two losing digits once more for the frequency-limit stop,
-        // so 14 + 16 windows remain.
-        expect(windows).toBe(30);
+        // Four of the five assets carry explicit frequency windows — the two entry-every-time
+        // bots read their two losing digits once more for the frequency-limit stop; the parity bot
+        // reads parity and freshness instead of a frequency window.
+        expect(windows).toBe(16);
     });
 
     it.each(FREE_BOT_TEMPLATES)('$name states its purchase and restart conditions', template => {
         expect(template.buyCondition.length).toBeGreaterThan(20);
         expect(template.restartCondition.length).toBeGreaterThan(20);
-    });
-
-    it('the single Even/Odd bot buys both parities with the Even/Odd strategy blocks', () => {
-        const parityTemplates = FREE_BOT_TEMPLATES.filter(template => !!template.entryParity);
-
-        expect(parityTemplates.map(template => template.id)).toEqual(['even_odd_window']);
-        parityTemplates.forEach(template => {
-            const report = inspectFreeBotXml(assetOf(template), template, isKnown);
-            expect(report.ok).toBe(true);
-            expect(report.blockTypes).toEqual(
-                expect.arrayContaining([
-                    'eo_configure',
-                    'eo_monitor_ticks',
-                    'eo_signal_direction',
-                    'eo_buy_even',
-                    'eo_buy_odd',
-                    'eo_one_entry_per_signal',
-                ])
-            );
-            expect(report.settings.entryParity).toBe('both');
-            expect(report.settings.prediction).toBeNull();
-            expect(report.settings.contractType).toBe('both');
-            expect(report.settings.tradeType).toBe('evenodd');
-            expect(report.checks.find(check => check.id === 'even-odd-window')?.passed).toBe(true);
-        });
     });
 
     it.each([
@@ -297,7 +267,7 @@ describe('Free Bots templates', () => {
             /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed)
         );
 
-        expect(gated.length).toBeGreaterThanOrEqual(3);
+        expect(gated.length).toBeGreaterThanOrEqual(1);
         gated.forEach(template => {
             const report = inspectFreeBotXml(assetOf(template), template, isKnown);
             expect(report.blockTypes.some(type => type.startsWith('obs_'))).toBe(true);
@@ -318,7 +288,7 @@ describe('Free Bots templates', () => {
             /Read Digit N Ticks Ago|Check Minimum Sample Size/.test(template.blocksUsed)
         );
 
-        expect(gated.length).toBeGreaterThanOrEqual(3);
+        expect(gated.length).toBeGreaterThanOrEqual(1);
         gated.forEach(template => {
             const report = inspectFreeBotXml(assetOf(template), template, isKnown);
             const groups = new Set(
@@ -361,36 +331,6 @@ describe('Free Bots templates', () => {
         expect(missing).toEqual([]);
     });
 
-    it('the two-leg template buys both contracts and sets its own barrier', () => {
-        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
-        const report = inspectFreeBotXml(assetOf(template), template, isKnown);
-
-        expect(report.ok).toBe(true);
-        expect(report.settings.contractType).toBe('both');
-        expect(report.settings.purchases).toEqual(['DIGITOVER', 'DIGITUNDER']);
-        // The barrier lives in a variable, so the workspace reports a block, not the primary digit.
-        expect(report.settings.dynamicPrediction).toBe(true);
-        expect(report.settings.prediction).toBe('1');
-        expect(report.blockTypes).toEqual(
-            expect.arrayContaining(['digits_high_run', 'digits_shares_below'])
-        );
-        expect(report.checks.find(check => check.id === 'recovery-leg')?.passed).toBe(true);
-    });
-
-    it('the recovery leg only counts digits above 6', () => {
-        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
-        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
-        const gate = doc.querySelector('block[id="freebot-o1u6-rec-high-run"]')!;
-
-        // 7, 8 and 9 are the digits that qualify: the block reads "above 6", so a 9 counts like 7
-        // and 8 and a 6 breaks the wait. The run length stays the seeded `freebot:runs`.
-        expect(gate.querySelector('field[name="MODE"]')?.textContent).toBe('above');
-        expect(gate.querySelector('field[name="DIGIT"]')?.textContent).toBe('6');
-        expect(
-            gate.querySelector('value[name="COUNT"] block[type="variables_get"] field[name="VAR"]')?.textContent
-        ).toBe('freebot:runs');
-    });
-
     it('counts only the blocks Blockly will hold on the canvas', () => {
         // The first (Under 8) template holds 124 blocks once the two neutral digit-bar
         // reads and their AND chain were dropped from its entry gate (10.2% and below,
@@ -415,9 +355,6 @@ describe('Free Bots templates', () => {
         const pairs: Record<string, [string, string]> = {
             under8_entry_every_time: ['8', '9'],
             over1_entry_every_time: ['0', '1'],
-            over1_two_low_digits: ['0', '1'],
-            under8_two_high_digits: ['8', '9'],
-            over1_under6_recovery: ['0', '1'],
             over1_parity_recovery: ['0', '1'],
             over1_cold_run_recovery: ['0', '1'],
             under8_cold_run_recovery: ['8', '9'],
@@ -521,30 +458,12 @@ describe('Free Bots templates', () => {
         expect(over1.querySelectorAll('block[id="freebot-over1-bar-any"]').length).toBe(0);
     });
 
-    it('the Even/Odd bot reverses the last two digits', () => {
-        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'even_odd_window')!;
-        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
-        const configure = doc.querySelector('block[type="eo_configure"]')!;
-
-        // Both even → signal ODD, both odd → signal EVEN: the "Buy EVEN" / "Buy ODD" branches
-        // map the selected direction straight onto the contract, so the reversal rule is what
-        // decides which parity is bought.
-        expect(configure.querySelector('field[name="RULE"]')?.textContent).toBe('reversal');
-        expect(configure.querySelector('field[name="RUN"]')?.textContent).toBe('2');
-        expect(doc.querySelector('block[type="eo_buy_even"]')).not.toBeNull();
-        expect(doc.querySelector('block[type="eo_buy_odd"]')).not.toBeNull();
-        expect(template.buyCondition).toContain('both of them are EVEN');
-        expect(template.buyCondition).toContain('both are ODD');
-    });
-
     it('every Over/Under template keeps the losing digits at or below 10.2%', () => {
         // The published Over/Under setups enter only while the digits the contract loses to sit
         // at or below 10.2% — Over 1 waits for digits 0 and 1, Under 8 for 8 and 9.
         const cold_digits: Record<string, number[]> = {
             over1_entry_every_time: [0, 1],
             under8_entry_every_time: [8, 9],
-            over1_two_low_digits: [0, 1],
-            under8_two_high_digits: [8, 9],
         };
 
         Object.entries(cold_digits).forEach(([id, digits]) => {
@@ -619,21 +538,6 @@ describe('Free Bots templates', () => {
 
             expect(used.filter(name => !declared.has(name as string))).toEqual([]);
         });
-    });
-
-    it('the recovery bot reads 10.2% on the rare digits and waits for three high digits', () => {
-        const template = FREE_BOT_TEMPLATES.find(item => item.id === 'over1_under6_recovery')!;
-        const doc = new DOMParser().parseFromString(assetOf(template), 'application/xml');
-        const percent_of = (selector: string) => doc.querySelector(selector)?.textContent?.trim();
-
-        // Over 1 waits for digit 0 and digit 1 at or below 10.2% of the last 1000 ticks, and no
-        // bar read gates the entry.
-        expect(percent_of('block[id="freebot-o1u6-p1-shares"] value[name="PERCENT"] field[name="NUM"]')).toBe('10.2');
-        expect(doc.querySelectorAll('block[type="digits_bar_neutral"]').length).toBe(0);
-        // ... and the Under 6 recovery waits for three ticks in a row above 6 (7, 8 or 9).
-        expect(percent_of('block[id="freebot-o1u6-init-num-runs"] field[name="NUM"]')).toBe('3');
-        expect(percent_of('block[id="freebot-o1u6-rec-high-run"] field[name="MODE"]')).toBe('above');
-        expect(percent_of('block[id="freebot-o1u6-rec-high-run"] field[name="DIGIT"]')).toBe('6');
     });
 
     it.each(FREE_BOT_TEMPLATES)('$name keeps its logic when the market is swapped', template => {

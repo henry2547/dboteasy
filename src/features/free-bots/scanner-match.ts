@@ -3,8 +3,8 @@
  *
  * The scanner ranks every volatility market on its own scanned digits and offers exactly the bots
  * whose rule those digits satisfy:
- * - Bot 8 — Over 1, Confirmed 0/1 Pair: digits **0 and 1 both at or below 10.2%** of the sample.
- * - Bot 9 — Under 8, Confirmed 8/9 Pair: digits **8 and 9 both at or below 10.2%** of the sample.
+ * - Bot 4 — Over 1, Confirmed 0/1 Pair: digits **0 and 1 both at or below 10.2%** of the sample.
+ * - Bot 5 — Under 8, Confirmed 8/9 Pair: digits **8 and 9 both at or below 10.2%** of the sample.
  *
  * A market can satisfy both rules at once, so the match returns every rule that holds — each with
  * the bot that trades it — instead of forcing one strategy onto the row by its score.
@@ -46,7 +46,7 @@ export interface FreeBotSetupEvidence {
 
 export interface FreeBotSetup {
     templateId: FreeBotId;
-    /** Position of the template in the Free Bots library, so the UI can say "Bot 8". */
+    /** Position of the template in the Free Bots library, so the UI can say "Bot 4". */
     botNumber: number;
     name: string;
     strategy: 'over1' | 'under8';
@@ -78,7 +78,7 @@ interface StrategyRule {
     barrier: number;
 }
 
-/** Bot 8 and bot 9, in library order. */
+/** Bot 4 and bot 5, in library order. */
 const RULES: StrategyRule[] = [
     {
         strategy: 'over1',

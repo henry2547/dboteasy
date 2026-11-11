@@ -39,6 +39,8 @@ const EXPECTED = 10;
 export interface MarketScan {
     market: MarketSymbol;
     digits: number[];
+    /** Quotes behind `digits`, in the same order — trend readers need the price, not the digit. */
+    prices: number[];
     statistics: DigitStatistics;
     score: number;
     edge: number;
@@ -185,7 +187,10 @@ function request(
     });
 }
 
-function digitsFromHistory(message: DerivMessage, market: MarketSymbol): number[] {
+function digitsFromHistory(
+    message: DerivMessage,
+    market: MarketSymbol
+): { digits: number[]; prices: number[] } {
     const payload = message as Record<string, any>;
     const history = payload.history ?? {};
     const prices: unknown[] = Array.isArray(history.prices) ? history.prices : [];
@@ -196,22 +201,24 @@ function digitsFromHistory(message: DerivMessage, market: MarketSymbol): number[
         activeSymbolPipSize: market.pipSize,
     });
     const decimalPlaces = resolved.resolvedDecimalPlaces;
-    if (decimalPlaces === null) return [];
+    if (decimalPlaces === null) return { digits: [], prices: [] };
 
     const digits: number[] = [];
+    const quotes: number[] = [];
     prices.forEach(price => {
         const value = Number(price);
         if (!Number.isFinite(value)) return;
         try {
             digits.push(extractLastDigit(formatQuote(value, decimalPlaces)));
+            quotes.push(value);
         } catch {
             /* skip unparseable price */
         }
     });
-    return digits;
+    return { digits, prices: quotes };
 }
 
-function scoreMarket(market: MarketSymbol, digits: number[]): MarketScan {
+function scoreMarket(market: MarketSymbol, digits: number[], prices: number[]): MarketScan {
     const statistics = calculateStatisticsFromDigits(digits);
     const signals = computeAdaptiveSignals(digits);
     const best = [...signals].sort((a, b) => b.confidence - a.confidence)[0];
@@ -226,6 +233,7 @@ function scoreMarket(market: MarketSymbol, digits: number[]): MarketScan {
     return {
         market,
         digits,
+        prices,
         statistics,
         score: Math.round(floorScore * 0.45 + balanceScore * 0.2 + edgeScore * 0.35),
         edge: best?.confidence ?? 0,
@@ -362,7 +370,7 @@ export async function scanDigitMarkets(options: ScanDigitMarketsOptions = {}): P
                 subscriptionId = (history as Record<string, any>).subscription?.id;
                 if (subscriptionId) client.send({ forget: subscriptionId });
 
-                const digits = digitsFromHistory(history, market);
+                const { digits, prices } = digitsFromHistory(history, market);
                 if (digits.length < MIN_SCAN_TICKS) {
                     failures.push({
                         market,
@@ -373,7 +381,7 @@ export async function scanDigitMarkets(options: ScanDigitMarketsOptions = {}): P
                     return;
                 }
 
-                results.push(scoreMarket(market, digits));
+                results.push(scoreMarket(market, digits, prices));
                 scanned += 1;
             } catch (error) {
                 if (subscriptionId) client.send({ forget: subscriptionId });

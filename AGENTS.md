@@ -130,7 +130,7 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
 ## Layout notes
 - `.main` in `src/app/main/main.scss` is a fixed-height, `overflow: hidden` flex box, so a tab page
   must own its own scrolling. `.digits` uses a viewport-based height with `overflow-y: auto`.
-- The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because seven tabs
+- The main tab bar is made scrollable below desktop (`is_scrollable={!isDesktop}`) because nine tabs
   do not fit a narrow phone viewport.
 - **Dashboard tiles** use `@deriv/quill-icons/Standalone` glyphs inside a tinted badge whose accent comes
   from `data-tile` (`dashboard.tsx` cards + `dashboard.scss`). The `Cards` `useMemo` deps must include
@@ -163,15 +163,17 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
   distribution chart, the digit circle, barrier cards, six strategy cards and six backtest rows.
 
 ## Tabs added for digit trading
-The main tab bar has eight tabs, in this order: Dashboard, **AI Builder**, Free Bots, Bot Builder,
-Strategy Engine, Deriv Chart, Digits, Statistics.
+The main tab bar has nine tabs, in this order: Dashboard, **AI Builder**, Free Bots, **AI Bots**,
+Bot Builder, Strategy Engine, Deriv Chart, Digits, Statistics.
+`AI Bots` sits right after Free Bots (`DBOT_TABS.AI_BOTS = 3`, `#id-ai-bots`, hash `ai_bots`); it
+holds the Even-Odd and Rise-Fall bots documented in "AI Bots tab" below.
 Indices live in `DBOT_TABS` / `TAB_IDS` (`src/constants/bot-contents.ts`) and the `hash` array in
 `src/app/main/main.tsx` must stay in the same order. The Bots tab is gone; its block language now
 ships in the Bot Builder palette (see "Observer blocks in the Bot Builder" below).
-**Bot Builder is index 3** (AI Builder, then Free Bots, sit right after Dashboard; both hand a bot straight
-to the builder). Code that switches on the active tab compares against `DBOT_TABS.BOT_BUILDER`, never a
-literal — the vendored tours, save/load modals and `bot-builder.tsx` were all moved off `=== 1` when the
-tabs were reordered.
+**Bot Builder is index 4** (AI Builder, Free Bots and AI Bots sit right after Dashboard; Free Bots and
+AI Bots both hand a bot straight to the run panels). Code that switches on the active tab compares
+against `DBOT_TABS.BOT_BUILDER`, never a literal — the vendored tours, save/load modals and
+`bot-builder.tsx` were all moved off `=== 1` when the tabs were reordered.
 
 ### Floating market scanner (app-wide)
 `ScanMarketsButton` (`digits/components/scan-markets-button.tsx`) is mounted ONCE in the app shell —
@@ -199,10 +201,10 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   sends `forget` straight after each request. `SCAN_TICKS = 1000` is the sample requested per market
   (a row may show 1001 when one streamed tick lands before the `forget`), and the panel lists every
   ranked market with its own Load bot button.
-- **Scanner → Load Bot (bots 8 and 9):** every ranked row renders
+- **Scanner → Load Bot (bots 4 and 5):** every ranked row renders
   `src/features/free-bots/components/scanner-bot-result.tsx`. The row's own scanned digits pick the
-  templates through `matchFreeBotSetups` (`free-bots/scanner-match.ts`), which offers **bot 8**
-  (`over1_cold_run_recovery`) when digits **0 and 1 are both under 10%** of the sample and **bot 9**
+  templates through `matchFreeBotSetups` (`free-bots/scanner-match.ts`), which offers **bot 4**
+  (`over1_cold_run_recovery`) when digits **0 and 1 are both under 10%** of the sample and **bot 5**
   (`under8_cold_run_recovery`) when digits **8 and 9 are both under** — both cards in one row when both
   rules hold, and the closest partial setup (no Load) when neither does. So a row can only ever load a
   strategy its digits satisfied; **Load Bot is disabled unless the row's two share conditions hold**.
@@ -231,9 +233,8 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   (`block` + `shadow` elements, minus a shadow replaced by a real block in the same `<value>`), currently
   **132** for each `*_entry_every_time` template (one `digits_frequency` "losing digit stays cold"
   compare per losing digit, see "Researched entries" below, plus a `logic_compare` `OP=EQ` per entry
-  digit) — **137** for each `*_two_*_digits` template (their observer gate adds the blocks), **129** for
-  `even_odd_window`, **104** for each `*_cold_run_recovery` template, **118** for
-  `over1_parity_recovery` and **177** for the two-leg `over1_under6_recovery`. Every Over/Under
+  digit) — **104** for each `*_cold_run_recovery` template and **118** for
+  `over1_parity_recovery`. Every Over/Under
   template opens its `before_purchase` stack with the **frequency-limit stop guard**: one `controls_if`
   whose `IF0` is an OR of the two losing digits' `digits_frequency` above 10.2% (sample 1000), whose
   `DO0` is a `bot_stop` with the reason, and whose `ELSE` holds the template's own entry gate (12
@@ -263,25 +264,23 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   `Error: The text content is null.` from `FieldDropdown.render_` — the load aborts, the whole
   `after_purchase` stack stays unrendered, and the user sees the Bot Builder's
   "XML file contains unsupported elements. Please check or modify file." with no clue which block is
-  wrong. `even_odd_window` and `over1_under6_recovery` both did this (the tail of `after_purchase`
+  wrong. The removed `even_odd_window` and `over1_under6_recovery` assets both did this (the tail of `after_purchase`
   never reached the canvas, and the reports were dead code after `trade_again`'s `return true`); the
   report chain now sits BEFORE `trade_again` in the same `statement`, which is also the order the
   working templates use. Keep `trade_again` the last block of any stack, and reach for
   `python3 -c` / a scratch `Blockly.Workspace` check on `trade_again`'s `<next>` before shipping an
   asset: the unit tests read block TYPES and counts, so this shape loads "fine" on paper.
-- **Free Bots library (seven templates).** `templates.ts` describes every asset in `src/xml/`; the first
-  two are the uploaded files, and `over1_two_low_digits` / `under8_two_high_digits` derive from them by
-  adding a second entry gate built from the observer blocks (`obs_ago` + `obs_compare_*` + `obs_number`,
-  plus the three data-quality reads below). **Both of those gates draw on all four palette groups**: the
-  digit/frequency condition (`obs_ago`, `obs_compare_*`, `obs_number`, `obs_min_sample`, `obs_freq_*`) is
-  ANDed — through nested `obs_and` — with `obs_parity_switched` (Pattern detection & parity), `obs_fresh`
-  (Observer control, market data within the 15 s freshness limit) and `obs_require_sample` N=100 (Entry &
-  monitoring). The gate blocks therefore add six blocks per template (114 canvas count above), and
-  `templates.test.ts` ("gates on all four block groups") maps every `obs_*` type in the asset through the
-  catalogue's `GROUP_OF_CATEGORY` and fails unless all four `GROUPS` ids contribute — so a template cannot
-  silently drop back to one group. The two `*_entry_every_time` bots carry no observer gate at all: their
-  entry is the digits/frequencies/bars rule spelled out on the card (see "Researched entries" below), which
-  the `$name draws on every palette group` test therefore only applies to the observer-gated templates.
+- **Free Bots library (five templates).** `templates.ts` describes every asset in `src/xml/`: the two
+  uploaded files (`*_entry_every_time`) and the three derived bots (`over1_parity_recovery`,
+  `over1_cold_run_recovery`, `under8_cold_run_recovery`). The four bots that used to sit between them
+  (both `*_two_*_digits` variants, `even_odd_window` and the two-leg `over1_under6_recovery`) were
+  removed with their XML assets, so the library is numbered 1–5 and the scanner's cold-pair bots are
+  **bot 4** and **bot 5**. `templates.test.ts` ("gates on all four block groups") still maps every
+  `obs_*` type in the parity-recovery asset through the catalogue's `GROUP_OF_CATEGORY` and fails
+  unless all four `GROUPS` ids contribute — so a template cannot silently drop back to one group. The
+  two `*_entry_every_time` bots carry no observer gate at all: their entry is the
+  digits/frequencies/bars rule spelled out on the card (see "Researched entries" below), which the
+  `$name draws on every palette group` test therefore only applies to the observer-gated template.
   Those observer blocks sit NESTED inside the
   `before_purchase` `controls_if` → `purchase` stack, not as an `obs_entry` gate: the observer runtime
   then evaluates them through `Bot.observerCondition(...)` on the same tick, and there is no second
@@ -289,29 +288,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   only finds a purchase that is a descendant of the `controls_if` whose `IF0` compares `last_digit`, so
   the observer `controls_if` must be nested INSIDE that DO0 (wrapping the purchase), never the other way
   round, or every observer-gated template fails the loader inspection.
-- **`even_odd_window` re-scans the market after a loss.** The market-scan guard is the
-  `freebot:market-scanned` variable, tested in `before_purchase` by `freebot-eo-market-pick`: when it is
-  unset the loop runs `switch_best_parity_market` and then sets it, so the scan happens once. The
-  `after_purchase` loss branch (`freebot-eo-rescan-after-loss`) sets it back to `FALSE`, so the next
-  trade loop measures every market again and re-picks the best one before looking for an entry — a win
-  leaves it set, so a winning run stays on the market it picked. Those two blocks are why the canvas
-  count is 113 for this template (see the block-count note above).
-- **The Even/Odd bot trades the reversal of the last 2 digits.** `eo_configure` carries the signal rule,
-  so `even_odd_window` sets `RULE=reversal` and `RUN=2`: `Bot.eoSignalDirection()` then answers the parity
-  the last two digits predict to break — both even → ODD, both odd → EVEN, a mixed pair → NO SIGNAL — and
-  the existing `Buy EVEN` / `Buy ODD` branches buy exactly that. The window (`TICKS`) and `PERCENT` still
-  gate readiness and only decide the signal under the `threshold` rule, which is what every other template
-  and the Even/Odd strategy blocks use.
-- **Two-leg bot (`over1_under6_recovery`):** the only template whose trade definition carries
-  `contractType: 'both'`. Its `trade_definition_tradeoptions` PREDICTION input holds the
-  `freebot:prediction` variable, so the primary branch sets it to 1 and buys `DIGITOVER` while the
-  recovery branch sets it to 6 and buys `DIGITUNDER`; `inspectFreeBotXml`'s `recovery-leg` check fails
-  unless both that purchase and the variable barrier exist. `settings.purchases` is read with
-  `block[type="before_purchase"] block[type="purchase"]` — `before_purchase` is a block *type*, so a
-  `before_purchase` tag selector matches nothing and silently reports zero purchases. Mind `logic_and`
-  too: this builder registers `logic_operation` only, so an AND must be `logic_operation` with
-  `OP=AND`, otherwise the load reports an unsupported block type.
-- **Every template seeds its session numbers in "Run once at start", and the restart-trading section reads them.** `INITIALIZATION` sets `freebot:stake`, `freebot:profit`, `freebot:stop` and — for all nine assets — `freebot:take-profit`, `freebot:stop-loss`, `freebot:reset-stake` and `freebot:multiplier`; the `after_purchase` take-profit / stop-loss compares, the win branch's stake reset and the loss branch's martingale step read those variables instead of repeating the numbers (the literal stays only as the input's shadow fallback). The four templates that declare `freebot:market-scanned` seed it to FALSE there as well, so the scan-once guard never starts from an unset variable. `over1_under6_recovery` additionally seeds `freebot:over` 1, `freebot:under-prediction` 6, `freebot:loss-count` 0, `freebot:take-profit` 20, `freebot:stop-loss` −50 and `freebot:runs` 3, and `over1_parity_recovery` seeds its two legs the same way. Only the digit gates keep literal numbers
+- **Every template seeds its session numbers in "Run once at start", and the restart-trading section reads them.** `INITIALIZATION` sets `freebot:stake`, `freebot:profit`, `freebot:stop` and — for all five assets — `freebot:take-profit`, `freebot:stop-loss`, `freebot:reset-stake` and `freebot:multiplier`; the `after_purchase` take-profit / stop-loss compares, the win branch's stake reset and the loss branch's martingale step read those variables instead of repeating the numbers (the literal stays only as the input's shadow fallback). The templates that declare `freebot:market-scanned` seed it to FALSE there as well, so the scan-once guard never starts from an unset variable. `over1_parity_recovery` seeds its two legs the same way. Only the digit gates keep literal numbers
   (10.3% share, 1000-tick samples, entry digits 5/6), because their block inputs read the number
   straight from the shadow.
   - **The prediction gate sits OUTSIDE the `not initialised` guard**, chained as its `<next>`: the guard
@@ -357,12 +334,11 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   that builds `Waiting · last digit N` with `text_join` into `freebot:notice` and logs it through
   `notify` (info, silent); the observer-gated templates carry the same `ELSE` on their inner gate too, so
   a failing digit filter and a failing observer filter both show up. Every template therefore declares
-  the `freebot:notice` variable, and `over1_under6_recovery` carries one `ELSE` per leg (Over 1 and the
-  Under 6 recovery) so a waiting leg is always visible in the journal.
+  the `freebot:notice` variable.
 - **Confirmation notices in the journal.** While the Free Bots tab is open,
   `use-confirmation-journal.ts` reads the selected market's live digits (last 1000, at least 30 ticks)
   and, when a bot's own entry conditions are met, writes one line per bot through
-  `confirmation-notices.ts`: bots 8 and 9 on their cold losing pair (0/1 or 8/9 at or below 10.2%, the
+  `confirmation-notices.ts`: bots 4 and 5 on their cold losing pair (0/1 or 8/9 at or below 10.2%, the
   red bar is irrelevant), every other bot only when its share gate and its entry digits/run both hold.
   The line reads `Confirmation needed — Bot N (name) on <market>: … Load the bot and press Run to
   confirm.` and carries `journal__text--confirmation` (amber `--status-warning`, bold) so it stands out
@@ -379,7 +355,7 @@ shared lab feed through `useDigitsLabContext()`, so it scans the same markets th
   more. `templates.test.ts` pins both the line and that the purchase follows it.
 - Each card shows two plain-language lines above the numeric defaults — **Buys when** (`buyCondition`)
   and **Trades again when** (`restartCondition`), plus **Blocks used** (`blocksUsed`) — and the whole
-  card is collapsed to just its name until the header toggle is pressed, so six bots fit on a phone.
+  card is collapsed to just its name until the header toggle is pressed, so the five cards fit on a phone.
 - **Statistics from raw digits:** `calculateStatisticsFromDigits` in `statistics.ts` is the digits-only
   entry point; `calculateDigitStatistics` now delegates to it.
 - **Crashes:** `src/components/error-boundary/` wraps `<Main>` in `app-content.jsx` and each new tab
@@ -1139,7 +1115,7 @@ builds exactly the workspace it did.
   `report_journal(learn_report)` generates `Bot.sessionJournal(Bot.learnReport(), "info")`.
 
 ### Researched entries (every Free Bots template)
-Every bot in the Free Bots tab — the seven XML templates and the nine multi-market presets — carries an
+Every bot in the Free Bots tab — the five XML templates and the nine multi-market presets — carries an
 entry rule taken from the published Deriv digit setups, not a bare "trade on this digit" trigger:
 - **Over/Under** (Over 1 and Under 8 plus the presets): the digits the contract *loses to* have to stay
   cold — below the fair 10.3% share of the last 100 ticks. **Under 8 (bot 1)** takes the entry digits
@@ -1186,8 +1162,7 @@ entry rule taken from the published Deriv digit setups, not a bare "trade on thi
 Where it lives: `MultiMarketConfig.maxFrequencyDigits` adds the "stays below 10.3%" compares to the
 generated switch + purchase condition (alongside `minFrequencyDigits` for the hot rules);
 `entryConditionText` writes the same rule into the card copy, so a card never shows a rule the XML does not
-carry. The four static Over/Under XML assets — the two `*_entry_every_time` ones plus
-`over1_two_low_digits` and `under8_two_high_digits` — add one `logic_compare` (`OP=LT`, 10.3, sample 100)
+carry. The two static Over/Under XML assets — `*_entry_every_time` — add one `logic_compare` (`OP=LT`, 10.3, sample 100)
 around a `digits_frequency` block per losing digit, ANDed with the existing bar/parity/freshness guards
 (the derived two keep their `freebot-o1two` / `freebot-u8two` block-id prefixes so every id stays unique
 inside one asset). Tests: `templates.test.ts` ("every Over/Under template keeps the losing digits cold",
@@ -1394,3 +1369,57 @@ stay on the canvas.
   logged-in Demo account, so it is verified by hand.
 
 
+
+## AI Bots tab (Even-Odd and Rise-Fall bots)
+The fourth tab (`DBOT_TABS.AI_BOTS = 3`, `#id-ai-bots`, hash `ai_bots`), right after Free Bots, in
+`src/features/ai-bots/`. It lists two bots and opens each one's setup — the dark console with the
+rule card, the market scope / stake / ticks / take profit / stop loss / martingale fields and the
+live market scan.
+- `ai-bots-page.tsx` keeps the selected bot, one settings object per bot and the scanner state, so
+  going back to the strategy list does not throw away a finished scan.
+- Rules are pure in `signals.ts`: `readHotCold` takes the most and least frequent digit of the
+  scanned sample — they must share a parity — and signals that parity when the newest digit is
+  either the hot or the cold digit. `readRun` reads the last N quotes: strictly rising → Fall,
+  strictly falling → Rise, and a flat tick breaks the run. `buildInsights` applies the selected
+  market scope and writes each row's status line; `countSignals` feeds the badge.
+- **The run lives outside the page (`ai-bot-session.ts`).** The tab strip renders only the active
+  tab's children, so a page-local scan loop would stop the moment the user opens the Bot Builder to
+  watch the trades. The selected bot, its settings and the scan loop are therefore module state,
+  bound by `use-ai-bot-session.ts`; going back to the strategy list (`closeAiBot`) or pressing STOP
+  ends the run, and switching tabs does not.
+- The scan is the Digits scanner (`scanDigitMarkets`) on its own short-lived public socket, so every
+  open volatility market is read (13 in practice, 1000 ticks each) without touching the live feed.
+  **A running bot rescans on its own**: each pass sets `scanning`, publishes the rows and returns to
+  `ready`, then schedules the next pass `RESCAN_INTERVAL_MS` (5 s) later; STOP clears that timer,
+  aborts the pass in flight and keeps the last report on screen. `MarketScan` also carries `prices`,
+  which the Rise-Fall rule reads, and a stale pass can never overwrite a newer one.
+- **The bot trades, and its purchases show up in the Bot Builder panels.** `trading.ts` is the rule
+  book: `tradePlanFor` maps a confirmed side to its contract (`Even` → `DIGITEVEN`, `Odd` →
+  `DIGITODD`, `Rise` → `CALL`, `Fall` → `PUT`), `nextStake` sizes the next stake (base × multiplier
+  after each loss, reset on a win), `sessionStop` reports a reached take profit / stop loss (a limit
+  of 0 is "not set") and `contractTicks` clamps the Ticks field to 1–10. `ai-bot-session.ts` places
+  one entry per finished scan, only while the bot is running, and `ai-bot-runner.ts` skips a market
+  that still holds an open contract or a purchase in flight. Every buy goes through the app's own
+  authorized socket via `gui-engine/deriv-execution.ts` (quote → buy → `watchContracts`), and each
+  contract is mirrored into `summary_card.onBotContractEvent` + `transactions.onBotContractEvent`
+  with `journal.pushMessage('AI bot · …')` lines for the purchase and the settlement — the same
+  three stores the Bot Builder's run panel renders, so the trades appear in its **Summary**,
+  **Transactions** and **Journal**. The open contracts, the session figures and the contract
+  subscription are module state, so a contract that settles after the AI Bots tab is closed still
+  reaches those panels; only the stores (app singletons) and the stop callback are attached from the
+  page. The account is read from the app's own socket (`isAuthorized$` / `authData$`), so the tab
+  needs no React auth state. A signed-out session places nothing: the run journals "Sign in with
+  your Deriv account to place the entries." once. A rejected proposal journals its reason instead of
+  failing silently, and reaching the take profit / stop loss stops the scan. Do not describe a signal
+  as an executed trade until the contract is confirmed — the live line's trade count comes from the
+  store updates, never from the signal alone.
+- `ai-bots.scss` uses the theme tokens (`--dash-surface`, `--dash-border`, `--brand-success`,
+  `--status-danger`), so the hamburger Dark theme switch still changes this page.
+- Verify: click `#id-ai-bots`, open a bot, press START AI BOT — rows appear for every open volatility
+  market with its newest digits and a reading, the badge counts the signals, and the live line reads
+  `rescans every 5s · N trades · P/L …`; the status alternates LIVE → READY about every 5 s, so one
+  press keeps scanning. Open another tab and come back: the bot is still running with its rows (the
+  run is module state). Narrowing MARKET SCOPE leaves only that market's row. The Bot Builder's
+  Journal tab shows the `AI bot ·` lines. A real purchase and its Summary / Transactions rows need a
+  signed-in account, so the buy → settle path is verified by hand on a Demo account.
+  `docker compose exec web npx jest src/features/ai-bots`.

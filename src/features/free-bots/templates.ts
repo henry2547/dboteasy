@@ -12,22 +12,13 @@
  * uploads were named after: Under 8 enters on 4, 7 or 9 while digits 8 and 9 stay
  * at or below 10.2%, Over 1 enters on 2, 5 or 6 while digits 0 and 1 stay at or
  * below 10.2%. The red (coldest) bar plays no part in either gate — a losing digit
- * may carry it or not. The two `*_two_*_digits` variants add a confirmation gate built from the
- * Bot Builder's observer blocks, which is why each card lists the blocks it uses.
- * Those gates draw on all four Blocks-menu groups: the digit/frequency condition
- * (`Read Digit N Ticks Ago`, `Digit Frequency Below`, …) is ANDed with a
- * pattern/parity read (`Parity Switched`), a data-quality guard (`Check Market
- * Data Freshness`) and an entry monitor (`Require Minimum Sample Size`).
+ * may carry it or not.
  *
- * `over1_under6_recovery` is the only two-leg template: its trade definition
- * carries the `both` contract type, so its purchase conditions buy Over 1 in the
- * primary branch and Under 6 in the recovery branch, with the shared prediction
- * variable set per branch. Run on Start seeds every number those blocks call —
- * OVER 1, UNDER PREDICTION 6, LOSS COUNT 0, TAKE PROFIT 10, STOP LOSS −20 and the
- * three-tick run — and the purchase conditions branch on the loss count itself
- * rather than on a recovery flag. Its extra gate comes from the Digits analysis
- * blocks (`Digits above in a row`, `Two digits at or below a share`) rather than
- * the observer blocks.
+ * The two `*_cold_run_recovery` bots add the confirmed losing pair: digits 0/1 (or
+ * 8/9) both stay at or below the adaptive share ceiling and a pair from that set is
+ * confirmed by a later tick ending in the same digits. `over1_parity_recovery` holds
+ * both of its legs in one Digits block: Over 1 first, then the Even/Odd reversal of
+ * the newest digits after a settled loss.
  *
  * Every card's entry rule follows the published Deriv digit setups, not just the
  * contract's own digit: the two `*_entry_every_time` assets AND the tick pattern
@@ -36,12 +27,8 @@
  * against 10.2% of the last 1000 ticks. The red (coldest) bar is never a condition.
  */
 
-import evenOddWindowXml from '@/xml/even_odd_window.xml';
 import over1EntryEveryTimeXml from '@/xml/over1_entry_every_time.xml';
-import over1TwoLowDigitsXml from '@/xml/over1_two_low_digits.xml';
 import under8EntryEveryTimeXml from '@/xml/under8_entry_every_time.xml';
-import under8TwoHighDigitsXml from '@/xml/under8_two_high_digits.xml';
-import over1Under6RecoveryXml from '@/xml/over1_under6_recovery.xml';
 import parityRecoveryXml from '@/xml/parity_recovery_bot.xml';
 import over1ColdRunRecoveryXml from '@/xml/over1_cold_run_recovery.xml';
 import under8ColdRunRecoveryXml from '@/xml/under8_cold_run_recovery.xml';
@@ -49,10 +36,6 @@ import under8ColdRunRecoveryXml from '@/xml/under8_cold_run_recovery.xml';
 export type FreeBotId =
     | 'under8_entry_every_time'
     | 'over1_entry_every_time'
-    | 'over1_two_low_digits'
-    | 'under8_two_high_digits'
-    | 'even_odd_window'
-    | 'over1_under6_recovery'
     | 'over1_parity_recovery'
     | 'over1_cold_run_recovery'
     | 'under8_cold_run_recovery';
@@ -268,138 +251,6 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
             'Digits: Last Digit · Compare · Digit frequency · AND / OR · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
     },
     {
-        id: 'over1_two_low_digits',
-        mode: 'single',
-        name: 'Over 1 — Two Low Digits in a Row',
-        sourceFile: 'Derived from Over 1 with Entry every time.xml',
-        asset: 'over1_two_low_digits.xml',
-        strategy: 'over1',
-        strategyLabel: 'Digit Over',
-        contractType: 'DIGITOVER',
-        prediction: 1,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 10,
-        stopLoss: 20,
-        multiplier: 1.5,
-        entryOperator: 'LTE',
-        triggerDigit: 1,
-        entryRule:
-            'Last digit ≤ 1 AND the digit one tick earlier was also ≤ 1 · digits 0 and 1 at or below 10.2% of the last 1000 ticks · risk guard, no open contract, trade cap · parity switched · fresh data · 1000-tick sample',
-        buyCondition:
-            'The last digit is 0 or 1 and the digit one tick before it was also 0 or 1 — a double low run, checked with Read Digit N Ticks Ago — the losing digits 0 and 1 both hold 10.2% or less of the last 1000 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 1000 genuine ticks. The red (coldest) bar plays no part.',
-        afterPurchase:
-            'Win → stake back to 10 · Loss → stake × 1.5 · stops at +10 / −20 · stops the run with a reason as soon as digit 0 or 1 rises above 10.2%',
-        restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double low run and still passes every gate, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run. It also stops, with the reason in the run log, the moment digit 0 or 1 rises above 10.2% of the last 1000 ticks.',
-        blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Less Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
-    },
-    {
-        id: 'under8_two_high_digits',
-        mode: 'single',
-        name: 'Under 8 — Two High Digits in a Row',
-        sourceFile: 'Derived from Under 8 with Entry every time.xml',
-        asset: 'under8_two_high_digits.xml',
-        strategy: 'under8',
-        strategyLabel: 'Digit Under',
-        contractType: 'DIGITUNDER',
-        prediction: 8,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 10,
-        stopLoss: 20,
-        multiplier: 2,
-        entryOperator: 'GTE',
-        triggerDigit: 8,
-        entryRule:
-            'Last digit ≥ 8 AND the digit one tick earlier was also ≥ 8 · digits 8 and 9 at or below 10.2% of the last 1000 ticks · risk guard, no open contract, trade cap · parity switched · fresh data · 1000-tick sample',
-        buyCondition:
-            'The last digit is 8 or 9 and the digit one tick before it was also 8 or 9 — a double high run, checked with Read Digit N Ticks Ago — the losing digits 8 and 9 both hold 10.2% or less of the last 1000 ticks, the risk guard allows a trade, no contract is still open and fewer than 250 trades have been taken, while the newest tick switched parity on fresh data after 1000 genuine ticks. The red (coldest) bar plays no part.',
-        afterPurchase:
-            'Win → stake back to 10 · Loss → stake × 2 · stops at +10 / −20 · stops the run with a reason as soon as digit 8 or 9 rises above 10.2%',
-        restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×2 after a loss, the result and the session report are journalled, and it trades again on the next tick that shows another double high run and still passes every gate, until the bot stops for good at +10 profit or −20 loss — a sweet alert then announces whether the take profit or the stop loss ended the run. It also stops, with the reason in the run log, the moment digit 8 or 9 rises above 10.2% of the last 1000 ticks.',
-        blocksUsed:
-            'Digit & frequency: Read Digit N Ticks Ago · Greater Than Or Equal To · Number · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Digits: Digit frequency · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
-    },
-    {
-        id: 'even_odd_window',
-        mode: 'single',
-        name: 'Even / Odd — Last 2 Digits Reversal',
-        sourceFile: 'Built from the Even/Odd strategy blocks',
-        asset: 'even_odd_window.xml',
-        strategy: 'even',
-        strategyLabel: 'Digit Even / Odd',
-        contractType: 'both',
-        primaryContractType: 'DIGITEVEN',
-        tradeType: 'evenodd',
-        prediction: null,
-        entryParity: 'both',
-        entryBlocks: 'even-odd-window',
-        // The bot does not stay on the market it was loaded with: it measures every volatility
-        // market itself on the first trade loop of the run and moves to the best one.
-        marketScan: true,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 10,
-        takeProfit: 10,
-        stopLoss: 20,
-        multiplier: 1.5,
-        entryOperator: null,
-        triggerDigit: null,
-        entryRule:
-            'Every volatility market is measured on the last 1000 ticks of its own history · the bot keeps the market whose even/odd split is the most lopsided · on that market the last 2 digits decide: both even → buy ODD, both odd → buy EVEN, a mixed pair is no entry',
-        buyCondition:
-            "Nothing is bought on the market the bot was loaded with. On the first trade loop of the run it scans every volatility market the app offers, reads the last 1000 ticks of each market with that market's own price precision, and moves to the one where a parity holds the largest share — the best market of the pool. Closed, suspended and cooldown markets are skipped with their reason, and the measurement behind every market it looked at is journalled. Then the configured rule is the reversal of the last 2 digits: when both of them are EVEN the bot buys ODD, when both are ODD it buys EVEN, and a mixed pair is no entry at all — it waits for the next pair instead of trading blind. Buy EVEN or Buy ODD sends that contract through the engine's own purchase path. One entry per signal, so the same tick can never enter twice; a window that is incomplete, stale or disconnected never signals. While it waits the journal shows the current signal. After a loss the whole pool is measured again, so the next entry is looked for on a freshly picked market.",
-        afterPurchase:
-            'Win → stake back to 10 · Loss → stake × 1.5 and every volatility market is scanned again · stops at +10 / −20',
-        restartCondition:
-            'Straight after each contract settles: stake resets to 10 after a win, ×1.5 after a loss, and it trades again on the next pair of same-parity digits — two even digits buy ODD, two odd digits buy EVEN — until ' +
-            MARTINGALE_STOP +
-            '. The market scan runs on the first trade loop of the run and again after every loss, so the bot re-picks the best market before it looks for the next entry; stopping and starting the bot scans from scratch.',
-        blocksUsed:
-            'Use the best even/odd market · Configure Even/Odd strategy · Monitor last N valid ticks · Selected signal direction · Buy EVEN · Buy ODD · Allow one entry per signal · Digit & frequency: Check Minimum Sample Size · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with',
-    },
-    {
-        id: 'over1_under6_recovery',
-        mode: 'continuous',
-        name: 'Over 1 — Under 6 Recovery',
-        sourceFile: 'Derived from Over 1 with Entry every time.xml',
-        asset: 'over1_under6_recovery.xml',
-        strategy: 'over1',
-        strategyLabel: 'Digit Over / Under',
-        contractType: 'both',
-        primaryContractType: 'DIGITOVER',
-        recoveryLeg: {
-            contractType: 'DIGITUNDER',
-            prediction: 6,
-            trigger:
-                'the loss count is 1 or more and the last three ticks each ended 7, 8 or 9 — digits above 6, with a 9 counting like 7 and 8',
-        },
-        prediction: 1,
-        durationTicks: 1,
-        defaultMarket: '1HZ25V',
-        stake: 20,
-        takeProfit: 20,
-        stopLoss: 50,
-        multiplier: 2,
-        entryOperator: 'GTE',
-        triggerDigit: 5,
-        entryRule:
-            'Last digit is 5 or 6 · digit 0 and digit 1 both at or below 10.2% of the last 1000 ticks',
-        buyCondition:
-            'Nothing is bought until an entry signal appears, and which signal it waits for comes from the loss count set in Run on Start. At 0 it waits for Over 1: the newest digit is 5 or 6 and digit 0 and digit 1 are both at or below 10.2% of the last 1000 ticks — the red (coldest) bar on any digit plays no part. At 1 or more it waits for the Under 6 recovery instead: the last three ticks in a row each ended 7, 8 or 9 — every one of them above 6, so a 6 breaks the wait (9, 9, 8 counts, 8, 6, 9 does not), and a 9 on the newest tick counts as a high digit like 7 and 8. While a leg waits it buys nothing and notifies the journal with the last digit. Every gate fails until real ticks are loaded.',
-        afterPurchase:
-            'Win → stake back to 10 and the loss count back to 0 (Over 1 again) · Loss → stake × 2 and the loss count + 1 (Under 6 recovery) · the session exits on the take-profit or stop-loss variable · stops the run with a reason as soon as digit 0 or 1 rises above 10.2%',
-        restartCondition:
-            'Straight after each contract settles it trades again while the stop is not set, so it keeps running through losses until the take profit — or the stop loss — is hit, and a sweet alert then announces which of the two limits ended the run. The barrier comes from the prediction variable, which Run on Start recalculates from the loss count: 0 buys Over 1, 1 or more buys Under 6. While a leg waits for its setup the journal shows the last digit that failed the gate. It also stops, with the reason in the run log, the moment digit 0 or 1 rises above 10.2% of the last 1000 ticks.',
-        blocksUsed:
-            'Digits above in a row · Two digits at or below a share · Pattern & parity: Parity Switched · Observer control: Check Market Data Freshness · Entry & monitoring: Require Minimum Sample Size · Market intelligence: Discover eligible markets · Risk management: Set risk limits · Reset risk session · Risk guard allows trade · Strategy learning: Learn following trades as strategy · Trading & execution: A contract is open · Result of last trade · Bot control: Trade limit reached · Reporting: Session report · Report journal · Notify · Sweet alert · Create text with · AND',
-    },
-    {
         id: 'over1_parity_recovery',
         mode: 'continuous',
         name: 'Over 1 — Even/Odd Recovery',
@@ -503,10 +354,6 @@ export const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
 const FREE_BOT_XML: Record<string, string> = {
     under8_entry_every_time: under8EntryEveryTimeXml,
     over1_entry_every_time: over1EntryEveryTimeXml,
-    over1_two_low_digits: over1TwoLowDigitsXml,
-    under8_two_high_digits: under8TwoHighDigitsXml,
-    even_odd_window: evenOddWindowXml,
-    over1_under6_recovery: over1Under6RecoveryXml,
     over1_parity_recovery: parityRecoveryXml,
     over1_cold_run_recovery: over1ColdRunRecoveryXml,
     under8_cold_run_recovery: under8ColdRunRecoveryXml,

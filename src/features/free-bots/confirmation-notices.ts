@@ -43,8 +43,6 @@ interface NoticeRule {
 
 const lastDigit = (digits: number[]): number => digits[digits.length - 1];
 
-const lastTwoDigits = (digits: number[]): [number, number] => [digits[digits.length - 2], digits[digits.length - 1]];
-
 const newestIs = (digits: number[]): string => `the newest digit is ${lastDigit(digits)}`;
 
 const RULES: NoticeRule[] = [
@@ -58,33 +56,6 @@ const RULES: NoticeRule[] = [
         templateId: 'over1_entry_every_time',
         pair: [0, 1],
         entry: digits => [2, 5, 6].includes(lastDigit(digits)),
-        reading: newestIs,
-    },
-    {
-        templateId: 'over1_two_low_digits',
-        pair: [0, 1],
-        entry: digits => lastTwoDigits(digits).every(digit => digit <= 1),
-        reading: () => 'the last two digits are both 0 or 1',
-    },
-    {
-        templateId: 'under8_two_high_digits',
-        pair: [8, 9],
-        entry: digits => lastTwoDigits(digits).every(digit => digit >= 8),
-        reading: () => 'the last two digits are both 8 or 9',
-    },
-    {
-        templateId: 'even_odd_window',
-        pair: null,
-        entry: digits => {
-            const [previous, newest] = lastTwoDigits(digits);
-            return previous % 2 === newest % 2;
-        },
-        reading: digits => `the last two digits are both ${lastDigit(digits) % 2 === 0 ? 'even' : 'odd'}`,
-    },
-    {
-        templateId: 'over1_under6_recovery',
-        pair: [0, 1],
-        entry: digits => [5, 6].includes(lastDigit(digits)),
         reading: newestIs,
     },
     {
