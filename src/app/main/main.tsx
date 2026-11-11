@@ -33,6 +33,7 @@ import {
     setModalStateChangeCallback,
 } from '@/utils/trade-type-modal-handler';
 import {
+    LabelPairedArrowsRotateCaptionRegularIcon,
     LabelPairedChartLineCaptionRegularIcon,
     LabelPairedLightbulbCaptionRegularIcon,
     LabelPairedCircleDotCaptionFillIcon,
@@ -57,6 +58,7 @@ const StatisticsPage = lazy(() => import('../../features/statistics'));
 const StrategyEnginePage = lazy(() => import('../../features/strategy-engine'));
 const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
 const FreeBotsPage = lazy(() => import('../../features/free-bots'));
+const AiBotsPage = lazy(() => import('../../features/ai-bots'));
 const GlobalScanButton = lazy(() => import('../../features/digits/components/global-scan-button'));
 
 const AppWrapper = observer(() => {
@@ -99,6 +101,7 @@ const AppWrapper = observer(() => {
         'chart',
         'digits',
         'statistics',
+        'ai_bots',
     ];
     const { isDesktop } = useDevice();
     const location = useLocation();
@@ -565,6 +568,29 @@ const AppWrapper = observer(() => {
                                         }
                                     >
                                         <StatisticsPage />
+                                    </Suspense>
+                                </ErrorBoundary>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedArrowsRotateCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='AI Bots' />
+                                    </>
+                                }
+                                id='id-ai-bots'
+                            >
+                                <ErrorBoundary label='AI Bots'>
+                                    <Suspense
+                                        fallback={
+                                            <ChunkLoader message={localize('Please wait, loading the AI bots...')} />
+                                        }
+                                    >
+                                        <AiBotsPage />
                                     </Suspense>
                                 </ErrorBoundary>
                             </div>

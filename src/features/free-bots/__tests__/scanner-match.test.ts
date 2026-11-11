@@ -1,16 +1,12 @@
 /**
  * The scanner decides which Free Bots a result may load. These tests pin the contract the "Load Bot"
- * buttons rely on: a row offers bot 8 when the scanned digits keep 0 and 1 at or below 10.2%, bot 9
+ * buttons rely on: a row offers bot 4 when the scanned digits keep 0 and 1 at or below 10.2%, bot 5
  * when they keep 8 and 9 at or below, both when both rules hold, and the closest partial setup when
  * neither does — never a silent match.
  */
 
 jest.mock('@/xml/over1_entry_every_time.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_entry_every_time.xml', () => '', { virtual: true });
-jest.mock('@/xml/over1_two_low_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/under8_two_high_digits.xml', () => '', { virtual: true });
-jest.mock('@/xml/even_odd_window.xml', () => '', { virtual: true });
-jest.mock('@/xml/over1_under6_recovery.xml', () => '', { virtual: true });
 jest.mock('@/xml/parity_recovery_bot.xml', () => '', { virtual: true });
 jest.mock('@/xml/over1_cold_run_recovery.xml', () => '', { virtual: true });
 jest.mock('@/xml/under8_cold_run_recovery.xml', () => '', { virtual: true });
@@ -34,7 +30,7 @@ describe('matchFreeBotSetups', () => {
         expect(matchFreeBotSetup(digits)).toBeNull();
     });
 
-    it('offers bot 8 when digits 0 and 1 are both at or below 10.2%', () => {
+    it('offers bot 4 when digits 0 and 1 are both at or below 10.2%', () => {
         // 100 ticks: 0 and 1 at two ticks each (2%), the rest spread over 2–9.
         const digits = sample([2, 2, 12, 12, 12, 12, 12, 12, 12, 12]);
         const setups = matchFreeBotSetups(digits);
@@ -42,7 +38,7 @@ describe('matchFreeBotSetups', () => {
         expect(setups).toHaveLength(1);
         const [setup] = setups;
         expect(setup.templateId).toBe('over1_cold_run_recovery');
-        expect(setup.botNumber).toBe(8);
+        expect(setup.botNumber).toBe(4);
         expect(setup.strategy).toBe('over1');
         expect(setup.contractType).toBe('DIGITOVER');
         expect(setup.prediction).toBe(1);
@@ -51,7 +47,7 @@ describe('matchFreeBotSetups', () => {
         expect(setup.evidence.map(item => item.digit)).toEqual([0, 1]);
     });
 
-    it('offers bot 9 when digits 8 and 9 are both at or below 10.2%', () => {
+    it('offers bot 5 when digits 8 and 9 are both at or below 10.2%', () => {
         // 8 and 9 suppressed, 0–7 carry the rest; 0 and 1 are far above 10% so Over 1 does not hold.
         const digits = sample([13, 13, 12, 12, 13, 13, 12, 12, 0, 0]);
         const setups = matchFreeBotSetups(digits);
@@ -59,7 +55,7 @@ describe('matchFreeBotSetups', () => {
         expect(setups).toHaveLength(1);
         const [setup] = setups;
         expect(setup.templateId).toBe('under8_cold_run_recovery');
-        expect(setup.botNumber).toBe(9);
+        expect(setup.botNumber).toBe(5);
         expect(setup.strategy).toBe('under8');
         expect(setup.contractType).toBe('DIGITUNDER');
         expect(setup.prediction).toBe(8);
@@ -72,11 +68,11 @@ describe('matchFreeBotSetups', () => {
         const digits = sample([1, 1, 16, 16, 16, 16, 16, 16, 1, 1]);
         const setups = matchFreeBotSetups(digits);
 
-        expect(setups.map(setup => setup.botNumber).sort()).toEqual([8, 9]);
+        expect(setups.map(setup => setup.botNumber).sort()).toEqual([4, 5]);
         expect(setups.every(setup => setup.ready)).toBe(true);
     });
 
-    it('offers bot 8 at exactly 10.2% on both losing digits', () => {
+    it('offers bot 4 at exactly 10.2% on both losing digits', () => {
         // 0 and 1 take 102 of 1000 ticks each (10.2%), while 8 and 9 sit at 11% each.
         const digits = sample([102, 102, 96, 96, 96, 96, 96, 96, 110, 110]);
         const setups = matchFreeBotSetups(digits);

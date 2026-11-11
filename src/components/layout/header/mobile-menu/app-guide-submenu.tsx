@@ -60,6 +60,11 @@ const DESTINATIONS: TDestination[] = [
         name: 'Statistics',
         hint: 'The numbers behind the market you analysed on the Digits tab.',
     },
+    {
+        tab: DBOT_TABS.AI_BOTS,
+        name: 'AI Bots',
+        hint: 'Even-Odd and Rise-Fall scanners that read every volatility market.',
+    },
 ];
 
 const TIPS = [
