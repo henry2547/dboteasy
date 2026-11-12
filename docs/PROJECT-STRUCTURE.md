@@ -46,7 +46,6 @@ Every module under `src/features/` has an `index.ts` that is what the rest of th
 | `digits` | Digits lab: public feed, statistics, strategies, scanner, and the `engines/` analytics modules |
 | `dtrader` | Kept DTrader tab component (unused, no route) |
 | `free-bots` | Free Bots library: templates, XML inspection/re-targeting, loader, scanner match |
-| `statistics` | Statistics tab over the shared Digits feed |
 | `strategy-engine` | Strategy Engine tab: pure core + reactive hook + dashboard |
 | `tutorials` | Guided tours, FAQ and guide content |
 

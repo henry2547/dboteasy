@@ -7,10 +7,11 @@ import MarketResultsTable from './components/market-results-table';
 import MarketSelector from './components/market-selector';
 import ScanControlPanel from './components/scan-control-panel';
 import { useDigitsLabContext } from './digits-lab-context';
-import { formatPercent } from './format';
+import { formatCount, formatPercent } from './format';
 import { ANALYSIS_WINDOWS } from './use-digits-lab';
 import './digits-page.scss';
 import './digits-enhancements.scss';
+import './digits-dashboard.scss';
 
 /**
  * Digits Analysis Lab — a read-only, public-market-data view of Deriv's feed.
@@ -20,8 +21,10 @@ import './digits-enhancements.scss';
  * barrier hit-rates. It never logs in, never sends a trade and never shows an
  * invented value.
  *
- * The page is deliberately short: market overview, the scan action, the scan
- * results, then the digit read (conditions, history, circle, barriers).
+ * The page reads top-down like a console: the snapshot tiles, the market and
+ * window settings, the live tick, the scan (the same scan the floating "Scan
+ * markets" button runs, whose ranked market results sit right below it), then
+ * the digit read and the barrier research.
  */
 export default function DigitsPage() {
     const lab = useDigitsLabContext();
@@ -54,6 +57,38 @@ export default function DigitsPage() {
                     </button>
                 </div>
             </header>
+
+            <section className='dash-tiles' aria-label='Digit snapshot'>
+                <SnapshotTile
+                    label='Even / Odd'
+                    value={formatPercent(statistics.evenPercentage)}
+                    sub={`odd ${formatPercent(statistics.oddPercentage)}`}
+                />
+                <SnapshotTile
+                    label='Low 0–4 / High 5–9'
+                    value={formatPercent(statistics.lowPercentage)}
+                    sub={`high ${formatPercent(statistics.highPercentage)}`}
+                />
+                <SnapshotTile
+                    label='Hot digits'
+                    value={statistics.mostFrequentDigits.length ? statistics.mostFrequentDigits.join(', ') : '—'}
+                    sub='most frequent'
+                />
+                <SnapshotTile
+                    label='Cold digits'
+                    value={statistics.leastFrequentDigits.length ? statistics.leastFrequentDigits.join(', ') : '—'}
+                    sub='least frequent'
+                />
+                <SnapshotTile
+                    label='Streak'
+                    value={
+                        statistics.currentStreak
+                            ? `${statistics.currentStreak.digit} ×${statistics.currentStreak.length}`
+                            : '—'
+                    }
+                    sub={`${formatCount(lab.analysisTicks.length)} ticks in window`}
+                />
+            </section>
 
             <section className='dash-section' aria-labelledby='dash-settings-heading'>
                 <header className='dash-section__head'>
@@ -136,7 +171,8 @@ export default function DigitsPage() {
                         Digit analysis
                     </h3>
                     <span className='dash-section__note'>
-                        {lab.analysisTicks.length} ticks in the analysis window · {lab.ticks.length} stored
+                        {formatCount(lab.analysisTicks.length)} ticks in the analysis window ·{' '}
+                        {formatCount(lab.ticks.length)} stored
                     </span>
                 </header>
 
@@ -209,6 +245,22 @@ export default function DigitsPage() {
                 financial advice. Statistical qualification is not proof that a setup will win.
             </p>
         </div>
+    );
+}
+
+interface SnapshotTileProps {
+    label: string;
+    value: string;
+    sub: string;
+}
+
+function SnapshotTile({ label, value, sub }: SnapshotTileProps) {
+    return (
+        <article className='dash-tile'>
+            <span className='dash-tile__label'>{label}</span>
+            <span className='dash-tile__value'>{value}</span>
+            <span className='dash-tile__sub'>{sub}</span>
+        </article>
     );
 }
 
