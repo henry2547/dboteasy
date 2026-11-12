@@ -36,6 +36,7 @@ const AiBotsPage = () => {
         rows,
         progress,
         error,
+        lockedSymbol,
         run,
         openBot,
         closeBot,
@@ -59,7 +60,7 @@ const AiBotsPage = () => {
 
     const insights = useMemo(
         () => (activeId && botSettings ? buildInsights(activeId, rows, botSettings) : []),
-        [activeId, botSettings?.marketScope, botSettings?.ticks, rows]
+        [activeId, botSettings?.marketScope, rows]
     );
     const signals = countSignals(insights);
 
@@ -134,13 +135,20 @@ const AiBotsPage = () => {
                     </p>
                 )}
 
-                <TradingRule botId={activeId} ticks={botSettings.ticks} />
+                <TradingRule botId={activeId} />
 
                 <ScannerFields
                     settings={botSettings}
                     rows={rows}
                     onChange={patch => updateSettings(activeId, patch)}
                 />
+
+                {lockedSymbol && (
+                    <p className='ai-setup__locked'>
+                        Trading <strong>{rows.find(row => row.symbol === lockedSymbol)?.displayName ?? lockedSymbol}</strong>{' '}
+                        until the hot/cold parity breaks.
+                    </p>
+                )}
             </section>
 
             <LiveMarketScan
@@ -149,7 +157,6 @@ const AiBotsPage = () => {
                 running={running}
                 progress={progress}
                 error={error}
-                ticks={botSettings.ticks}
                 signals={signals}
             />
 

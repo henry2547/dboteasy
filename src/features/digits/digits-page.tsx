@@ -1,37 +1,30 @@
-import BacktestPanel from './components/backtest-panel';
 import BarrierPanel from './components/barrier-panel';
 import DigitDistribution from './components/digit-distribution';
 import DigitGrid from './components/digit-grid';
-import FeedbackPanel from './components/feedback-panel';
-import LabEnginesSection from './components/lab-engines-section';
 import MarketConditionsPanel from './components/market-conditions-panel';
 import MarketOverview from './components/market-overview';
 import MarketResultsTable from './components/market-results-table';
 import MarketSelector from './components/market-selector';
 import ScanControlPanel from './components/scan-control-panel';
-import StrategyPanel from './components/strategy-panel';
 import { useDigitsLabContext } from './digits-lab-context';
 import { formatPercent } from './format';
-import { useLabEngines } from './use-lab-engines';
 import { ANALYSIS_WINDOWS } from './use-digits-lab';
 import './digits-page.scss';
 import './digits-enhancements.scss';
-import './digits-lab-engines.scss';
-import './digits-dashboard.scss';
 
 /**
  * Digits Analysis Lab — a read-only, public-market-data view of Deriv's feed.
  *
  * It discovers live markets, streams the latest 1,000 ticks and turns them into
- * digit statistics, barrier behaviour, hit-rates and a walk-forward backtest.
- * It never logs in, never sends a trade and never shows an invented value.
+ * digit statistics, the five digit markets' conditions, entry guidance and
+ * barrier hit-rates. It never logs in, never sends a trade and never shows an
+ * invented value.
  *
- * The page is organised as a dashboard: market overview, the scan action and
- * its honest summary, the scan results, then the historical digit analysis.
+ * The page is deliberately short: market overview, the scan action, the scan
+ * results, then the digit read (conditions, history, circle, barriers).
  */
 export default function DigitsPage() {
     const lab = useDigitsLabContext();
-    const engines = useLabEngines();
     const { statistics } = lab;
     const recentDigits = lab.analysisTicks.map(tick => tick.lastDigit);
     const eligibleMarkets = lab.markets.filter(market => market.isOpen && !market.isSuspended).length;
@@ -42,7 +35,7 @@ export default function DigitsPage() {
                 <div className='digits-hero__titles'>
                     <h2 className='digits-hero__title'>Digits Analysis Lab</h2>
                     <p className='digits-hero__subtitle'>
-                        Public market data · statistical analysis · educational strategy research
+                        Public market data · market conditions · entry guidance · barrier research
                     </p>
                 </div>
 
@@ -191,7 +184,7 @@ export default function DigitsPage() {
                     </article>
                 </section>
 
-                <MarketConditionsPanel statistics={statistics} signals={lab.signals} />
+                <MarketConditionsPanel statistics={statistics} recentDigits={recentDigits} />
 
                 <DigitGrid
                     statistics={statistics}
@@ -209,13 +202,7 @@ export default function DigitsPage() {
                 </header>
 
                 <BarrierPanel barriers={lab.barrierStats} />
-                <StrategyPanel performance={lab.rulePerformance} signals={lab.signals} />
-                <BacktestPanel results={lab.backtests} />
             </section>
-
-            <LabEnginesSection engines={engines} />
-
-            <FeedbackPanel />
 
             <p className='digits-disclaimer'>
                 Unofficial, educational tool reading Deriv&apos;s public market-data feed. No login, no trading, no

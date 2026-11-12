@@ -1,4 +1,5 @@
 import type { ScanProgress } from '@/features/digits/scan-markets';
+import { EVEN_ODD_WINDOW } from '../signals';
 import type { MarketInsight } from '../signals';
 import type { ScanStatus } from '../types';
 
@@ -9,7 +10,6 @@ interface LiveMarketScanProps {
     running: boolean;
     progress: ScanProgress | null;
     error: string | null;
-    ticks: number;
     signals: number;
 }
 
@@ -23,7 +23,7 @@ function badgeText(status: ScanStatus, signals: number, progress: ScanProgress |
 }
 
 /** Live market scan — one row per volatility market with its newest digits and status. */
-function LiveMarketScan({ insights, status, running, progress, error, ticks, signals }: LiveMarketScanProps) {
+function LiveMarketScan({ insights, status, running, progress, error, signals }: LiveMarketScanProps) {
     const tone = status === 'ready' && signals > 0 ? 'success' : status === 'error' ? 'danger' : 'idle';
 
     return (
@@ -59,7 +59,7 @@ function LiveMarketScan({ insights, status, running, progress, error, ticks, sig
                 <ul className='ai-scan__list'>
                     {insights.map(insight => {
                         const { row, signal, status: line, detail } = insight;
-                        const digits = row.digits.slice(-ticks);
+                        const digits = row.digits.slice(-EVEN_ODD_WINDOW);
                         const failed = row.status !== 'scanned';
 
                         return (

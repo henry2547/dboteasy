@@ -46,19 +46,9 @@ const DESTINATIONS: TDestination[] = [
         hint: 'Drag blocks onto the canvas to build or change a bot, then hit Run.',
     },
     {
-        tab: DBOT_TABS.STRATEGY_ENGINE,
-        name: 'Strategy Engine',
-        hint: 'Live digit-market evaluation and entry-threshold monitoring.',
-    },
-    {
-        tab: DBOT_TABS.CHART,
-        name: 'Deriv Chart',
-        hint: 'The full chart of the market you are trading.',
-    },
-    {
         tab: DBOT_TABS.DIGITS,
         name: 'Digits',
-        hint: 'Digit frequency, barriers and strategy signals for the market you pick.',
+        hint: 'Digit history, market conditions and entry guidance for the market you pick.',
     },
     {
         tab: DBOT_TABS.STATISTICS,

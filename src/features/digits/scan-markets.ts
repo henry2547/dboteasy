@@ -119,6 +119,8 @@ export interface ScanDigitMarketsOptions {
     createClient?: () => ScanClient;
     requestTimeoutMs?: number;
     ticks?: number;
+    /** Read only these api symbols — a single-market bot never scans the whole board. */
+    symbols?: string[];
 }
 
 function openClient(client: ScanClient, timeoutMs: number): Promise<void> {
@@ -275,6 +277,7 @@ export async function scanDigitMarkets(options: ScanDigitMarketsOptions = {}): P
         createClient = () => new DerivPublicWebSocketClient(),
         requestTimeoutMs = REQUEST_TIMEOUT_MS,
         ticks = SCAN_TICKS,
+        symbols: onlySymbols,
     } = options;
 
     const startedAt = Date.now();
@@ -319,7 +322,9 @@ export async function scanDigitMarkets(options: ScanDigitMarketsOptions = {}): P
         });
 
         const eligible: MarketSymbol[] = [];
+        const allowed = onlySymbols && onlySymbols.length ? new Set(onlySymbols) : null;
         unique.forEach(market => {
+            if (allowed && !allowed.has(market.apiSymbol)) return;
             if (market.isOpen && !market.isSuspended) {
                 eligible.push(market);
             } else {
