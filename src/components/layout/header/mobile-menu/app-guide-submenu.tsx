@@ -50,11 +50,6 @@ const DESTINATIONS: TDestination[] = [
         name: 'Digits',
         hint: 'Digit history, market conditions and entry guidance for the market you pick.',
     },
-    {
-        tab: DBOT_TABS.STATISTICS,
-        name: 'Statistics',
-        hint: 'The numbers behind the market you analysed on the Digits tab.',
-    },
 ];
 
 const TIPS = [

@@ -39,7 +39,6 @@ import {
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
-    LabelPairedTableLayoutCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
@@ -51,7 +50,6 @@ import { DigitsLabProvider } from '../../features/digits/digits-lab-context';
 import './main.scss';
 
 const DigitsPage = lazy(() => import('../../features/digits'));
-const StatisticsPage = lazy(() => import('../../features/statistics'));
 const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
 const FreeBotsPage = lazy(() => import('../../features/free-bots'));
 const AiBotsPage = lazy(() => import('../../features/ai-bots'));
@@ -93,7 +91,6 @@ const AppWrapper = observer(() => {
         'ai_bots',
         'bot_builder',
         'digits',
-        'statistics',
     ];
     const { isDesktop } = useDevice();
     const location = useLocation();
@@ -164,7 +161,7 @@ const AppWrapper = observer(() => {
 
     React.useEffect(() => {
         const el_dashboard = document.getElementById('id-dbot-dashboard');
-        const el_last_tab = document.getElementById('id-statistics');
+        const el_last_tab = document.getElementById('id-digits');
 
         const observer_dashboard = new window.IntersectionObserver(
             ([entry]) => {
@@ -512,29 +509,6 @@ const AppWrapper = observer(() => {
                                         <DigitsPage />
                                     </ErrorBoundary>
                                 </Suspense>
-                            </div>
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedTableLayoutCaptionRegularIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='Statistics' />
-                                    </>
-                                }
-                                id='id-statistics'
-                            >
-                                <ErrorBoundary label='Statistics'>
-                                    <Suspense
-                                        fallback={
-                                            <ChunkLoader message={localize('Please wait, loading statistics...')} />
-                                        }
-                                    >
-                                        <StatisticsPage />
-                                    </Suspense>
-                                </ErrorBoundary>
                             </div>
                         </Tabs>
                         <Suspense fallback={null}>

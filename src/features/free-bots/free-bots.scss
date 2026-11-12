@@ -108,6 +108,13 @@
         color: var(--text-less-prominent);
     }
 
+    &__library-note {
+        margin: 0.4rem 0 1rem;
+        font-size: 1.2rem;
+        line-height: 1.5;
+        color: var(--text-less-prominent);
+    }
+
     &__grid {
         display: grid;
         /* Every card owns its own height: with the default `stretch`, opening one card in a
@@ -122,130 +129,6 @@
     }
 
     &__disclaimer {
-        margin: 0;
-        font-size: 1.1rem;
-        color: var(--text-less-prominent);
-    }
-
-    &__market-bots-note {
-        margin: 0.4rem 0 1rem;
-        font-size: 1.2rem;
-        color: var(--text-less-prominent);
-    }
-}
-
-/* Single-market bots (Even-Odd / Rise-Fall rules on the picked market) */
-.market-bot {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    padding: 1.4rem;
-    border-radius: 12px;
-    border: 1px solid var(--general-main-3);
-    background: var(--general-section-1);
-
-    &__head {
-        display: flex;
-        gap: 0.8rem;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    &__name {
-        margin: 0;
-        font-size: 1.45rem;
-        font-weight: 700;
-    }
-
-    &__state {
-        padding: 0.2rem 0.8rem;
-        border-radius: 999px;
-        border: 1px solid var(--general-main-3);
-        font-size: 1.05rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-less-prominent);
-
-        &--live {
-            border-color: var(--brand-success);
-            color: var(--brand-success);
-        }
-    }
-
-    &__tagline {
-        margin: 0;
-        font-size: 1.2rem;
-        color: var(--text-general);
-    }
-
-    &__summary {
-        margin: 0;
-        font-size: 1.1rem;
-        line-height: 1.5;
-        color: var(--text-less-prominent);
-    }
-
-    &__fields {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.6rem;
-    }
-
-    &__field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    &__field-label {
-        font-size: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-less-prominent);
-    }
-
-    &__input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 0.5rem 0.6rem;
-        border-radius: 6px;
-        border: 1px solid var(--general-main-3);
-        background: var(--general-main-1);
-        color: var(--text-general);
-        font-size: 1.2rem;
-    }
-
-    &__market {
-        margin: 0;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--text-general);
-    }
-
-    &__start {
-        padding: 0.7rem 1.2rem;
-        border-radius: 8px;
-        border: 1px solid var(--brand-success);
-        background: var(--brand-success);
-        color: #fff;
-        font-size: 1.2rem;
-        font-weight: 700;
-        cursor: pointer;
-
-        &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        &--stop {
-            border-color: var(--status-danger);
-            background: var(--status-danger);
-        }
-    }
-
-    &__live,
-    &__note {
         margin: 0;
         font-size: 1.1rem;
         color: var(--text-less-prominent);

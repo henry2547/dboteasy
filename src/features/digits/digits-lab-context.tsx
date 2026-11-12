@@ -1,7 +1,7 @@
 /**
- * Shares one Digits-lab feed (and one selected market) between the Digits tab
- * and the Statistics tab, so switching tabs never starts a second WebSocket or
- * loses the market the user picked.
+ * Shares one Digits-lab feed (and one selected market) between the Digits tab,
+ * the Free Bots tab and the floating scanner, so switching tabs never starts a
+ * second WebSocket or loses the market the user picked.
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
