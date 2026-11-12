@@ -14,6 +14,7 @@ import {
     getAiBotSessionView,
     openAiBot,
     startAiBot,
+    startMarketBot,
     stopAiBot,
     subscribeAiBotSessionView,
     updateAiBotSettings,
@@ -47,6 +48,7 @@ export function useAiBotSession() {
         openBot: openAiBot,
         closeBot: closeAiBot,
         start: startAiBot,
+        startMarket: startMarketBot,
         stop: stopAiBot,
         updateSettings: updateAiBotSettings,
     };

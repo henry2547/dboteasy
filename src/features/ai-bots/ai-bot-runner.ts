@@ -23,6 +23,7 @@ import {
     type ContractUpdate,
 } from '@/features/gui-engine/deriv-execution';
 import type { AiBotId, AiBotSettings, TradeSide } from './types';
+import { CONTRACT_TICKS } from './signals';
 import { contractTicks, nextStake, sessionStop, tradePlanFor } from './trading';
 
 export interface AiBotRun {
@@ -233,7 +234,8 @@ export async function placeAiBotTrade(entry: AiBotEntry): Promise<void> {
             contractType: plan.contractType,
             stake,
             currency,
-            duration: contractTicks(entry.settings.ticks),
+            // A contract always covers one tick — the setup no longer exposes a duration field.
+            duration: contractTicks(CONTRACT_TICKS),
             durationUnit: 't',
         });
         const bought = await purchaseContract(proposal);

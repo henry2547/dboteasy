@@ -6,16 +6,15 @@ interface ScannerFieldsProps {
     onChange: (patch: Partial<AiBotSettings>) => void;
 }
 
-const NUMBER_FIELDS: { key: keyof Pick<AiBotSettings, 'stake' | 'ticks' | 'takeProfit' | 'stopLoss' | 'martingale'>; label: string }[] =
+const NUMBER_FIELDS: { key: keyof Pick<AiBotSettings, 'stake' | 'takeProfit' | 'stopLoss' | 'martingale'>; label: string }[] =
     [
         { key: 'stake', label: 'Stake' },
-        { key: 'ticks', label: 'Ticks' },
         { key: 'takeProfit', label: 'Take profit' },
         { key: 'stopLoss', label: 'Stop loss' },
         { key: 'martingale', label: 'Martingale' },
     ];
 
-/** Market scope plus the five numeric settings, styled like the reference setup panel. */
+/** Market scope plus the four numeric settings, styled like the reference setup panel. */
 function ScannerFields({ settings, rows, onChange }: ScannerFieldsProps) {
     const markets = rows.filter(row => row.status === 'scanned');
 
@@ -54,6 +53,11 @@ function ScannerFields({ settings, rows, onChange }: ScannerFieldsProps) {
                     />
                 </label>
             ))}
+
+            <div className='ai-field'>
+                <span className='ai-field__label'>Contract ticks</span>
+                <span className='ai-field__fixed'>1 tick (fixed)</span>
+            </div>
         </div>
     );
 }

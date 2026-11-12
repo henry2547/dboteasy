@@ -1,13 +1,14 @@
 /**
- * Turns the digit statistics and adaptive signals into a plain-language read of
- * the current market, plus the entry guidance for the Over/Under playbook.
+ * Turns the digit statistics into a plain-language read of the five markets the
+ * app actually trades: Over 1, Over 2, Under 7, Under 8 and Even/Odd.
  *
- * Everything here is derived from the live feed through the behaviour and
- * strategy-learning calculations — it describes what the market is doing, it
- * never predicts or places a trade.
+ * Each reading compares the digits that LOSE the contract with the fair 10%
+ * share, then repeats the check on a short recent window so a stale long-run
+ * average cannot make an unstable market look safe. Everything is derived from
+ * the live feed; nothing here predicts or places a trade.
  */
 
-import type { AdaptiveSignal, DigitFrequency, DigitStatistics } from './types';
+import type { DigitFrequency, DigitStatistics } from './types';
 
 export type ConditionTone = 'favourable' | 'neutral' | 'caution';
 
@@ -28,25 +29,85 @@ export interface MarketCondition {
 }
 
 const EXPECTED = 10;
-/** How far a digit may stray from 10% before it stops counting as "stable". */
-const STABLE_TOLERANCE = 4;
+/**
+ * A losing set of N digits is expected to take N × 10% of the ticks (Over 1 loses
+ * on two digits, Under 7 on three), so every comparison uses that fair share —
+ * comparing a three-digit set with 10% marked every Under 7 market as unstable.
+ */
+const DRIFT_TOLERANCE = 1.5;
+/** Ticks of the recent window used for the drift check. */
+const RECENT_WINDOW = 100;
 
-function group(frequencies: DigitFrequency[], digits: number[]) {
-    const set = frequencies.filter(item => digits.includes(item.digit));
-    const maxPercentage = set.length ? Math.max(...set.map(item => item.percentage)) : 0;
-    const maxDeviation = set.length ? Math.max(...set.map(item => item.absoluteDeviation)) : 0;
-    return { maxPercentage, maxDeviation, set };
+const fairShare = (losingDigits: number): number => EXPECTED * losingDigits;
+
+const toneFor = (losingShare: number, losingDigits: number, drift: number): ConditionTone => {
+    const fair = fairShare(losingDigits);
+    const tolerance = DRIFT_TOLERANCE * Math.sqrt(Math.max(1, losingDigits));
+    if (losingShare <= fair + 0.5 && Math.abs(drift) <= tolerance) return 'favourable';
+    if (losingShare <= fair + 4) return 'neutral';
+    return 'caution';
+};
+
+function shareOf(frequencies: DigitFrequency[], digits: number[]): number {
+    return frequencies.filter(item => digits.includes(item.digit)).reduce((sum, item) => sum + item.percentage, 0);
 }
 
-function toneFor(maxPercentage: number, maxDeviation: number): ConditionTone {
-    if (maxPercentage <= EXPECTED && maxDeviation <= STABLE_TOLERANCE) return 'favourable';
-    if (maxPercentage <= EXPECTED + 4) return 'neutral';
-    return 'caution';
+function recentShare(digits: number[], losing: number[]): number | null {
+    const window = digits.slice(-RECENT_WINDOW);
+    if (window.length < 20) return null;
+    return (window.filter(digit => losing.includes(digit)).length / window.length) * 100;
+}
+
+function percent(value: number | null, digits = 1): string {
+    return value === null ? '—' : `${value.toFixed(digits)}%`;
+}
+
+interface BarrierRead {
+    id: string;
+    label: string;
+    barrier: number;
+    kind: 'over' | 'under';
+    losing: number[];
+    entry: number[];
+}
+
+const BARRIERS: BarrierRead[] = [
+    { id: 'over1', label: 'Over 1', barrier: 1, kind: 'over', losing: [0, 1], entry: [5, 6] },
+    { id: 'over2', label: 'Over 2', barrier: 2, kind: 'over', losing: [0, 1, 2], entry: [4, 6] },
+    { id: 'under8', label: 'Under 8', barrier: 8, kind: 'under', losing: [8, 9], entry: [4, 7] },
+    { id: 'under7', label: 'Under 7', barrier: 7, kind: 'under', losing: [7, 8, 9], entry: [2, 5] },
+];
+
+/** The hot/cold reading the Even/Odd guidance uses. */
+export interface ParityRead {
+    hot: number;
+    cold: number;
+    hotShare: number;
+    coldShare: number;
+    parity: 'even' | 'odd' | null;
+    recentEven: number | null;
+}
+
+export function readParity(statistics: DigitStatistics, recentDigits: number[] = []): ParityRead {
+    const sorted = [...statistics.frequencies].sort((a, b) => b.percentage - a.percentage);
+    const hot = sorted[0];
+    const cold = sorted[sorted.length - 1];
+    const parity = hot && cold && hot.digit % 2 === cold.digit % 2 ? (hot.digit % 2 === 0 ? 'even' : 'odd') : null;
+    const window = recentDigits.slice(-RECENT_WINDOW);
+
+    return {
+        hot: hot?.digit ?? 0,
+        hotShare: hot?.percentage ?? 0,
+        cold: cold?.digit ?? 0,
+        coldShare: cold?.percentage ?? 0,
+        parity,
+        recentEven: window.length >= 20 ? (window.filter(digit => digit % 2 === 0).length / window.length) * 100 : null,
+    };
 }
 
 export function buildMarketConditions(
     statistics: DigitStatistics,
-    signals: AdaptiveSignal[]
+    recentDigits: number[] = []
 ): MarketCondition {
     const { frequencies, sampleSize } = statistics;
 
@@ -61,93 +122,52 @@ export function buildMarketConditions(
         };
     }
 
-    const over2 = group(frequencies, [0, 1, 2]);
-    const over1 = group(frequencies, [0, 1]);
-    const high = group(frequencies, [7, 8, 9]);
+    const items: ConditionItem[] = BARRIERS.map(read => {
+        const losingShare = shareOf(frequencies, read.losing);
+        const fair = fairShare(read.losing.length);
+        const recent = recentShare(recentDigits, read.losing);
+        const drift = recent === null ? 0 : recent - losingShare;
+        const tone = toneFor(losingShare, read.losing.length, drift);
+        const winRate = 100 - losingShare;
 
-    const over2Tone = toneFor(over2.maxPercentage, over2.maxDeviation);
-    const over1Tone = toneFor(over1.maxPercentage, over1.maxDeviation);
-    const evenOddGap = Math.abs(statistics.evenPercentage - statistics.oddPercentage);
-    const balanceTone: ConditionTone = evenOddGap <= 4 ? 'favourable' : evenOddGap <= 10 ? 'neutral' : 'caution';
-
-    const bestSignal = [...signals].sort((a, b) => b.confidence - a.confidence)[0];
-
-    const items: ConditionItem[] = [
-        {
-            label: 'Over 2 control',
-            value: `0–2 max ${over2.maxPercentage.toFixed(1)}%`,
+        return {
+            label: read.label,
+            value: `${winRate.toFixed(1)}% win · ${read.losing
+                .map(digit => `${digit} ${percent(frequencies[digit]?.percentage ?? 0, 1)}`)
+                .join(' · ')}`,
             detail:
-                over2Tone === 'favourable'
-                    ? 'Digits 0, 1 and 2 sit at 10% or below and hold steady — the barrier floor is stable.'
-                    : over2Tone === 'neutral'
-                      ? 'Digits 0–2 are hovering around the 10% line — watch for drift.'
-                      : 'A low digit is running hot — the floor is unstable right now.',
-            tone: over2Tone,
-        },
-        {
-            label: 'Over 1 control',
-            value: `0–1 max ${over1.maxPercentage.toFixed(1)}%`,
-            detail:
-                over1Tone === 'favourable'
-                    ? 'Digits 0 and 1 stay at 10% or below and barely move — a clean Over 1 floor.'
-                    : 'The lowest digits are above 10% or shifting — Over 1 is less predictable.',
-            tone: over1Tone,
-        },
-        {
-            label: 'Even / Odd balance',
-            value: `${statistics.evenPercentage.toFixed(1)}% / ${statistics.oddPercentage.toFixed(1)}%`,
-            detail: `Even and Odd are ${evenOddGap.toFixed(1)} pts apart.`,
-            tone: balanceTone,
-        },
-        {
-            label: 'High digits (7–9)',
-            value: `max ${high.maxPercentage.toFixed(1)}%`,
-            detail: 'Digits above the barrier decide most Over payouts.',
-            tone: high.maxPercentage >= EXPECTED ? 'favourable' : 'neutral',
-        },
-        {
-            label: 'Strongest rule now',
-            value: bestSignal ? `${bestSignal.label} · ${Math.round(bestSignal.confidence)}%` : '—',
-            detail: bestSignal ? bestSignal.reason : 'Not enough data yet.',
-            tone: bestSignal?.recommendation === 'enter' ? 'favourable' : 'caution',
-        },
-    ];
+                tone === 'favourable'
+                    ? `Digits ${read.losing.join(', ')} sit at ${losingShare.toFixed(1)}%, at or below their ${fair.toFixed(0)}% fair share — a clean ${read.label} floor.`
+                    : tone === 'neutral'
+                      ? `Digits ${read.losing.join(', ')} are at ${losingShare.toFixed(1)}% against a ${fair.toFixed(0)}% fair share${
+                            recent === null ? '' : ` (recent ${recent.toFixed(1)}%)`
+                        } — usable, but not clean.`
+                      : `Digits ${read.losing.join(', ')} run at ${losingShare.toFixed(1)}% against a ${fair.toFixed(0)}% fair share — ${read.label} is unstable right now.`,
+            tone,
+        };
+    });
 
-    // Entry guidance, following the Over 2 / Over 1 playbook.
-    const behindBarrier = frequencies
-        .filter(item => item.digit < 2)
-        .sort((a, b) => b.percentage - a.percentage);
-    const behindTop = behindBarrier[0];
-    const entryGuidance: string[] = [];
+    const parity = readParity(statistics, recentDigits);
+    const evenGap = Math.abs(statistics.evenPercentage - statistics.oddPercentage);
+    const parityTone: ConditionTone = parity.parity === null ? 'caution' : evenGap <= 4 ? 'favourable' : 'neutral';
 
-    if (behindTop) {
-        entryGuidance.push(
-            `Over 2: enter the highest-share digit behind the barrier — digit ${behindTop.digit} (${behindTop.percentage.toFixed(1)}%).`
-        );
-    }
+    items.push({
+        label: 'Even / Odd',
+        value: `${statistics.evenPercentage.toFixed(1)}% even · ${statistics.oddPercentage.toFixed(1)}% odd`,
+        detail:
+            parity.parity === null
+                ? `Hot digit ${parity.hot} and cold digit ${parity.cold} split parity — there is no parity edge to trade.`
+                : `Hot ${parity.hot} (${parity.hotShare.toFixed(1)}%) and cold ${parity.cold} (${parity.coldShare.toFixed(1)}%) are both ${parity.parity}. Even and Odd are ${evenGap.toFixed(1)} pts apart.`,
+        tone: parityTone,
+    });
 
-    const five = frequencies.find(item => item.digit === 5);
-    const six = frequencies.find(item => item.digit === 6);
-    entryGuidance.push(
-        `Over 1: prefer 5 or 6 where the floor is clean — 5 at ${five?.percentage.toFixed(1) ?? '—'}%, 6 at ${six?.percentage.toFixed(1) ?? '—'}%.`
-    );
+    const entryGuidance = buildEntryGuidance(statistics, recentDigits, parity);
 
-    const hottest = [...frequencies].sort((a, b) => b.percentage - a.percentage)[0];
-    const coldest = [...frequencies].sort((a, b) => a.percentage - b.percentage)[0];
-    entryGuidance.push(
-        `Avoid entering on a stretched digit while its bar is long: ${hottest?.digit} is hottest (${hottest?.percentage.toFixed(1)}%), ${coldest?.digit} coldest (${coldest?.percentage.toFixed(1)}%).`
-    );
+    const favourable = items.filter(item => item.tone === 'favourable').length;
+    const caution = items.filter(item => item.tone === 'caution').length;
+    const score = Math.round((favourable / items.length) * 100);
 
-    const favourableCount = items.filter(item => item.tone === 'favourable').length;
-    const cautionCount = items.filter(item => item.tone === 'caution').length;
-    const score = Math.max(
-        0,
-        Math.min(100, Math.round((favourableCount / items.length) * 70 + (bestSignal?.confidence ?? 0) * 0.3))
-    );
-
-    const tone: ConditionTone =
-        cautionCount === 0 && favourableCount >= 2 ? 'favourable' : cautionCount >= 2 ? 'caution' : 'neutral';
-
+    const tone: ConditionTone = caution === 0 && favourable >= 2 ? 'favourable' : caution >= 3 ? 'caution' : 'neutral';
     const headline =
         tone === 'favourable'
             ? 'Conditions look favourable'
@@ -155,7 +175,59 @@ export function buildMarketConditions(
               ? 'Conditions are mixed — trade small'
               : 'Conditions are neutral';
 
-    const summary = `${sampleSize} ticks analysed · ${items[0].value} · ${items[1].value} · Even/Odd ${items[2].value}`;
+    return {
+        headline,
+        summary: `${sampleSize} ticks analysed · ${favourable} of ${items.length} markets clean · ${caution} to avoid`,
+        tone,
+        score,
+        items,
+        entryGuidance,
+    };
+}
 
-    return { headline, summary, tone, score, items, entryGuidance };
+function buildEntryGuidance(
+    statistics: DigitStatistics,
+    recentDigits: number[],
+    parity: ParityRead
+): string[] {
+    const { frequencies } = statistics;
+    const lines: string[] = [];
+
+    BARRIERS.forEach(read => {
+        const losingShare = shareOf(frequencies, read.losing);
+        const fair = fairShare(read.losing.length);
+        const recent = recentShare(recentDigits, read.losing);
+        const clean = losingShare <= fair + 0.5;
+        const digits = read.entry
+            .map(digit => `${digit} (${(frequencies[digit]?.percentage ?? 0).toFixed(1)}%)`)
+            .join(' and ');
+        lines.push(
+            `${read.label}: ${
+                clean
+                    ? `digits ${read.losing.join(', ')} are cold (${losingShare.toFixed(1)}% vs ${fair.toFixed(0)}% fair) — enter while the last digit is ${digits}.`
+                    : `wait — digits ${read.losing.join(', ')} are at ${losingShare.toFixed(1)}% against ${fair.toFixed(0)}% fair${
+                          recent === null ? '' : ` (recent ${recent.toFixed(1)}%)`
+                      }.`
+            }`
+        );
+    });
+
+    const evenTail = recentDigits.slice(-5);
+    const evenLean = evenTail.length === 5 ? evenTail.filter(digit => digit % 2 === 0).length : null;
+
+    if (parity.parity === null) {
+        lines.push(
+            `Even/Odd: no entry — hot digit ${parity.hot} and cold digit ${parity.cold} split parity. Wait for them to agree again.`
+        );
+    } else if (evenLean !== null && (parity.parity === 'even' ? evenLean >= 3 : evenLean <= 2)) {
+        lines.push(
+            `Even/Odd: ${parity.parity === 'even' ? 'Even' : 'Odd'} is confirmed — hot and cold digits are both ${parity.parity} and the last 5 digits lean that way.`
+        );
+    } else {
+        lines.push(
+            `Even/Odd: both hot and cold digits are ${parity.parity} — wait for the last 5 digits to lean ${parity.parity} (3 or more).`
+        );
+    }
+
+    return lines;
 }

@@ -6,6 +6,7 @@ import { digitSequence } from '@/features/digits/statistics';
 import MarketSelector from '@/features/digits/components/market-selector';
 import BotStatusBanner from './components/bot-status-banner';
 import FreeBotCard from './components/free-bot-card';
+import MarketBots from './components/market-bots';
 import { supportsDigitContracts } from './market-support';
 import { FREE_BOT_TEMPLATES, type FreeBotTemplate } from './templates';
 import { useConfirmationJournal } from './use-confirmation-journal';
@@ -124,6 +125,8 @@ const FreeBotsPage = observer(() => {
                     ))}
                 </div>
             </section>
+
+            <MarketBots market={selectedMarket} connected={!feedDown} />
 
             <p className='free-bots__disclaimer'>
                 Loading never places a trade and the library is not advice: the scanner&apos;s digit percentages describe

@@ -1,24 +1,24 @@
 import { buildMarketConditions } from '../market-conditions';
-import type { AdaptiveSignal, DigitStatistics } from '../types';
+import type { DigitStatistics } from '../types';
 
 interface MarketConditionsPanelProps {
     statistics: DigitStatistics;
-    signals: AdaptiveSignal[];
+    /** The digits of the current analysis window, oldest first — the drift check reads the newest 100. */
+    recentDigits?: number[];
 }
 
 /**
- * A plain-language read of the market right now, built from the digit
- * statistics and the adaptive strategy learning, with the Over 2 / Over 1
- * entry guidance.
+ * A plain-language read of the five digit markets right now — Over 1, Over 2,
+ * Under 7, Under 8 and Even/Odd — with the entry guidance for each of them.
  */
-export default function MarketConditionsPanel({ statistics, signals }: MarketConditionsPanelProps) {
-    const condition = buildMarketConditions(statistics, signals);
+export default function MarketConditionsPanel({ statistics, recentDigits = [] }: MarketConditionsPanelProps) {
+    const condition = buildMarketConditions(statistics, recentDigits);
 
     return (
         <section className={`digits-panel digits-conditions digits-conditions--${condition.tone}`}>
             <header className='digits-panel__head'>
                 <h3 className='digits-panel__title'>Market conditions</h3>
-                <span className='digits-panel__note'>Behaviour + strategy learning</span>
+                <span className='digits-panel__note'>Over/Under · Even/Odd · last 100-tick drift</span>
             </header>
 
             <div className='digits-conditions__headline'>
@@ -26,7 +26,7 @@ export default function MarketConditionsPanel({ statistics, signals }: MarketCon
                     {condition.headline}
                 </span>
                 <span className='digits-conditions__score'>
-                    Readiness <strong>{condition.score}</strong>/100
+                    Clean markets <strong>{condition.score}</strong>%
                 </span>
             </div>
 

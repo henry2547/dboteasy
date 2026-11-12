@@ -17,8 +17,6 @@ export interface AiBotSettings {
     /** `all` or the api symbol of one market. */
     marketScope: string;
     stake: number;
-    /** Recent digits shown per row, and the run length the Rise-Fall bot reads. */
-    ticks: number;
     takeProfit: number;
     stopLoss: number;
     martingale: number;

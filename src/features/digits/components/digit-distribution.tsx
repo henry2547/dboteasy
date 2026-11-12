@@ -1,163 +1,170 @@
+import { useMemo, useState } from 'react';
 import { formatPercent } from '../format';
-import { EXPECTED_DIGIT_PERCENTAGE } from '../statistics';
 import type { DigitStatistics } from '../types';
 
 interface DigitDistributionProps {
     statistics: DigitStatistics;
-    /** The most recent digits, oldest first — drawn as a moving ticker trail. */
+    /** The most recent digits, oldest first — the history strip draws the newest 20. */
     recentDigits?: number[];
 }
 
-const CHART_WIDTH = 360;
-const CHART_HEIGHT = 210;
-const PAD_LEFT = 36;
-const PAD_RIGHT = 12;
-const PAD_TOP = 16;
-const PAD_BOTTOM = 28;
-const PLOT_WIDTH = CHART_WIDTH - PAD_LEFT - PAD_RIGHT;
-const PLOT_HEIGHT = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM;
-const TRAIL_LENGTH = 14;
+type HistoryMode = 'even_odd' | 'over_under';
+type BarrierSide = 'over' | 'under';
 
-/** The bar chart is the distribution view; the ring is the digit-circle view. */
+const HISTORY_LENGTH = 20;
+const SIDES: { id: BarrierSide; label: string; strategies: number[] }[] = [
+    { id: 'over', label: 'Over', strategies: [1, 2] },
+    { id: 'under', label: 'Under', strategies: [7, 8] },
+];
+
+/**
+ * Digit history and digit circle.
+ *
+ * Even/Odd marks each of the last 20 digits with its first letter (E or O) in
+ * its own colour. Over/Under lets the user pick a side and the barrier they
+ * trade, then colours every digit green when that contract would have won and
+ * red when it would have lost.
+ */
 export default function DigitDistribution({ statistics, recentDigits = [] }: DigitDistributionProps) {
-    const { frequencies, sampleSize } = statistics;
-    const maxPercentage = Math.max(20, ...frequencies.map(item => item.percentage));
-    const barWidth = PLOT_WIDTH / frequencies.length;
+    const [mode, setMode] = useState<HistoryMode>('even_odd');
+    const [side, setSide] = useState<BarrierSide>('over');
+    const [barrier, setBarrier] = useState(1);
 
-    const yFor = (percentage: number) => PAD_TOP + PLOT_HEIGHT * (1 - percentage / maxPercentage);
-    const referenceY = yFor(EXPECTED_DIGIT_PERCENTAGE);
+    const history = recentDigits.slice(-HISTORY_LENGTH);
+    const strategies = SIDES.find(item => item.id === side)?.strategies ?? [1, 2];
 
-    const trail = recentDigits.slice(-TRAIL_LENGTH);
-    const lastDigit = trail.length ? trail[trail.length - 1] : null;
-    const trailPoints = trail.map((digit, index) => {
-        const x = trail.length > 1 ? PAD_LEFT + (index / (trail.length - 1)) * PLOT_WIDTH : PAD_LEFT + PLOT_WIDTH / 2;
-        const y = PAD_TOP + (digit / 9) * PLOT_HEIGHT;
-        return { x, y, digit, index };
-    });
+    const chooseSide = (next: BarrierSide) => {
+        setSide(next);
+        setBarrier(SIDES.find(item => item.id === next)?.strategies[0] ?? 1);
+    };
+
+    const wins = useMemo(
+        () => history.filter(digit => (side === 'over' ? digit > barrier : digit < barrier)).length,
+        [history, side, barrier]
+    );
+    const evenCount = history.filter(digit => digit % 2 === 0).length;
+
+    const isWinner = (digit: number) =>
+        mode === 'even_odd' ? digit % 2 === 0 : side === 'over' ? digit > barrier : digit < barrier;
 
     return (
-        <section className='digits-panel'>
+        <section className='digits-panel digits-history'>
             <header className='digits-panel__head'>
-                <h3 className='digits-panel__title'>Distribution &amp; digit circle</h3>
-                <span className='digits-panel__note'>Expected 10% per digit</span>
+                <h3 className='digits-panel__title'>Digit history &amp; circle</h3>
+                <span className='digits-panel__note'>Last {HISTORY_LENGTH} digits</span>
             </header>
 
-            {sampleSize === 0 ? (
-                <p className='digits-empty'>Waiting for ticks to build a distribution…</p>
-            ) : (
-                <div className='digits-distribution'>
-                    <svg
-                        className='digits-chart'
-                        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-                        role='img'
-                        aria-label='Digit distribution bar chart with ticker trail'
-                    >
-                        {[0, 10, 20, 30].map(tick => {
-                            if (tick > maxPercentage) return null;
-                            const y = yFor(tick);
-                            return (
-                                <g key={tick}>
-                                    <line
-                                        x1={PAD_LEFT}
-                                        x2={CHART_WIDTH - PAD_RIGHT}
-                                        y1={y}
-                                        y2={y}
-                                        className='digits-chart__grid'
-                                    />
-                                    <text x={PAD_LEFT - 6} y={y + 3} className='digits-chart__axis'>
-                                        {tick}%
-                                    </text>
-                                </g>
-                            );
-                        })}
+            <div className='digits-history__modes' role='group' aria-label='History market'>
+                <button
+                    type='button'
+                    className={`digits-history__mode${mode === 'even_odd' ? ' digits-history__mode--active' : ''}`}
+                    onClick={() => setMode('even_odd')}
+                >
+                    Even / Odd
+                </button>
+                <button
+                    type='button'
+                    className={`digits-history__mode${mode === 'over_under' ? ' digits-history__mode--active' : ''}`}
+                    onClick={() => setMode('over_under')}
+                >
+                    Over / Under
+                </button>
+            </div>
 
-                        <line
-                            x1={PAD_LEFT}
-                            x2={CHART_WIDTH - PAD_RIGHT}
-                            y1={referenceY}
-                            y2={referenceY}
-                            className='digits-chart__reference'
-                        />
-                        <text x={CHART_WIDTH - PAD_RIGHT} y={referenceY - 4} className='digits-chart__reference-label'>
-                            10%
-                        </text>
+            {mode === 'over_under' && (
+                <div className='digits-history__picks'>
+                    <div className='digits-history__pick' role='group' aria-label='Side'>
+                        <span className='digits-history__pick-label'>Side</span>
+                        {SIDES.map(item => (
+                            <button
+                                type='button'
+                                key={item.id}
+                                className={`digits-history__option${side === item.id ? ' digits-history__option--active' : ''}`}
+                                onClick={() => chooseSide(item.id)}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
 
-                        {/* Ticker trail: how the last digits moved across the chart. */}
-                        {trailPoints.length > 1 && (
-                            <polyline
-                                className='digits-chart__trail'
-                                points={trailPoints.map(point => `${point.x},${point.y}`).join(' ')}
-                            />
-                        )}
-                        {trailPoints.map(
-                            (point, index) =>
-                                index < trailPoints.length - 1 && (
-                                    <circle
-                                        key={`trail-${point.index}`}
-                                        cx={point.x}
-                                        cy={point.y}
-                                        r={2}
-                                        className='digits-chart__trail-dot'
-                                    />
-                                )
-                        )}
-
-                        {frequencies.map((item, index) => {
-                            const x = PAD_LEFT + index * barWidth + barWidth * 0.18;
-                            const width = barWidth * 0.64;
-                            const y = yFor(item.percentage);
-                            const height = PAD_TOP + PLOT_HEIGHT - y;
-                            const isCurrent = item.digit === lastDigit;
-                            return (
-                                <g key={item.digit}>
-                                    <rect
-                                        x={x}
-                                        y={height > 0 ? y : PAD_TOP + PLOT_HEIGHT}
-                                        width={width}
-                                        height={Math.max(height, 1)}
-                                        rx={3}
-                                        className={
-                                            'digits-chart__bar' +
-                                            (item.isMostFrequent ? ' digits-chart__bar--top' : '') +
-                                            (isCurrent ? ' digits-chart__bar--current' : '')
-                                        }
-                                    />
-                                    <text
-                                        x={x + width / 2}
-                                        y={PAD_TOP + PLOT_HEIGHT + 17}
-                                        className={
-                                            'digits-chart__axis digits-chart__axis--digit' +
-                                            (isCurrent ? ' digits-chart__axis--current' : '')
-                                        }
-                                    >
-                                        {item.digit}
-                                    </text>
-                                </g>
-                            );
-                        })}
-
-                        {/* The live cursor: where the ticker sits right now. */}
-                        {trailPoints.length > 0 && lastDigit !== null && (
-                            <g className='digits-chart__cursor'>
-                                <line
-                                    x1={trailPoints[trailPoints.length - 1].x}
-                                    x2={trailPoints[trailPoints.length - 1].x}
-                                    y1={PAD_TOP}
-                                    y2={PAD_TOP + PLOT_HEIGHT}
-                                    className='digits-chart__cursor-line'
-                                />
-                                <circle
-                                    cx={trailPoints[trailPoints.length - 1].x}
-                                    cy={trailPoints[trailPoints.length - 1].y}
-                                    r={4.5}
-                                    className='digits-chart__cursor-dot'
-                                />
-                            </g>
-                        )}
-                    </svg>
-
-                    <DigitCircle statistics={statistics} currentDigit={lastDigit} />
+                    <div className='digits-history__pick' role='group' aria-label='Strategy'>
+                        <span className='digits-history__pick-label'>Strategy</span>
+                        {strategies.map(value => (
+                            <button
+                                type='button'
+                                key={value}
+                                className={`digits-history__option${barrier === value ? ' digits-history__option--active' : ''}`}
+                                onClick={() => setBarrier(value)}
+                            >
+                                {side === 'over' ? 'Over' : 'Under'} {value}
+                            </button>
+                        ))}
+                    </div>
                 </div>
+            )}
+
+            {history.length === 0 ? (
+                <p className='digits-empty'>Waiting for ticks to build the digit history…</p>
+            ) : (
+                <>
+                    <ul className='digits-history__strip' aria-label='Last 20 digits'>
+                        {history.map((digit, index) => {
+                            const newest = index === history.length - 1;
+                            const tone =
+                                mode === 'even_odd'
+                                    ? digit % 2 === 0
+                                        ? 'even'
+                                        : 'odd'
+                                    : isWinner(digit)
+                                      ? 'win'
+                                      : 'lose';
+
+                            return (
+                                <li
+                                    key={`${index}-${digit}`}
+                                    className={`digits-history__cell digits-history__cell--${tone}${
+                                        newest ? ' digits-history__cell--newest' : ''
+                                    }`}
+                                    title={`Digit ${digit}`}
+                                >
+                                    {mode === 'even_odd' ? (digit % 2 === 0 ? 'E' : 'O') : digit}
+                                </li>
+                            );
+                        })}
+                    </ul>
+
+                    {mode === 'even_odd' ? (
+                        <p className='digits-history__legend'>
+                            <span className='digits-history__key digits-history__key--even'>E</span> even{' '}
+                            {evenCount}/{history.length} ·{' '}
+                            <span className='digits-history__key digits-history__key--odd'>O</span> odd{' '}
+                            {history.length - evenCount}/{history.length} ·{' '}
+                            {evenCount >= history.length - evenCount ? 'Even' : 'Odd'} leaned last{' '}
+                            {history.length} digits
+                        </p>
+                    ) : (
+                        <p className='digits-history__legend'>
+                            <span className='digits-history__key digits-history__key--win'>win</span> {wins}/
+                            {history.length} ·{' '}
+                            <span className='digits-history__key digits-history__key--lose'>lose</span>{' '}
+                            {history.length - wins}/{history.length} on{' '}
+                            {side === 'over' ? 'Over' : 'Under'} {barrier} · expected{' '}
+                            {side === 'over' ? `${((9 - barrier) * 10).toFixed(0)}%` : `${(barrier * 10).toFixed(0)}%`}
+                        </p>
+                    )}
+
+                    {mode === 'over_under' && (
+                        <p className='digits-history__note'>
+                            {side === 'over'
+                                ? `Over ${barrier} wins on ${barrier + 1}–9 and loses on 0–${barrier}.`
+                                : `Under ${barrier} wins on 0–${barrier - 1} and loses on ${barrier}–9.`}
+                        </p>
+                    )}
+                </>
+            )}
+
+            {statistics.sampleSize > 0 && (
+                <DigitCircle statistics={statistics} mode={mode} side={side} barrier={barrier} />
             )}
         </section>
     );
@@ -170,19 +177,35 @@ const LABEL_RADIUS = 101;
 
 /**
  * The digit circle: each digit sits on the ring, sized by how often it has
- * appeared, with its percentage just outside. A marker follows the digit the
- * ticker just landed on.
+ * appeared. In Over/Under mode the winning digits are drawn green and the
+ * losing ones red, so the selected contract is readable at a glance.
  */
-function DigitCircle({ statistics, currentDigit }: { statistics: DigitStatistics; currentDigit: number | null }) {
+function DigitCircle({
+    statistics,
+    mode,
+    side,
+    barrier,
+}: {
+    statistics: DigitStatistics;
+    mode: HistoryMode;
+    side: BarrierSide;
+    barrier: number;
+}) {
     const { frequencies, sampleSize } = statistics;
     const maxPercentage = Math.max(...frequencies.map(item => item.percentage), 1);
+
+    const toneOf = (digit: number) => {
+        if (mode === 'even_odd') return digit % 2 === 0 ? 'even' : 'odd';
+        const wins = side === 'over' ? digit > barrier : digit < barrier;
+        return wins ? 'win' : 'lose';
+    };
 
     return (
         <svg
             className='digits-circle'
             viewBox={`0 0 ${CIRCLE_SIZE} ${CIRCLE_SIZE}`}
             role='img'
-            aria-label='Digit circle percentages with a marker on the latest digit'
+            aria-label='Digit circle percentages coloured by the selected market'
         >
             <circle cx={CIRCLE_CENTER} cy={CIRCLE_CENTER} r={CIRCLE_RADIUS} className='digits-circle__ring' />
 
@@ -193,27 +216,23 @@ function DigitCircle({ statistics, currentDigit }: { statistics: DigitStatistics
                 const labelX = CIRCLE_CENTER + Math.cos(angle) * LABEL_RADIUS;
                 const labelY = CIRCLE_CENTER + Math.sin(angle) * LABEL_RADIUS;
                 const radius = 15 + (item.percentage / maxPercentage) * 7;
-                const isCurrent = item.digit === currentDigit;
+                const tone = toneOf(item.digit);
 
                 return (
                     <g key={item.digit}>
-                        {(isCurrent || item.isMostFrequent) && (
+                        {item.isMostFrequent && (
                             <circle
                                 cx={nodeX}
                                 cy={nodeY}
                                 r={radius + 4}
-                                className={
-                                    isCurrent ? 'digits-circle__marker' : 'digits-circle__marker digits-circle__marker--top'
-                                }
+                                className='digits-circle__marker digits-circle__marker--top'
                             />
                         )}
                         <circle
                             cx={nodeX}
                             cy={nodeY}
                             r={radius}
-                            className={
-                                'digits-circle__node' + (isCurrent ? ' digits-circle__node--current' : '')
-                            }
+                            className={`digits-circle__node digits-circle__node--${tone}`}
                         />
                         <text x={nodeX} y={nodeY + 4} className='digits-circle__digit'>
                             {item.digit}
@@ -231,13 +250,6 @@ function DigitCircle({ statistics, currentDigit }: { statistics: DigitStatistics
             <text x={CIRCLE_CENTER} y={CIRCLE_CENTER + 13} className='digits-circle__center-label'>
                 ticks
             </text>
-            {currentDigit !== null && (
-                <>
-                    <text x={CIRCLE_CENTER} y={CIRCLE_CENTER + 27} className='digits-circle__center-cursor'>
-                        cursor: {currentDigit}
-                    </text>
-                </>
-            )}
         </svg>
     );
 }

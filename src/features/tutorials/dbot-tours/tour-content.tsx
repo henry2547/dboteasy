@@ -44,14 +44,14 @@ export const DBOT_ONBOARDING = [
         disableOverlay: false,
     },
     {
-        target: '#id-charts',
+        target: '#id-digits',
         content: (
             <TourSteps
                 label={<Localize i18n_default_text='Monitor the market' />}
                 content={[
                     <Localize
                         key='view the market'
-                        i18n_default_text='View the market price of your favourite assets.'
+                        i18n_default_text='View the live digit history and market conditions of your favourite assets.'
                     />,
                 ]}
                 media={'/assets/videos/dbot-onboarding-tour-step-2.mp4'}

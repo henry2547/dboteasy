@@ -34,9 +34,7 @@ import {
 } from '@/utils/trade-type-modal-handler';
 import {
     LabelPairedArrowsRotateCaptionRegularIcon,
-    LabelPairedChartLineCaptionRegularIcon,
     LabelPairedLightbulbCaptionRegularIcon,
-    LabelPairedCircleDotCaptionFillIcon,
     LabelPairedCircleStarCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPercentCaptionRegularIcon,
@@ -52,10 +50,8 @@ import RunStrategy from '../../features/dashboard/run-strategy';
 import { DigitsLabProvider } from '../../features/digits/digits-lab-context';
 import './main.scss';
 
-const DerivChart = lazy(() => import('../../features/chart/chart-wrapper'));
 const DigitsPage = lazy(() => import('../../features/digits'));
 const StatisticsPage = lazy(() => import('../../features/statistics'));
-const StrategyEnginePage = lazy(() => import('../../features/strategy-engine'));
 const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
 const FreeBotsPage = lazy(() => import('../../features/free-bots'));
 const AiBotsPage = lazy(() => import('../../features/ai-bots'));
@@ -68,8 +64,6 @@ const AppWrapper = observer(() => {
     const {
         active_tab,
         active_tour,
-        is_chart_modal_visible,
-        is_trading_view_modal_visible,
         setActiveTab,
         setWebSocketState,
         setActiveTour,
@@ -98,8 +92,6 @@ const AppWrapper = observer(() => {
         'free_bots',
         'ai_bots',
         'bot_builder',
-        'strategy_engine',
-        'chart',
         'digits',
         'statistics',
     ];
@@ -498,56 +490,6 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-bot-builder'
                             />
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedCircleDotCaptionFillIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='Strategy Engine' />
-                                    </>
-                                }
-                                id='id-strategy-engine'
-                            >
-                                <ErrorBoundary label='Strategy Engine'>
-                                    <Suspense
-                                        fallback={
-                                            <ChunkLoader
-                                                message={localize('Please wait, loading the strategy engine...')}
-                                            />
-                                        }
-                                    >
-                                        <StrategyEnginePage />
-                                    </Suspense>
-                                </ErrorBoundary>
-                            </div>
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedChartLineCaptionRegularIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='Deriv Chart' />
-                                    </>
-                                }
-                                id={
-                                    is_chart_modal_visible || is_trading_view_modal_visible
-                                        ? 'id-charts--disabled'
-                                        : 'id-charts'
-                                }
-                            >
-                                <Suspense
-                                    fallback={<ChunkLoader message={localize('Please wait, loading Deriv Chart...')} />}
-                                >
-                                    <ErrorBoundary label='Deriv Chart'>
-                                        <DerivChart show_digits_stats={false} />
-                                    </ErrorBoundary>
-                                </Suspense>
-                            </div>
                             <div
                                 label={
                                     <>

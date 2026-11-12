@@ -6,12 +6,19 @@
  * Transactions and Journal. So the selected bot, its settings and the scan loop
  * live here, at module scope: switching tabs changes nothing, the bot keeps
  * rescanning every few seconds and keeps buying the signals it confirms.
+ *
+ * Two ways to run a bot:
+ * - **Scan mode** (AI Bots tab): every open volatility market is read and the
+ *   bot trades the first confirmed signal. The Even-Odd bot then stays on that
+ *   market (see `lockedSymbol`) until its hot/cold parity breaks.
+ * - **Single-market mode** (Free Bots tab): one volatility market chosen by the
+ *   user is read and traded, with no multi-market scanner at all.
  */
 
 import { scanDigitMarkets, type ScanProgress, type ScanReport } from '@/features/digits/scan-markets';
 import { isAiBotMarketBusy, placeAiBotTrade, resetAiBotRun } from './ai-bot-runner';
 import { AI_BOT_SETTINGS } from './catalog';
-import { buildInsights } from './signals';
+import { buildInsights, isEvenOddConditionValid, readHotCold } from './signals';
 import type { AiBotId, AiBotSettings, ScanRow, ScanStatus } from './types';
 
 /** Pause between two scans while the bot is running. */
@@ -25,6 +32,13 @@ export interface AiBotSessionView {
     rows: ScanRow[];
     progress: ScanProgress | null;
     error: string | null;
+    /**
+     * The market an Even-Odd run is trading until its conditions stop holding.
+     * `null` while the bot is still looking for a market (or for Rise-Fall).
+     */
+    lockedSymbol: string | null;
+    /** Single-market mode: only this symbol is read. `null` in scan mode. */
+    onlySymbol: string | null;
 }
 
 let view: AiBotSessionView = {
@@ -35,6 +49,8 @@ let view: AiBotSessionView = {
     rows: [],
     progress: null,
     error: null,
+    lockedSymbol: null,
+    onlySymbol: null,
 };
 
 const listeners = new Set<() => void>();
@@ -80,23 +96,46 @@ function reportToRows(report: ScanReport): ScanRow[] {
     return [...scanned, ...failed].sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
+function placeNext(insight: { row: ScanRow; signal: string | null } | undefined, settings: AiBotSettings) {
+    if (!insight?.signal || !view.activeBot) return false;
+    void placeAiBotTrade({
+        botId: view.activeBot,
+        settings,
+        symbol: insight.row.symbol,
+        displayName: insight.row.displayName,
+        side: insight.signal as Parameters<typeof placeAiBotTrade>[0]['side'],
+    });
+    return true;
+}
+
 /** Buys the next confirmed signal of the scan that just finished. */
 function tradeFromScan() {
-    const { activeBot, settings, rows, running } = view;
+    const { activeBot, settings, rows, running, lockedSymbol } = view;
     if (!activeBot || !running) return;
 
     const botSettings = settings[activeBot];
     const insights = buildInsights(activeBot, rows, botSettings);
-    const next = insights.find(insight => insight.signal && !isAiBotMarketBusy(insight.row.symbol));
-    if (!next?.signal) return;
 
-    void placeAiBotTrade({
-        botId: activeBot,
-        settings: botSettings,
-        symbol: next.row.symbol,
-        displayName: next.row.displayName,
-        side: next.signal,
-    });
+    // The Even-Odd bot stays on the market where it found its entry, and only
+    // leaves it once the hot/cold parity that justified the entry breaks.
+    if (activeBot === 'even_odd' && lockedSymbol) {
+        const lockedRow = rows.find(row => row.symbol === lockedSymbol);
+        const reading = lockedRow ? readHotCold(lockedRow.digits) : null;
+        if (!lockedRow || !reading || !isEvenOddConditionValid(reading)) {
+            setView({ lockedSymbol: null });
+        } else {
+            const next = insights.find(
+                insight => insight.row.symbol === lockedSymbol && insight.signal && !isAiBotMarketBusy(insight.row.symbol)
+            );
+            placeNext(next, botSettings);
+            return;
+        }
+    }
+
+    const next = insights.find(insight => insight.signal && !isAiBotMarketBusy(insight.row.symbol));
+    if (!next) return;
+    if (activeBot === 'even_odd') setView({ lockedSymbol: next.row.symbol });
+    placeNext(next, botSettings);
 }
 
 async function scanOnce() {
@@ -110,6 +149,8 @@ async function scanOnce() {
     try {
         const report = await scanDigitMarkets({
             signal: controller.signal,
+            // Single-market mode reads that one market only — there is no scanner.
+            symbols: view.onlySymbol ? [view.onlySymbol] : undefined,
             onProgress: next => {
                 if (scanId === current) setView({ progress: next });
             },
@@ -143,11 +184,30 @@ function clearTimer() {
     }
 }
 
+function beginRun(patch: Partial<AiBotSessionView>) {
+    resetAiBotRun();
+    setView({ running: true, rows: [], error: null, status: 'scanning', lockedSymbol: null, ...patch });
+    void scanOnce();
+}
+
+/** Starts the scanning bot (every volatility market). */
 export function startAiBot() {
     if (view.running) return;
-    resetAiBotRun();
-    setView({ running: true, rows: [], error: null, status: 'scanning' });
-    void scanOnce();
+    beginRun({ onlySymbol: null });
+}
+
+/**
+ * Starts a bot on ONE market the user picked — the Free Bots single-market
+ * bots. No other market is read or traded.
+ */
+export function startMarketBot(botId: AiBotId, symbol: string) {
+    if (!symbol) return;
+    if (view.running) stopAiBot();
+    setView({ activeBot: botId, onlySymbol: symbol, lockedSymbol: null });
+    beginRun({
+        onlySymbol: symbol,
+        settings: { ...view.settings, [botId]: { ...view.settings[botId], marketScope: symbol } },
+    });
 }
 
 export function stopAiBot() {
@@ -156,17 +216,17 @@ export function stopAiBot() {
     clearTimer();
     abort?.abort();
     abort = null;
-    setView({ running: false, status: 'idle', progress: null });
+    setView({ running: false, status: 'idle', progress: null, lockedSymbol: null });
 }
 
 export function openAiBot(id: AiBotId) {
     stopAiBot();
-    setView({ activeBot: id });
+    setView({ activeBot: id, onlySymbol: null, lockedSymbol: null });
 }
 
 export function closeAiBot() {
     stopAiBot();
-    setView({ activeBot: null });
+    setView({ activeBot: null, onlySymbol: null, lockedSymbol: null });
 }
 
 export function updateAiBotSettings(id: AiBotId, patch: Partial<AiBotSettings>) {
