@@ -562,9 +562,9 @@
             fill: var(--brand-success);
         }
 
-        /* Second hottest digit — blue. */
+        /* Second hottest digit — purple. */
         &--warm {
-            fill: var(--status-info);
+            fill: var(--brand-tertiary);
         }
 
         /* Second coldest digit — yellow. */
@@ -650,7 +650,7 @@
 
     &--warm {
         .digit-bubble__track {
-            stroke: var(--status-info);
+            stroke: var(--brand-tertiary);
         }
     }
 
@@ -667,7 +667,7 @@
     }
 }
 
-/* Key to the four heat colours: red least, yellow second least, green hottest, blue second hottest. */
+/* Key to the four heat colours: red least, yellow second least, green hottest, purple second hottest. */
 .digits-grid__legend {
     display: flex;
     flex-wrap: wrap;
@@ -700,7 +700,7 @@
     }
 
     &--warm::before {
-        background: var(--status-info);
+        background: var(--brand-tertiary);
     }
 
     &--cool::before {
@@ -735,7 +735,7 @@
     }
 
     &--warm {
-        background: var(--status-info);
+        background: var(--brand-tertiary);
     }
 
     &--cool {

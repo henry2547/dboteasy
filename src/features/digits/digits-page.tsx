@@ -1,11 +1,8 @@
 import BarrierPanel from './components/barrier-panel';
 import DigitDistribution from './components/digit-distribution';
 import DigitGrid from './components/digit-grid';
-import MarketConditionsPanel from './components/market-conditions-panel';
 import MarketOverview from './components/market-overview';
-import MarketResultsTable from './components/market-results-table';
 import MarketSelector from './components/market-selector';
-import ScanControlPanel from './components/scan-control-panel';
 import { useDigitsLabContext } from './digits-lab-context';
 import { formatCount, formatPercent } from './format';
 import { ANALYSIS_WINDOWS } from './use-digits-lab';
@@ -17,20 +14,17 @@ import './digits-dashboard.scss';
  * Digits Analysis Lab — a read-only, public-market-data view of Deriv's feed.
  *
  * It discovers live markets, streams the latest 1,000 ticks and turns them into
- * digit statistics, the five digit markets' conditions, entry guidance and
- * barrier hit-rates. It never logs in, never sends a trade and never shows an
- * invented value.
+ * digit statistics and barrier hit-rates. It never logs in, never sends a trade
+ * and never shows an invented value.
  *
  * The page reads top-down like a console: the snapshot tiles, the market and
- * window settings, the live tick, the scan (the same scan the floating "Scan
- * markets" button runs, whose ranked market results sit right below it), then
- * the digit read and the barrier research.
+ * window settings, the live tick, then the digit read and the barrier research.
+ * The market scan has its own tab (Market Scan).
  */
 export default function DigitsPage() {
     const lab = useDigitsLabContext();
     const { statistics } = lab;
     const recentDigits = lab.analysisTicks.map(tick => tick.lastDigit);
-    const eligibleMarkets = lab.markets.filter(market => market.isOpen && !market.isSuspended).length;
 
     return (
         <div className='digits'>
@@ -38,7 +32,7 @@ export default function DigitsPage() {
                 <div className='digits-hero__titles'>
                     <h2 className='digits-hero__title'>Digits Analysis Lab</h2>
                     <p className='digits-hero__subtitle'>
-                        Public market data · market conditions · entry guidance · barrier research
+                        Public market data · digit statistics · barrier research
                     </p>
                 </div>
 
@@ -144,38 +138,7 @@ export default function DigitsPage() {
                 scanSummary={lab.scanSummary}
             />
 
-            <ScanControlPanel
-                isScanning={lab.isScanning}
-                progress={lab.scanProgress}
-                summary={lab.scanSummary}
-                failures={lab.scanFailures}
-                error={lab.scanError}
-                eligibleMarkets={eligibleMarkets}
-                onScan={lab.scanMarkets}
-                onCancel={lab.cancelScan}
-            />
-
-            <MarketResultsTable
-                results={lab.scanResults}
-                failures={lab.scanFailures}
-                summary={lab.scanSummary}
-                isScanning={lab.isScanning}
-                selectedMarket={lab.selectedMarket}
-                onPick={lab.selectMarket}
-                onScan={lab.scanMarkets}
-            />
-
-            <section className='dash-section' aria-labelledby='dash-digits-heading'>
-                <header className='dash-section__head'>
-                    <h3 className='dash-section__title' id='dash-digits-heading'>
-                        Digit analysis
-                    </h3>
-                    <span className='dash-section__note'>
-                        {formatCount(lab.analysisTicks.length)} ticks in the analysis window ·{' '}
-                        {formatCount(lab.ticks.length)} stored
-                    </span>
-                </header>
-
+            <section className='dash-section'>
                 <section className='digits-summary'>
                     <SummaryCard
                         title='Even / Odd'
@@ -219,8 +182,6 @@ export default function DigitsPage() {
                         </p>
                     </article>
                 </section>
-
-                <MarketConditionsPanel statistics={statistics} recentDigits={recentDigits} />
 
                 <DigitGrid
                     statistics={statistics}

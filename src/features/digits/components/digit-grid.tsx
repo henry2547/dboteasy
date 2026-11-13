@@ -15,7 +15,7 @@ const CURSOR_RADIUS = 22;
 /**
  * Digit frequency bubbles: one circle per digit instead of a rectangle card.
  * The coloured disc inside grows with the digit's share of the window — green
- * for the hottest digit, blue for the second hottest, red for the coldest and
+ * for the hottest digit, purple for the second hottest, red for the coldest and
  * yellow for the second coldest — and a yellow cursor ring marks the digit the
  * ticker is on right now.
  */
@@ -144,7 +144,7 @@ export default function DigitGrid({ statistics, currentDigit = null }: DigitGrid
                     <span className='digits-grid__key digits-grid__key--cold'>Red · least frequent</span>
                     <span className='digits-grid__key digits-grid__key--cool'>Yellow · 2nd least</span>
                     <span className='digits-grid__key digits-grid__key--hot'>Green · most frequent</span>
-                    <span className='digits-grid__key digits-grid__key--warm'>Blue · 2nd most</span>
+                    <span className='digits-grid__key digits-grid__key--warm'>Purple · 2nd most</span>
                 </p>
             )}
         </section>
