@@ -63,7 +63,9 @@ export interface DigitFrequency {
     absoluteDeviation: number;
     rank: number;
     isMostFrequent: boolean;
+    isSecondMostFrequent: boolean;
     isLeastFrequent: boolean;
+    isSecondLeastFrequent: boolean;
 }
 
 export interface DigitStreak {

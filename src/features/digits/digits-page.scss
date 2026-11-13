@@ -562,6 +562,16 @@
             fill: var(--brand-success);
         }
 
+        /* Second hottest digit — blue. */
+        &--warm {
+            fill: var(--status-info);
+        }
+
+        /* Second coldest digit — yellow. */
+        &--cool {
+            fill: var(--brand-warning);
+        }
+
         &--cold {
             fill: var(--status-danger);
         }
@@ -638,10 +648,67 @@
         }
     }
 
+    &--warm {
+        .digit-bubble__track {
+            stroke: var(--status-info);
+        }
+    }
+
+    &--cool {
+        .digit-bubble__track {
+            stroke: var(--brand-warning);
+        }
+    }
+
     &--cold {
         .digit-bubble__track {
             stroke: var(--status-danger);
         }
+    }
+}
+
+/* Key to the four heat colours: red least, yellow second least, green hottest, blue second hottest. */
+.digits-grid__legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem 0.9rem;
+    margin: 0.7rem 0 0;
+    font-size: 0.7rem;
+    color: var(--text-less-prominent);
+
+    @media (min-width: 768px) {
+        font-size: 0.95rem;
+    }
+}
+
+.digits-grid__key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+
+    &::before {
+        content: '';
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 50%;
+        background: var(--brand-primary);
+    }
+
+    &--hot::before {
+        background: var(--brand-success);
+    }
+
+    &--warm::before {
+        background: var(--status-info);
+    }
+
+    &--cool::before {
+        background: var(--brand-warning);
+    }
+
+    &--cold::before {
+        background: var(--status-danger);
     }
 }
 
@@ -661,6 +728,23 @@
 
     &--tie {
         background: var(--brand-secondary);
+    }
+
+    &--hot {
+        background: var(--brand-success);
+    }
+
+    &--warm {
+        background: var(--status-info);
+    }
+
+    &--cool {
+        background: var(--brand-warning);
+        color: #1a1a1a;
+    }
+
+    &--cold {
+        background: var(--status-danger);
     }
 }
 

@@ -495,7 +495,7 @@ const AppWrapper = observer(() => {
                                             width='24px'
                                             fill='var(--text-general)'
                                         />
-                                        <Localize i18n_default_text='Digits' />
+                                        <Localize i18n_default_text='D Analysis' />
                                     </>
                                 }
                                 id='id-digits'

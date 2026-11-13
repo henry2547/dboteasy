@@ -15,8 +15,9 @@ const CURSOR_RADIUS = 22;
 /**
  * Digit frequency bubbles: one circle per digit instead of a rectangle card.
  * The coloured disc inside grows with the digit's share of the window — green
- * for the hottest digit, red for the coldest — and a yellow cursor ring marks
- * the digit the ticker is on right now.
+ * for the hottest digit, blue for the second hottest, red for the coldest and
+ * yellow for the second coldest — and a yellow cursor ring marks the digit the
+ * ticker is on right now.
  */
 export default function DigitGrid({ statistics, currentDigit = null }: DigitGridProps) {
     const hasSample = statistics.sampleSize > 0;
@@ -36,12 +37,17 @@ export default function DigitGrid({ statistics, currentDigit = null }: DigitGrid
                     const tie =
                         hasSample && statistics.frequencies.filter(item => item.count === frequency.count).length > 1;
                     const isCurrent = frequency.digit === currentDigit;
-                    const heat =
-                        frequency.isMostFrequent && !frequency.isLeastFrequent
-                            ? 'hot'
-                            : frequency.isLeastFrequent && !frequency.isMostFrequent
-                              ? 'cold'
-                              : 'normal';
+                    const heat = !hasSample
+                        ? 'normal'
+                        : frequency.isMostFrequent && !frequency.isLeastFrequent
+                          ? 'hot'
+                          : frequency.isLeastFrequent && !frequency.isMostFrequent
+                            ? 'cold'
+                            : frequency.isSecondMostFrequent
+                              ? 'warm'
+                              : frequency.isSecondLeastFrequent
+                                ? 'cool'
+                                : 'normal';
                     // How much of the circle is filled is the digit's share of the busiest digit.
                     const fillRadius = Math.max(2, (frequency.percentage / maxPercentage) * BUBBLE_RADIUS);
                     const percent = formatPercent(frequency.percentage);
@@ -111,10 +117,20 @@ export default function DigitGrid({ statistics, currentDigit = null }: DigitGrid
                                 {formatSigned(frequency.deviationFromExpected)} pts
                             </span>
                             <span className='digit-bubble__rank'>Rank {frequency.rank}</span>
-                            {(frequency.isMostFrequent || frequency.isLeastFrequent) && (
+                            {(heat !== 'normal' || tie) && (
                                 <span className='digit-bubble__badges'>
-                                    {frequency.isMostFrequent && <em className='digits-badge'>Most</em>}
-                                    {frequency.isLeastFrequent && <em className='digits-badge'>Least</em>}
+                                    {heat === 'hot' && (
+                                        <em className='digits-badge digits-badge--hot'>Hottest</em>
+                                    )}
+                                    {heat === 'warm' && (
+                                        <em className='digits-badge digits-badge--warm'>2nd hottest</em>
+                                    )}
+                                    {heat === 'cool' && (
+                                        <em className='digits-badge digits-badge--cool'>2nd coldest</em>
+                                    )}
+                                    {heat === 'cold' && (
+                                        <em className='digits-badge digits-badge--cold'>Coldest</em>
+                                    )}
                                     {tie && <em className='digits-badge digits-badge--tie'>Tie</em>}
                                 </span>
                             )}
@@ -122,6 +138,15 @@ export default function DigitGrid({ statistics, currentDigit = null }: DigitGrid
                     );
                 })}
             </div>
+
+            {hasSample && (
+                <p className='digits-grid__legend'>
+                    <span className='digits-grid__key digits-grid__key--cold'>Red · least frequent</span>
+                    <span className='digits-grid__key digits-grid__key--cool'>Yellow · 2nd least</span>
+                    <span className='digits-grid__key digits-grid__key--hot'>Green · most frequent</span>
+                    <span className='digits-grid__key digits-grid__key--warm'>Blue · 2nd most</span>
+                </p>
+            )}
         </section>
     );
 }
