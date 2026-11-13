@@ -1,6 +1,7 @@
 import BarrierPanel from './components/barrier-panel';
 import DigitDistribution from './components/digit-distribution';
 import DigitGrid from './components/digit-grid';
+import DigitRankStrip from './components/digit-rank-strip';
 import MarketOverview from './components/market-overview';
 import MarketSelector from './components/market-selector';
 import { useDigitsLabContext } from './digits-lab-context';
@@ -51,6 +52,8 @@ export default function DigitsPage() {
                     </button>
                 </div>
             </header>
+
+            <DigitRankStrip statistics={statistics} />
 
             <section className='dash-tiles' aria-label='Digit snapshot'>
                 <SnapshotTile

@@ -529,6 +529,7 @@
 }
 
 .digit-bubble {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -640,6 +641,59 @@
         flex-wrap: wrap;
         justify-content: center;
         gap: 0.3rem;
+    }
+
+    /* Hover/tap tooltip spelling out what the bubble's fill colour means. */
+    &__tooltip {
+        position: absolute;
+        bottom: calc(100% + 0.4rem);
+        left: 50%;
+        z-index: 6;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        width: max-content;
+        max-width: min(22rem, 62vw);
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--general-main-3);
+        border-radius: 8px;
+        background: var(--general-section-2);
+        color: var(--text-general);
+        font-size: 1rem;
+        line-height: 1.35;
+        text-align: left;
+        box-shadow: 0 10px 24px rgb(0 0 0 / 35%);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-50%);
+        transition: opacity 0.15s ease;
+        pointer-events: none;
+    }
+
+    &__tooltip-title {
+        font-weight: 700;
+    }
+
+    &__tooltip-note {
+        color: var(--text-less-prominent);
+    }
+
+    &:hover &__tooltip,
+    &--tooltip-open &__tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* First and last bubble of each row: anchor the tooltip inside the page. */
+    &:nth-child(5n + 1) &__tooltip {
+        left: 0;
+        transform: none;
+    }
+
+    &:nth-child(5n) &__tooltip {
+        left: auto;
+        right: 0;
+        transform: none;
     }
 
     &--hot {

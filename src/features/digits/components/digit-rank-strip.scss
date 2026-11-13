@@ -1,0 +1,83 @@
+/* Heat-rank strip under the Digits Analysis Lab header: hottest, 2nd hottest,
+   2nd coldest and coldest digit, in the same four colours as the frequency grid. */
+
+.digit-ranks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+}
+
+.digit-rank {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--dash-border);
+    border-left: 3px solid var(--text-less-prominent);
+    border-radius: 12px;
+    background: var(--dash-surface);
+
+    &__label {
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-less-prominent);
+    }
+
+    &__digits {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.15;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+
+        @media (min-width: 768px) {
+            font-size: 2.2rem;
+        }
+    }
+
+    &__meta {
+        font-size: 1rem;
+        line-height: 1.3;
+        color: var(--text-less-prominent);
+    }
+
+    &--hot {
+        border-left-color: var(--brand-success);
+
+        .digit-rank__label {
+            color: var(--brand-success);
+        }
+    }
+
+    &--warm {
+        border-left-color: var(--brand-tertiary);
+
+        .digit-rank__label {
+            color: var(--brand-tertiary);
+        }
+    }
+
+    &--cool {
+        border-left-color: var(--brand-warning);
+
+        .digit-rank__label {
+            color: var(--brand-warning);
+        }
+    }
+
+    &--cold {
+        border-left-color: var(--status-danger);
+
+        .digit-rank__label {
+            color: var(--status-danger);
+        }
+    }
+}
