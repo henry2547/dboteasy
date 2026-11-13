@@ -47,8 +47,13 @@ const DESTINATIONS: TDestination[] = [
     },
     {
         tab: DBOT_TABS.DIGITS,
-        name: 'Digits',
-        hint: 'Digit history, market conditions and entry guidance for the market you pick.',
+        name: 'D Analysis',
+        hint: 'Digit history, the frequency grid and barrier research for the market you pick.',
+    },
+    {
+        tab: DBOT_TABS.MARKET_SCAN,
+        name: 'Market Scan',
+        hint: 'Read every eligible volatility market once and rank them by their digit behaviour.',
     },
 ];
 

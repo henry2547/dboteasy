@@ -60,6 +60,10 @@ export function calculateStatisticsFromDigits(digits: number[]): DigitStatistics
     const maxCount = counts.length ? Math.max(...counts) : 0;
     const minCount = counts.length ? Math.min(...counts) : 0;
     const uniqueSortedDesc = [...new Set(counts)].sort((a, b) => b - a);
+    // The second-ranked counts only exist once the window has more than one distinct count.
+    const hasSecondRank = sampleSize > 0 && uniqueSortedDesc.length > 1;
+    const secondMaxCount = hasSecondRank ? uniqueSortedDesc[1] : null;
+    const secondMinCount = hasSecondRank ? uniqueSortedDesc[uniqueSortedDesc.length - 2] : null;
 
     const frequencies: DigitFrequency[] = DIGITS.map(digit => {
         const count = counts[digit];
@@ -74,7 +78,9 @@ export function calculateStatisticsFromDigits(digits: number[]): DigitStatistics
             absoluteDeviation: Math.abs(deviationFromExpected),
             rank: sampleSize === 0 ? 0 : ranks[digit],
             isMostFrequent: sampleSize > 0 && count === maxCount,
+            isSecondMostFrequent: secondMaxCount !== null && count === secondMaxCount,
             isLeastFrequent: sampleSize > 0 && count === minCount,
+            isSecondLeastFrequent: secondMinCount !== null && count === secondMinCount,
         };
     });
 

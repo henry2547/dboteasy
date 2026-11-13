@@ -34,6 +34,7 @@ import {
 } from '@/utils/trade-type-modal-handler';
 import {
     LabelPairedArrowsRotateCaptionRegularIcon,
+    LabelPairedChartLineMdRegularIcon,
     LabelPairedLightbulbCaptionRegularIcon,
     LabelPairedCircleStarCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
@@ -54,6 +55,7 @@ const AiArchitectPage = lazy(() => import('../../features/ai-architect'));
 const FreeBotsPage = lazy(() => import('../../features/free-bots'));
 const AiBotsPage = lazy(() => import('../../features/ai-bots'));
 const GlobalScanButton = lazy(() => import('../../features/digits/components/global-scan-button'));
+const MarketScanPage = lazy(() => import('../../features/digits/market-scan-page'));
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();
@@ -91,6 +93,7 @@ const AppWrapper = observer(() => {
         'ai_bots',
         'bot_builder',
         'digits',
+        'market_scan',
     ];
     const { isDesktop } = useDevice();
     const location = useLocation();
@@ -495,7 +498,7 @@ const AppWrapper = observer(() => {
                                             width='24px'
                                             fill='var(--text-general)'
                                         />
-                                        <Localize i18n_default_text='Digits' />
+                                        <Localize i18n_default_text='D Analysis' />
                                     </>
                                 }
                                 id='id-digits'
@@ -507,6 +510,29 @@ const AppWrapper = observer(() => {
                                 >
                                     <ErrorBoundary label='Digits'>
                                         <DigitsPage />
+                                    </ErrorBoundary>
+                                </Suspense>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedChartLineMdRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Market Scan' />
+                                    </>
+                                }
+                                id='id-market-scan'
+                            >
+                                <Suspense
+                                    fallback={
+                                        <ChunkLoader message={localize('Please wait, loading the market scan...')} />
+                                    }
+                                >
+                                    <ErrorBoundary label='Market Scan'>
+                                        <MarketScanPage />
                                     </ErrorBoundary>
                                 </Suspense>
                             </div>

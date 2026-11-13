@@ -142,8 +142,11 @@ hamburger menu's **Dark theme** switch toggles (`useThemeSwitcher` → `UiStore.
   inside a narrow viewport.
 - Digit frequency is drawn as circles (`.digit-bubble`, one SVG per digit in `digit-grid.tsx`), not
   cards: the coloured disc inside grows with the digit's share of the busiest digit, green
-  (`--brand-success`) for the hottest digit, red (`--status-danger`) for the coldest, and a yellow
-  (`--brand-warning`) cursor ring plus pin marks the digit the ticker is on right now. The grid takes
+  (`--brand-success`) for the hottest digit, blue (`--status-info`) for the second hottest, red
+  (`--status-danger`) for the coldest and yellow (`--brand-warning`) for the second coldest — the
+  same four colours the grid's legend spells out — and a yellow (`--brand-warning`) cursor ring plus
+  pin marks the digit the ticker is on right now. `DigitFrequency` carries the second-rank flags
+  (`isSecondMostFrequent` / `isSecondLeastFrequent`) computed in `statistics.ts`. The grid takes
   `currentDigit` from the newest tick on the page — same value the distribution panel's cursor uses.
 - **Bot Builder below the desktop breakpoint: one collapsible menu.** `toolbox.tsx` renders the docked
   palette only on a desktop; on a phone it renders `toolbox/mobile-tools-menu.tsx` instead — the

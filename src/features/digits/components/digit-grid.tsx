@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatCount, formatPercent, formatSigned } from '../format';
 import type { DigitStatistics } from '../types';
 
@@ -7,20 +8,34 @@ interface DigitGridProps {
     currentDigit?: number | null;
 }
 
+type Heat = 'hot' | 'warm' | 'cool' | 'cold' | 'normal';
+
 const BUBBLE_SIZE = 48;
 const BUBBLE_CENTER = BUBBLE_SIZE / 2;
 const BUBBLE_RADIUS = 19;
 const CURSOR_RADIUS = 22;
 
+/** What each fill colour means — the text every bubble's tooltip shows on hover or tap. */
+const HEAT_INFO: Record<Heat, { title: string; color: string; meaning: string }> = {
+    hot: { title: 'Hottest', color: 'Green', meaning: 'the most frequent digit in this window' },
+    warm: { title: '2nd hottest', color: 'Purple', meaning: 'the second most frequent digit' },
+    cool: { title: '2nd coldest', color: 'Yellow', meaning: 'the second least frequent digit' },
+    cold: { title: 'Coldest', color: 'Red', meaning: 'the least frequent digit in this window' },
+    normal: { title: 'No heat colour', color: 'Blue', meaning: 'between the four ranked digits' },
+};
+
 /**
  * Digit frequency bubbles: one circle per digit instead of a rectangle card.
  * The coloured disc inside grows with the digit's share of the window — green
- * for the hottest digit, red for the coldest — and a yellow cursor ring marks
- * the digit the ticker is on right now.
+ * for the hottest digit, purple for the second hottest, red for the coldest and
+ * yellow for the second coldest — and a yellow cursor ring marks the digit the
+ * ticker is on right now.
  */
 export default function DigitGrid({ statistics, currentDigit = null }: DigitGridProps) {
     const hasSample = statistics.sampleSize > 0;
     const maxPercentage = Math.max(...statistics.frequencies.map(item => item.percentage), 1);
+    // Tapped-on bubble for touch screens, where there is no hover to read the tooltip with.
+    const [openTooltip, setOpenTooltip] = useState<number | null>(null);
 
     return (
         <section className='digits-panel'>
@@ -36,24 +51,38 @@ export default function DigitGrid({ statistics, currentDigit = null }: DigitGrid
                     const tie =
                         hasSample && statistics.frequencies.filter(item => item.count === frequency.count).length > 1;
                     const isCurrent = frequency.digit === currentDigit;
-                    const heat =
-                        frequency.isMostFrequent && !frequency.isLeastFrequent
-                            ? 'hot'
-                            : frequency.isLeastFrequent && !frequency.isMostFrequent
-                              ? 'cold'
-                              : 'normal';
+                    const heat: Heat = !hasSample
+                        ? 'normal'
+                        : frequency.isMostFrequent && !frequency.isLeastFrequent
+                          ? 'hot'
+                          : frequency.isLeastFrequent && !frequency.isMostFrequent
+                            ? 'cold'
+                            : frequency.isSecondMostFrequent
+                              ? 'warm'
+                              : frequency.isSecondLeastFrequent
+                                ? 'cool'
+                                : 'normal';
                     // How much of the circle is filled is the digit's share of the busiest digit.
                     const fillRadius = Math.max(2, (frequency.percentage / maxPercentage) * BUBBLE_RADIUS);
                     const percent = formatPercent(frequency.percentage);
+                    const heatInfo = HEAT_INFO[heat];
 
                     return (
                         <article
                             key={frequency.digit}
                             className={
                                 `digit-bubble digit-bubble--${heat}` +
-                                (isCurrent ? ' digit-bubble--current' : '')
+                                (isCurrent ? ' digit-bubble--current' : '') +
+                                (openTooltip === frequency.digit ? ' digit-bubble--tooltip-open' : '')
                             }
                             aria-current={isCurrent ? 'true' : undefined}
+                            onMouseEnter={() => setOpenTooltip(frequency.digit)}
+                            onMouseLeave={() =>
+                                setOpenTooltip(open => (open === frequency.digit ? null : open))
+                            }
+                            onClick={() =>
+                                setOpenTooltip(open => (open === frequency.digit ? null : frequency.digit))
+                            }
                         >
                             <svg
                                 className='digit-bubble__dial'
@@ -111,17 +140,46 @@ export default function DigitGrid({ statistics, currentDigit = null }: DigitGrid
                                 {formatSigned(frequency.deviationFromExpected)} pts
                             </span>
                             <span className='digit-bubble__rank'>Rank {frequency.rank}</span>
-                            {(frequency.isMostFrequent || frequency.isLeastFrequent) && (
+                            {(heat !== 'normal' || tie) && (
                                 <span className='digit-bubble__badges'>
-                                    {frequency.isMostFrequent && <em className='digits-badge'>Most</em>}
-                                    {frequency.isLeastFrequent && <em className='digits-badge'>Least</em>}
+                                    {heat === 'hot' && (
+                                        <em className='digits-badge digits-badge--hot'>Hottest</em>
+                                    )}
+                                    {heat === 'warm' && (
+                                        <em className='digits-badge digits-badge--warm'>2nd hottest</em>
+                                    )}
+                                    {heat === 'cool' && (
+                                        <em className='digits-badge digits-badge--cool'>2nd coldest</em>
+                                    )}
+                                    {heat === 'cold' && (
+                                        <em className='digits-badge digits-badge--cold'>Coldest</em>
+                                    )}
                                     {tie && <em className='digits-badge digits-badge--tie'>Tie</em>}
                                 </span>
                             )}
+
+                            <span className='digit-bubble__tooltip' role='tooltip'>
+                                <strong className='digit-bubble__tooltip-title'>
+                                    {heatInfo.title} · {percent}
+                                </strong>
+                                <span className='digit-bubble__tooltip-note'>
+                                    {heatInfo.color} fill — {heatInfo.meaning} · {formatCount(frequency.count)} ticks ·
+                                    rank {frequency.rank} of 10
+                                </span>
+                            </span>
                         </article>
                     );
                 })}
             </div>
+
+            {hasSample && (
+                <p className='digits-grid__legend'>
+                    <span className='digits-grid__key digits-grid__key--cold'>Red · least frequent</span>
+                    <span className='digits-grid__key digits-grid__key--cool'>Yellow · 2nd least</span>
+                    <span className='digits-grid__key digits-grid__key--hot'>Green · most frequent</span>
+                    <span className='digits-grid__key digits-grid__key--warm'>Purple · 2nd most</span>
+                </p>
+            )}
         </section>
     );
 }

@@ -529,6 +529,7 @@
 }
 
 .digit-bubble {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -560,6 +561,16 @@
 
         &--hot {
             fill: var(--brand-success);
+        }
+
+        /* Second hottest digit — purple. */
+        &--warm {
+            fill: var(--brand-tertiary);
+        }
+
+        /* Second coldest digit — yellow. */
+        &--cool {
+            fill: var(--brand-warning);
         }
 
         &--cold {
@@ -632,9 +643,74 @@
         gap: 0.3rem;
     }
 
+    /* Hover/tap tooltip spelling out what the bubble's fill colour means. */
+    &__tooltip {
+        position: absolute;
+        bottom: calc(100% + 0.4rem);
+        left: 50%;
+        z-index: 6;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        width: max-content;
+        max-width: min(22rem, 62vw);
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--general-main-3);
+        border-radius: 8px;
+        background: var(--general-section-2);
+        color: var(--text-general);
+        font-size: 1rem;
+        line-height: 1.35;
+        text-align: left;
+        box-shadow: 0 10px 24px rgb(0 0 0 / 35%);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-50%);
+        transition: opacity 0.15s ease;
+        pointer-events: none;
+    }
+
+    &__tooltip-title {
+        font-weight: 700;
+    }
+
+    &__tooltip-note {
+        color: var(--text-less-prominent);
+    }
+
+    &:hover &__tooltip,
+    &--tooltip-open &__tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* First and last bubble of each row: anchor the tooltip inside the page. */
+    &:nth-child(5n + 1) &__tooltip {
+        left: 0;
+        transform: none;
+    }
+
+    &:nth-child(5n) &__tooltip {
+        left: auto;
+        right: 0;
+        transform: none;
+    }
+
     &--hot {
         .digit-bubble__track {
             stroke: var(--status-success);
+        }
+    }
+
+    &--warm {
+        .digit-bubble__track {
+            stroke: var(--brand-tertiary);
+        }
+    }
+
+    &--cool {
+        .digit-bubble__track {
+            stroke: var(--brand-warning);
         }
     }
 
@@ -642,6 +718,51 @@
         .digit-bubble__track {
             stroke: var(--status-danger);
         }
+    }
+}
+
+/* Key to the four heat colours: red least, yellow second least, green hottest, purple second hottest. */
+.digits-grid__legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem 0.9rem;
+    margin: 0.7rem 0 0;
+    font-size: 0.7rem;
+    color: var(--text-less-prominent);
+
+    @media (min-width: 768px) {
+        font-size: 0.95rem;
+    }
+}
+
+.digits-grid__key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+
+    &::before {
+        content: '';
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 50%;
+        background: var(--brand-primary);
+    }
+
+    &--hot::before {
+        background: var(--brand-success);
+    }
+
+    &--warm::before {
+        background: var(--brand-tertiary);
+    }
+
+    &--cool::before {
+        background: var(--brand-warning);
+    }
+
+    &--cold::before {
+        background: var(--status-danger);
     }
 }
 
@@ -661,6 +782,23 @@
 
     &--tie {
         background: var(--brand-secondary);
+    }
+
+    &--hot {
+        background: var(--brand-success);
+    }
+
+    &--warm {
+        background: var(--brand-tertiary);
+    }
+
+    &--cool {
+        background: var(--brand-warning);
+        color: #1a1a1a;
+    }
+
+    &--cold {
+        background: var(--status-danger);
     }
 }
 
