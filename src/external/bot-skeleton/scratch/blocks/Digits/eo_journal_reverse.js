@@ -5,15 +5,10 @@ const MIN_RUN = 2;
 const MAX_RUN = 100;
 
 /**
- * "Journal the last digits & buy the reverse" — the reversal entry as one block.
- *
- * It reads the newest RUN digits of the market the bot is already trading, writes them to the
- * journal together with the parity they point at, and buys the OPPOSITE parity through the engine's
- * own purchase path: the last digits all even → ODD, all odd → EVEN. A mixed run is no entry, so the
- * block waits for the next pair instead of trading blind, and the same digits never enter twice.
- *
- * The read comes from the engine's genuine tick stream, so an incomplete, stale or disconnected
- * feed never signals and never trades.
+ * A standalone Even/Odd entry block. It is not a recovery leg: put it in a bot
+ * whose trade definition is Digits → Even/Odd. It reads the newest RUN genuine
+ * digits on the selected market and buys the opposite parity (all even → ODD,
+ * all odd → EVEN); a mixed run waits without placing a trade.
  */
 window.Blockly.Blocks.eo_journal_reverse = {
     init() {
@@ -21,7 +16,7 @@ window.Blockly.Blocks.eo_journal_reverse = {
     },
     definition() {
         return {
-            message0: localize('Journal the last {{ run }} digits & buy the reverse parity', { run: '%1' }),
+            message0: localize('Trade the opposite parity when the last {{ run }} digits share parity', { run: '%1' }),
             args0: [
                 {
                     type: 'field_number',
@@ -38,18 +33,18 @@ window.Blockly.Blocks.eo_journal_reverse = {
             colourSecondary: window.Blockly.Colours.Base.colourSecondary,
             colourTertiary: window.Blockly.Colours.Base.colourTertiary,
             tooltip: localize(
-                'Journals the newest digits and buys the parity they predict to break: the last N digits all even → ODD, all odd → EVEN. A mixed run is no entry, so the block waits for the next pair instead of trading blind. The purchase goes through the engine’s own purchase path and the same digits never enter twice.'
+                'Standalone Even/Odd entry for an Even/Odd trade definition. Reads the last N genuine digits on the selected market: all even buys ODD, all odd buys EVEN, and a mixed run waits. This block is not an Over/Under recovery leg.'
             ),
             category: window.Blockly.Categories.Digits,
         };
     },
     meta() {
         return {
-            display_name: localize('Journal last digits & buy the reverse'),
+            display_name: localize('Trade opposite Even/Odd from last N digits'),
             description: localize(
-                'One reversal entry: journals the last N digits and buys the opposite parity (all even → ODD, all odd → EVEN). A mixed run is no entry.'
+                'A self-contained Even/Odd entry. Choose the number of newest digits; all even buys ODD, all odd buys EVEN, and mixed parity does not trade. Use with a Digits → Even/Odd trade definition, not as an Over/Under recovery.'
             ),
-            key_words: localize('even odd journal last digits reversal buy purchase parity entry'),
+            key_words: localize('even odd standalone last digits parity trade entry opposite'),
         };
     },
     customContextMenu(menu) {
